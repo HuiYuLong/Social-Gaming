@@ -18,7 +18,10 @@ private:
 	int number; // number can be -1,0,1,2,3,4,5,6,7,8. -1 means the cell has a bomb.
 	bool isRevealed; // Is the cell selected by the user
 	bool isMarked; // Is the cell marked by the user
+	bool isBomb;//Is the cell bomb
+	bool isValid;//Is the cell on the board.
 };
+
 
 Cell grid[8][8]; //Initialize 8x8 grid
 
@@ -30,6 +33,7 @@ void generateBombs(){
 		do{
 			rrow = rand()%8;
 			rcol = rand()%8;
+			cout<<"rrow"<<rrow<<" rcol"<<rcol<<endl;
 		} while(grid[rrow][rcol].getNumber() == -1);
 		grid[rrow][rcol].setNumber(-1);
 		mineCount++;
@@ -54,6 +58,48 @@ void draw(){
 	}
 	std::cout << "Number of bombs left: " << bomb << "\n";
 }
+
+int placeFlag(int row, int col,int realboard[][8]){
+
+}
+bool isBomb(int row, int col,int bombset[][8]){
+	
+}
+
+void isValid(int row, int col,int bombset[][8]){
+
+}
+
+//check adjacent bomb nearby,and return the number of bumb.
+/* Count all the mines in the 8 adjacent 
+        cells 
+  
+            N.W   N   N.E 
+              \   |   / 
+               \  |  / 
+            W----Cell----E 
+                 / | \ 
+               /   |  \ 
+            S.W    S   S.E 
+  
+        Cell-->Current Cell (row, col) 
+        N -->  North        (row-1, col) 
+        S -->  South        (row+1, col) 
+        E -->  East         (row, col+1) 
+        W -->  West            (row, col-1) 
+        N.E--> North-East   (row-1, col+1) 
+        N.W--> North-West   (row-1, col-1) 
+        S.E--> South-East   (row+1, col+1) 
+        S.W--> South-West   (row+1, col-1) */
+
+int check_adjacent(int row, int col,int bombset[][8]){
+
+
+}
+
+
+
+
 
 int main() {
 	generateBombs();
