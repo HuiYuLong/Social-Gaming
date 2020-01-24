@@ -1,6 +1,7 @@
 #include <iostream>
 using namespace std;
-
+#define NEW 0
+#define EXPERT 1
 int bomb = 10;
 
 class Cell {
@@ -14,15 +15,40 @@ public:
 	void setNumber(const int& number) {this->number = number;}
 	void setisRevealed(const bool& isRevealed) {this->isRevealed = isRevealed;}
 	void setIsMarked(const bool& isMarked) {this->isMarked = isMarked;}
+	
 
 private:
 	int number; // number can be -1,0,1,2,3,4,5,6,7,8. -1 means the cell has a bomb.
 	bool isRevealed; // Is the cell selected by the user
 	bool isMarked; // Is the cell marked by the user
-	bool isBomb; // Is the cell a bomb
+	bool isBomb;//Is the cell bomb
+	bool isValid;//Is the cell on the board.
 };
 
+
 Cell grid[8][8]; //Initialize 8x8 grid
+
+// A Function to choose the difficulty level 
+void gameLevel () 
+{ 
+    int difficulty; 
+    cout << "Enter the Difficulty Level\n"; 
+    cout << "Press 0 for BEGINNER (8 * 8 Cells and 10 Bombs)\n"; 
+    cout << "Press 1 for EXPERT (8 * 8 Cells and 30 Bombs)\n"; 
+    cin >> &difficulty; 
+  
+    if (difficulty == NEW) 
+    { 
+        bomb = 10; 
+    } 
+  
+    if (difficulty == EXPERT) 
+    { 
+        bomb = 30; 
+    } 
+    return; 
+} 
+
 
 //tested: worked for 8x8 grid and bomb <= 64
 void generateBombs(){
@@ -32,6 +58,7 @@ void generateBombs(){
 		do{
 			rrow = rand()%8;
 			rcol = rand()%8;
+			cout<<"rrow"<<rrow<<" rcol"<<rcol<<endl;
 		} while(grid[rrow][rcol].getNumber() == -1);
 		grid[rrow][rcol].setNumber(-1);
 		mineCount++;
@@ -56,7 +83,6 @@ void draw(){
 	}
 	std::cout << "Number of bombs left: " << bomb << "\n";
 }
-
 
 class Minesweeper {
 public:
@@ -84,6 +110,76 @@ private:
 	Cell** gameGrid;
 
 };
+
+int placeFlag(int row, int col,int realboard[][8]){
+	bool mark[64]; 
+  
+    memset (mark, false, sizeof (mark)); 
+  
+    // Continue until all random mines have been created. 
+    for (int i = 0; i < bomb; ) 
+     { 
+        int random = rand() % (64); 
+        int temp1 = random / 8; 
+        int temp2 = random % 8; 
+  
+        // Add the mine if no mine is placed at this 
+        // position on the board 
+        if (mark[random] == false) 
+        { 
+            // Row Index of the Mine 
+            row = temp1; 
+            // Column Index of the Mine 
+            col = temp2; 
+  
+            // Place the mine 
+            realBoard[row][col] = '*'; 
+            mark[random] = true; 
+            i++; 
+        } 
+    } 
+  
+    return; 
+}
+bool isBomb(int row, int col,int bombset[][8]){
+	if (bombset[row][col] == '*') 
+        return (true); 
+    else
+        return (false); 
+}
+
+void isValid(int row, int col,int bombset[][8]){
+    return (row >= 0) && (row < 8) && 
+           (col >= 0) && (col < 8); 
+}
+
+//check adjacent bomb nearby,and return the number of bumb.
+/* Count all the mines in the 8 adjacent 
+        cells 
+  
+            N.W   N   N.E 
+              \   |   / 
+               \  |  / 
+            W----Cell----E 
+                 / | \ 
+               /   |  \ 
+            S.W    S   S.E 
+  
+        Cell-->Current Cell (row, col) 
+        N -->  North        (row-1, col) 
+        S -->  South        (row+1, col) 
+        E -->  East         (row, col+1) 
+        W -->  West            (row, col-1) 
+        N.E--> North-East   (row-1, col+1) 
+        N.W--> North-West   (row-1, col-1) 
+        S.E--> South-East   (row+1, col+1) 
+        S.W--> South-West   (row+1, col-1) */
+
+int check_adjacent(int row, int col,int bombset[][8]){
+
+
+}
+
 
 int main() {
 
