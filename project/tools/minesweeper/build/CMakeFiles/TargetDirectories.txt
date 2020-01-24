@@ -1,3 +1,0 @@
-/mnt/c/users/khanh/Downloads/CMPT373/social-gaming/project/tools/minesweeper/build/CMakeFiles/rebuild_cache.dir
-/mnt/c/users/khanh/Downloads/CMPT373/social-gaming/project/tools/minesweeper/build/CMakeFiles/edit_cache.dir
-/mnt/c/users/khanh/Downloads/CMPT373/social-gaming/project/tools/minesweeper/build/CMakeFiles/MineSweeper.dir
