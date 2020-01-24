@@ -6,11 +6,12 @@ int bomb = 10;
 
 class Cell {
 public:
-	Cell(): number(0), isRevealed(false), isMarked(false) {}
+	Cell(): number(0), isRevealed(false), isMarked(false), isBomb(false) {}
 	// Cell(bool isRevealed, bool isMarked): number(0), isRevealed(isRevealed), isMarked(isMarked){}
 	int getNumber() const { return number;}
-	bool getisRevealed() const { return isRevealed;}
+	bool getIsRevealed() const { return isRevealed;}
 	bool getIsMarked() const { return isMarked;}
+	bool getIsBomb() const {return isBomb;}
 	void setNumber(const int& number) {this->number = number;}
 	void setisRevealed(const bool& isRevealed) {this->isRevealed = isRevealed;}
 	void setIsMarked(const bool& isMarked) {this->isMarked = isMarked;}
@@ -28,25 +29,25 @@ private:
 Cell grid[8][8]; //Initialize 8x8 grid
 
 // A Function to choose the difficulty level 
-void gameLevel () 
-{ 
-    int difficulty; 
-    cout << "Enter the Difficulty Level\n"; 
-    cout << "Press 0 for BEGINNER (8 * 8 Cells and 10 Bombs)\n"; 
-    cout << "Press 1 for EXPERT (8 * 8 Cells and 30 Bombs)\n"; 
-    cin >> &difficulty; 
+// void gameLevel () 
+// { 
+//     int difficulty; 
+//     cout << "Enter the Difficulty Level\n"; 
+//     cout << "Press 0 for BEGINNER (8 * 8 Cells and 10 Bombs)\n"; 
+//     cout << "Press 1 for EXPERT (8 * 8 Cells and 30 Bombs)\n"; 
+//     cin >> &difficulty; 
   
-    if (difficulty == NEW) 
-    { 
-        bomb = 10; 
-    } 
+//     if (difficulty == NEW) 
+//     { 
+//         bomb = 10; 
+//     } 
   
-    if (difficulty == EXPERT) 
-    { 
-        bomb = 30; 
-    } 
-    return; 
-} 
+//     if (difficulty == EXPERT) 
+//     { 
+//         bomb = 30; 
+//     } 
+//     return; 
+// } 
 
 
 //tested: worked for 8x8 grid and bomb <= 64
@@ -70,7 +71,7 @@ void draw(){
 		for(int j = 0; j < 8; j++){
 			if(grid[i][j].getIsMarked()){
 				std::cout << "M ";
-			} else if (!grid[i][j].getisRevealed()){
+			} else if (!grid[i][j].getIsRevealed()){
 				std::cout << "* ";
 			} else if (grid[i][j].getNumber() == -1){
 				std::cout << "X ";
@@ -83,36 +84,64 @@ void draw(){
 	std::cout << "Number of bombs left: " << bomb << "\n";
 }
 
-int placeFlag(int row, int col,int realboard[][8]){
-	bool mark[64]; 
+class Minesweeper {
+public:
+	int rowNum;
+	int colNum;
+	int numPlayers;
+
+	Minesweeper(const int& rowNum, const int& colNum, const int& numPlayers) {
+		this->rowNum = rowNum;
+		this->colNum = colNum;
+		this->numPlayers = numPlayers;
+
+		this->gameGrid = new Cell*[rowNum];
+		for (int i = 0; i < rowNum; i++) {
+			gameGrid[i] = new Cell[colNum];
+		}
+	}
+
+	void setHasWon(const bool& hasWon) {this->hasWon = hasWon;}
+	bool getHasWon() const {return hasWon;}
+	Cell** getGameGrid() const {return gameGrid;}
+
+private:
+	bool hasWon = false;
+	Cell** gameGrid;
+
+};
+
+// int placeFlag(int row, int col,int realboard[][8]){
+// 	bool mark[64]; 
   
-    memset (mark, false, sizeof (mark)); 
+//     memset (mark, false, sizeof (mark)); 
   
-    // Continue until all random mines have been created. 
-    for (int i = 0; i < bomb; ) 
-     { 
-        int random = rand() % (64); 
-        int temp1 = random / 8; 
-        int temp2 = random % 8; 
+//     // Continue until all random mines have been created. 
+//     for (int i = 0; i < bomb; ) 
+//      { 
+//         int random = rand() % (64); 
+//         int temp1 = random / 8; 
+//         int temp2 = random % 8; 
   
-        // Add the mine if no mine is placed at this 
-        // position on the board 
-        if (mark[random] == false) 
-        { 
-            // Row Index of the Mine 
-            row = temp1; 
-            // Column Index of the Mine 
-            col = temp2; 
+//         // Add the mine if no mine is placed at this 
+//         // position on the board 
+//         if (mark[random] == false) 
+//         { 
+//             // Row Index of the Mine 
+//             row = temp1; 
+//             // Column Index of the Mine 
+//             col = temp2; 
   
-            // Place the mine 
-            realBoard[row][col] = '*'; 
-            mark[random] = true; 
-            i++; 
-        } 
-    } 
+//             // Place the mine 
+//             realBoard[row][col] = '*'; 
+//             mark[random] = true; 
+//             i++; 
+//         } 
+//     } 
   
-    return; 
-}
+//     return; 
+// }
+
 bool isBomb(int row, int col,int bombset[][8]){
 	if (bombset[row][col] == '*') 
         return (true); 
@@ -120,10 +149,10 @@ bool isBomb(int row, int col,int bombset[][8]){
         return (false); 
 }
 
-void isValid(int row, int col,int bombset[][8]){
-    return (row >= 0) && (row < 8) && 
-           (col >= 0) && (col < 8); 
-}
+// void isValid(int row, int col,int bombset[][8]){
+//     return (row >= 0) && (row < 8) && 
+//            (col >= 0) && (col < 8); 
+// }
 
 //check adjacent bomb nearby,and return the number of bumb.
 /* Count all the mines in the 8 adjacent 
@@ -153,11 +182,25 @@ int check_adjacent(int row, int col,int bombset[][8]){
 }
 
 
-
-
-
 int main() {
+
 	generateBombs();
 	draw();
+
+	// test constructor for MineSweeper
+	// will introduce 2D arrays into 
+
+	int rowNum = 8;
+	int colNum = 8;
+	int numPlayers = 2;
+
+	Minesweeper* game = new Minesweeper(rowNum, colNum, numPlayers);
+
+	cout << "RowNum: " << game->rowNum << endl;
+	cout << "colNum: " << game->colNum << endl;
+	cout << "numPlayers: " << game->numPlayers << endl;
+	cout << "hasWon: " << game->getHasWon() << endl;
+	cout << "gameGrid[0][0]: " << game->getGameGrid()[0][0].getNumber() << endl;
+
 	return 0;
 }
