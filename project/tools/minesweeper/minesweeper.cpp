@@ -29,25 +29,25 @@ private:
 Cell grid[8][8]; //Initialize 8x8 grid
 
 // A Function to choose the difficulty level 
-void gameLevel () 
-{ 
-    int difficulty; 
-    cout << "Enter the Difficulty Level\n"; 
-    cout << "Press 0 for BEGINNER (8 * 8 Cells and 10 Bombs)\n"; 
-    cout << "Press 1 for EXPERT (8 * 8 Cells and 30 Bombs)\n"; 
-    cin >> &difficulty; 
+// void gameLevel () 
+// { 
+//     int difficulty; 
+//     cout << "Enter the Difficulty Level\n"; 
+//     cout << "Press 0 for BEGINNER (8 * 8 Cells and 10 Bombs)\n"; 
+//     cout << "Press 1 for EXPERT (8 * 8 Cells and 30 Bombs)\n"; 
+//     cin >> &difficulty; 
   
-    if (difficulty == NEW) 
-    { 
-        bomb = 10; 
-    } 
+//     if (difficulty == NEW) 
+//     { 
+//         bomb = 10; 
+//     } 
   
-    if (difficulty == EXPERT) 
-    { 
-        bomb = 30; 
-    } 
-    return; 
-} 
+//     if (difficulty == EXPERT) 
+//     { 
+//         bomb = 30; 
+//     } 
+//     return; 
+// } 
 
 
 //tested: worked for 8x8 grid and bomb <= 64
@@ -111,36 +111,37 @@ private:
 
 };
 
-int placeFlag(int row, int col,int realboard[][8]){
-	bool mark[64]; 
+// int placeFlag(int row, int col,int realboard[][8]){
+// 	bool mark[64]; 
   
-    memset (mark, false, sizeof (mark)); 
+//     memset (mark, false, sizeof (mark)); 
   
-    // Continue until all random mines have been created. 
-    for (int i = 0; i < bomb; ) 
-     { 
-        int random = rand() % (64); 
-        int temp1 = random / 8; 
-        int temp2 = random % 8; 
+//     // Continue until all random mines have been created. 
+//     for (int i = 0; i < bomb; ) 
+//      { 
+//         int random = rand() % (64); 
+//         int temp1 = random / 8; 
+//         int temp2 = random % 8; 
   
-        // Add the mine if no mine is placed at this 
-        // position on the board 
-        if (mark[random] == false) 
-        { 
-            // Row Index of the Mine 
-            row = temp1; 
-            // Column Index of the Mine 
-            col = temp2; 
+//         // Add the mine if no mine is placed at this 
+//         // position on the board 
+//         if (mark[random] == false) 
+//         { 
+//             // Row Index of the Mine 
+//             row = temp1; 
+//             // Column Index of the Mine 
+//             col = temp2; 
   
-            // Place the mine 
-            realBoard[row][col] = '*'; 
-            mark[random] = true; 
-            i++; 
-        } 
-    } 
+//             // Place the mine 
+//             realBoard[row][col] = '*'; 
+//             mark[random] = true; 
+//             i++; 
+//         } 
+//     } 
   
-    return; 
-}
+//     return; 
+// }
+
 bool isBomb(int row, int col,int bombset[][8]){
 	if (bombset[row][col] == '*') 
         return (true); 
@@ -148,10 +149,10 @@ bool isBomb(int row, int col,int bombset[][8]){
         return (false); 
 }
 
-void isValid(int row, int col,int bombset[][8]){
-    return (row >= 0) && (row < 8) && 
-           (col >= 0) && (col < 8); 
-}
+// void isValid(int row, int col,int bombset[][8]){
+//     return (row >= 0) && (row < 8) && 
+//            (col >= 0) && (col < 8); 
+// }
 
 //check adjacent bomb nearby,and return the number of bumb.
 /* Count all the mines in the 8 adjacent 
