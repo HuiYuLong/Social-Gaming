@@ -120,34 +120,79 @@ bool isBomb(int row, int col,int bombset[][8]){
         return (false); 
 }
 
-void isValid(int row, int col,int bombset[][8]){
+bool isValid(int row, int col){
     return (row >= 0) && (row < 8) && 
            (col >= 0) && (col < 8); 
 }
 
 //check adjacent bomb nearby,and return the number of bumb.
 /* Count all the mines in the 8 adjacent 
-        cells 
-  
-            N.W   N   N.E 
-              \   |   / 
-               \  |  / 
-            W----Cell----E 
-                 / | \ 
-               /   |  \ 
-            S.W    S   S.E 
-  
         Cell-->Current Cell (row, col) 
         N -->  North        (row-1, col) 
         S -->  South        (row+1, col) 
         E -->  East         (row, col+1) 
-        W -->  West            (row, col-1) 
+        W -->  West          (row, col-1) 
         N.E--> North-East   (row-1, col+1) 
         N.W--> North-West   (row-1, col-1) 
         S.E--> South-East   (row+1, col+1) 
         S.W--> South-West   (row+1, col-1) */
 
-int check_adjacent(int row, int col,int bombset[][8]){
+int check_adjacent(int row, int col,int realBoard[][8]){
+	
+    int count = 0; 
+	// N -->  North        (row-1, col) 
+	if (isValid (row-1, col) == true) 
+        { 
+               if (isBomb (row-1, col, realBoard) == true) 
+               count++; 
+        } 
+	//S -->  South        (row+1, col) 
+	if (isValid(row+1, col) == true) 
+        { 
+               if (isBomb (row+1, col, realBoard) == true) 
+               count++; 
+        } 
+	// E -->  East         (row, col+1)
+	if (isValid(row, col+1) == true) 
+        { 
+               if (isBomb (row, col+1, realBoard) == true) 
+               count++; 
+        } 
+	// W -->  West            (row, col-1) 
+	if (isValid(row, col-1) == true) 
+        { 
+               if (isBomb (row, col-1, realBoard) == true) 
+               count++; 
+        } 
+	// N.E--> North-East   (row-1, col+1) 
+	if (isValid(row-1, col+1l) == true) 
+        { 
+               if (isBomb (row-1, col+1, realBoard) == true) 
+               count++; 
+        } 
+	// N.W--> North-West   (row-1, col-1) 
+	if (isValid(row-1, col-1) == true) 
+        { 
+               if (isBomb (row-1, col-1, realBoard) == true) 
+               count++; 
+        } 
+	//S.E--> South-East   (row+1, col+1)
+	if (isValid(row+1, col+1) == true) 
+        { 
+               if (isBomb (row+1, col+1, realBoard) == true) 
+               count++; 
+        } 
+
+	//S.W--> South-West   (row+1, col-1)
+	if (isValid(row+1, col-1) == true) 
+        { 
+               if (isBomb (row+1, col-1, realBoard) == true) 
+               count++; 
+        }
+
+	return count;
+	
+  
 
 
 }
