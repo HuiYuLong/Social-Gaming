@@ -1,0 +1,1 @@
+/usr/bin/clang++    -rdynamic CMakeFiles/MineSweeper.dir/MineSweeper.cpp.o  -o MineSweeper 
