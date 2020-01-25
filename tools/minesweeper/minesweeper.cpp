@@ -29,25 +29,25 @@ private:
 Cell grid[8][8]; //Initialize 8x8 grid
 
 // A Function to choose the difficulty level 
-// void gameLevel () 
-// { 
-//     int difficulty; 
-//     cout << "Enter the Difficulty Level\n"; 
-//     cout << "Press 0 for BEGINNER (8 * 8 Cells and 10 Bombs)\n"; 
-//     cout << "Press 1 for EXPERT (8 * 8 Cells and 30 Bombs)\n"; 
-//     cin >> &difficulty; 
+void gameLevel () 
+{ 
+	 int difficulty; 
+     cout << "Enter the Difficulty Level\n"; 
+     cout << "Press 0 for BEGINNER (8 * 8 Cells and 10 Bombs)\n"; 
+     cout << "Press 1 for EXPERT (8 * 8 Cells and 30 Bombs)\n"; 
+     cin >> difficulty; 
   
-//     if (difficulty == NEW) 
-//     { 
-//         bomb = 10; 
-//     } 
+     if (difficulty == NEW) 
+     { 
+         bomb = 10; 
+     } 
   
-//     if (difficulty == EXPERT) 
-//     { 
-//         bomb = 30; 
-//     } 
-//     return; 
-// } 
+     if (difficulty == EXPERT) 
+     { 
+         bomb = 30; 
+     } 
+     return; 
+} 
 
 
 //tested: worked for 8x8 grid and bomb <= 64
@@ -149,10 +149,10 @@ bool isBomb(int row, int col,int bombset[][8]){
         return (false); 
 }
 
-// void isValid(int row, int col,int bombset[][8]){
-//     return (row >= 0) && (row < 8) && 
-//            (col >= 0) && (col < 8); 
-// }
+bool isValid(int row, int col,int bombset[][8]){
+     return (row >= 0) && (row < 8) && 
+            (col >= 0) && (col < 8); 
+}
 
 //check adjacent bomb nearby,and return the number of bumb.
 /* Count all the mines in the 8 adjacent 
@@ -180,6 +180,43 @@ int check_adjacent(int row, int col,int bombset[][8]){
 
 
 }
+
+void checkWin(){
+
+
+
+}
+// A Function to print the current gameplay board 
+void printB(char bombset[][8]) 
+{ 
+    
+  
+    cout << "    "; 
+  
+    for (int i = 0; i < 8; i++) 
+        cout << i; 
+  
+    cout << "\n\n"; 
+  
+    for (int i = 0; i < 8; i++) 
+    { 
+        cout << i; 
+  
+        for (int j = 0; j < 8; j++) 
+            cout << bombset[i][j]; 
+        cout << "\n\n"; 
+    } 
+    return; 
+} 
+// A Function to cheat by revealing where the mines are 
+void showBomb(char bombset[][8]) 
+{ 
+    cout << "The bombs locations are-\n"; 
+    printB(bombset); 
+    return; 
+} 
+
+
 
 
 int main() {
