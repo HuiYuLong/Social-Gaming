@@ -28,6 +28,9 @@ public:
     // Constructor
     User(std::string username);
 
+    // Deconstructor
+    ~User();
+
     // Join a game
     void joinGame(std::string token);
 

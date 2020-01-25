@@ -12,31 +12,48 @@ User::User(std::string username)
     assert(!username.empty() && "Error, cannot create an empty username!");
 }
 
+User::~User() = default;
+
 void
 User::joinGame(std::string token)
 {
     userType = UserType::GAMER;
     gamesPlayed.push_back("gameName");
     // Do stuff to join game
-    
-//     if(userType.compare())
-//     void compareOperation(string s1, string s2) 
-// { 
-//     // Compares 5 characters from index number 3 of s2 with s1 
-//     if((s2.compare(3, 5, s1)) == 0) 
-//         cout << "Here, "<< s1 << " are " << s2; 
-  
-//     else
-//         cout << "Strings didn't match "; 
-// } 
+
+    // look for matches in the gameslist
+    for (const auto& game: gameslist)
+    {
+        // if the Game exist, then join
+        int count = token.compare(game);
+        if(count == 0)
+            // connect to the GameServer
+        else
+            cout << "Game does not exist" << endl;
+    }
+} 
 }
 
 void
 User::createGame(/* WILL NEED TO PASS SOME FORM OF JSON OR STRING */)
 {
     userType = UserType::OWNER;
-    gamesCreated.push_back("gameName");
     // Do stuff to create game
+    
+    // Assume passed a string called NameId
+    for (const auto& game: gameslist)
+    {
+        // if the Game Id is unique, then create a new game
+        int count = NameId.compare(game);
+        if(count != 0)      
+        {
+            gamesCreated.push_back("gameName");
+            joinGame(NameId);
+        }
+        else
+            cout << "Game already exists" << endl;
+    }
+
 
 }
 
@@ -71,7 +88,7 @@ User::listGamesCreated(const std::vector<std::string>& gamesCreated)
 
 int main() {
     std::string username = "Sophia";
-    User User(UserType::GAMER);
+    // User User(UserType::GAMER);
 
     // newUser.createGame();
     // newUser.listGamesCreated();
