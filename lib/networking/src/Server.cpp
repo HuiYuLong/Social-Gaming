@@ -33,18 +33,20 @@ class Channel;
 class ServerImpl {
 public:
 
-  ServerImpl(Server& server, unsigned short port, std::string httpMessage)
+  ServerImpl(Server& server, unsigned short port, std::string httpMessage, std::string invite_code)
    : server{server},
      endpoint{boost::asio::ip::tcp::v4(), port},
      ioService{},
      acceptor{ioService, endpoint},
-     httpMessage{std::move(httpMessage)} {
+     httpMessage{std::move(httpMessage)},
+     invite_code{std::move(invite_code)} {
     listenForConnections();
   }
 
   void listenForConnections();
   void registerChannel(Channel& channel);
   void reportError(std::string_view message);
+  bool acceptTarget(boost::beast::string_view target);
 
   using ChannelMap =
     std::unordered_map<Connection, std::shared_ptr<Channel>, ConnectionHash>;
@@ -57,6 +59,8 @@ public:
 
   ChannelMap channels;
   std::deque<Message> incoming;
+
+  std::string invite_code;
 };
 
 
@@ -208,55 +212,19 @@ private:
   boost::asio::ip::tcp::socket socket;
   boost::beast::flat_buffer streamBuf;
   boost::beast::http::request<boost::beast::http::string_body> request;
+
+  const boost::beast::websocket::response_type badRequest(
+    boost::beast::http::request<boost::beast::http::string_body>& request,
+    boost::beast::string_view why);
+
+  template <typename Response>
+  void send(Response&& response);
 };
 
-
-void
-HTTPSession::start() {
-  boost::beast::http::async_read(socket, streamBuf, request,
-    [this, session = this->shared_from_this()]
-    (std::error_code ec, std::size_t /*bytes*/) {
-      if (ec) {
-        serverImpl.reportError("Error reading from HTTP stream.");
-
-      } else if (boost::beast::websocket::is_upgrade(request)) {
-        auto channel = std::make_shared<Channel>(std::move(socket), serverImpl);
-        channel->start(request);
-
-      } else {
-        session->handleRequest();
-      }
-    });
-}
-
-
-void
-HTTPSession::handleRequest() {
-  auto send = [this, session = this->shared_from_this()] (auto&& response) {
-    using Response = typename std::decay<decltype(response)>::type;
-    auto sharedResponse =
-      std::make_shared<Response>(std::forward<decltype(response)>(response));
-
-    boost::beast::http::async_write(socket, *sharedResponse,
-      [this, session, sharedResponse] (std::error_code ec, std::size_t /*bytes*/) {
-        if (ec) {
-          session->serverImpl.reportError("Error writing to HTTP stream");
-          socket.shutdown(boost::asio::ip::tcp::socket::shutdown_send);
-        } else if (sharedResponse->need_eof()) {
-          // This signifies a deliberate close
-          boost::system::error_code ec;
-          socket.shutdown(boost::asio::ip::tcp::socket::shutdown_send, ec);
-          if (ec) {
-            session->serverImpl.reportError("Error closing HTTP stream");
-          }
-        } else {
-          session->start();
-        }
-      });
-  };
-
-  auto const badRequest =
-    [&request = this->request] (boost::beast::string_view why) {
+const boost::beast::websocket::response_type
+HTTPSession::badRequest(
+  boost::beast::http::request<boost::beast::http::string_body>& request,
+  boost::beast::string_view why) {
     boost::beast::http::response<boost::beast::http::string_body> result {
       boost::beast::http::status::bad_request,
       request.version()
@@ -267,26 +235,72 @@ HTTPSession::handleRequest() {
     result.body() = why.to_string();
     result.prepare_payload();
     return result;
+}
+
+
+void
+HTTPSession::start() {
+  boost::beast::http::async_read(socket, streamBuf, request,
+    [this, session = this->shared_from_this()]
+    (std::error_code ec, std::size_t /*bytes*/) {
+      if (ec) {
+        serverImpl.reportError("Error reading from HTTP stream.");
+      } else if (!serverImpl.acceptTarget(request.target())) {
+        send(badRequest(request, "Incorrect invite code"));
+      } else if (boost::beast::websocket::is_upgrade(request)) {
+        auto channel = std::make_shared<Channel>(std::move(socket), serverImpl);
+        channel->start(request);
+
+      } else {
+        session->handleRequest();
+      }
+    });
+}
+
+template <typename Response>
+void HTTPSession::send (Response&& response) {
+  //using Response = typename std::decay<decltype(response)>::type;
+  auto sharedResponse =
+    std::make_shared<Response>(response);
+
+  boost::beast::http::async_write(socket, *sharedResponse,
+    [this, session = this->shared_from_this(), sharedResponse] (std::error_code ec, std::size_t /*bytes*/) {
+      if (ec) {
+        session->serverImpl.reportError("Error writing to HTTP stream");
+        socket.shutdown(boost::asio::ip::tcp::socket::shutdown_send);
+      } else if (sharedResponse->need_eof()) {
+        // This signifies a deliberate close
+        boost::system::error_code ec;
+        socket.shutdown(boost::asio::ip::tcp::socket::shutdown_send, ec);
+        if (ec) {
+          session->serverImpl.reportError("Error closing HTTP stream");
+        }
+      } else {
+        session->start();
+      }
+    });
   };
 
+void
+HTTPSession::handleRequest() {
   if (auto method = request.method();
       method != boost::beast::http::verb::get
       && method != boost::beast::http::verb::head) {
-    send(badRequest("Unknown HTTP-method"));
+    send(badRequest(request, "Unknown HTTP-method"));
   }
 
   // We only support index.html and /.
-  auto shouldServeIndex = [] (auto target) {
-    std::string const index = "/index.html"s;
-    constexpr auto npos = boost::beast::string_view::npos;
-    // NOTE: in C++20, we can use `ends_with` here instead.
-    return target == "/"
-      || (index.size() <= target.size()
-        && target.compare(target.size() - index.size(), npos, index) == 0);
-  };
-  if (!shouldServeIndex(request.target())) {
-    send(badRequest("Illegal request-target"));
-  }
+  // auto shouldServeIndex = [] (auto target) {
+  //   std::string const index = "/index.html"s;
+  //   constexpr auto npos = boost::beast::string_view::npos;
+  //   // NOTE: in C++20, we can use `ends_with` here instead.
+  //   return target == "/"
+  //     || (index.size() <= target.size()
+  //       && target.compare(target.size() - index.size(), npos, index) == 0);
+  // };
+  // if (!shouldServeIndex(request.target())) {
+  //  send(badRequest(request, "Illegal request-target"));
+  //}
        
   boost::beast::http::string_body::value_type body = serverImpl.httpMessage;
 
@@ -355,6 +369,12 @@ ServerImpl::reportError(std::string_view /*message*/) {
   // Swallow errors....
 }
 
+bool
+ServerImpl::acceptTarget(boost::beast::string_view target) {
+  std::cout << target.compare(invite_code) << std::endl;
+  return target.compare(invite_code) == 0;
+}
+
 void
 ServerImplDeleter::operator()(ServerImpl* serverImpl) {
   // NOTE: This is a custom deleter used to help hide the impl class. Thus
@@ -407,12 +427,13 @@ Server::disconnect(Connection connection) {
 std::unique_ptr<ServerImpl,ServerImplDeleter>
 Server::buildImpl(Server& server,
                   unsigned short port,
-                  std::string httpMessage) {
+                  std::string httpMessage,
+                  std::string invite_code) {
   // NOTE: We are using a custom deleter here so that the impl class can be
   // hidden within the source file rather than exposed in the header. Using
   // a custom deleter means that we need to use a raw `new` rather than using
   // `std::make_unique`.
-  auto* impl = new ServerImpl(server, port, std::move(httpMessage));
+  auto* impl = new ServerImpl(server, port, std::move(httpMessage), std::move(invite_code));
   return std::unique_ptr<ServerImpl,ServerImplDeleter>(impl);
 }
 

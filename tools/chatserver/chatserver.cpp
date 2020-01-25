@@ -90,14 +90,14 @@ getHTTPMessage(const char* htmlLocation) {
 
 int
 main(int argc, char* argv[]) {
-  if (argc < 3) {
-    std::cerr << "Usage:\n  " << argv[0] << " <port> <html response>\n"
-              << "  e.g. " << argv[0] << " 4002 ./webchat.html\n";
+  if (argc < 4) {
+    std::cerr << "Usage:\n  " << argv[0] << " <port> <html response> <invite code>\n"
+              << "  e.g. " << argv[0] << " 4002 ./webchat.html password\n";
     return 1;
   }
 
   unsigned short port = std::stoi(argv[1]);
-  Server server{port, getHTTPMessage(argv[2]), onConnect, onDisconnect};
+  Server server{port, getHTTPMessage(argv[2]), argv[3], onConnect, onDisconnect};
 
   while (true) {
     bool errorWhileUpdating = false;

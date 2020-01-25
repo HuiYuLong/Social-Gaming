@@ -95,10 +95,11 @@ public:
   template <typename C, typename D>
   Server(unsigned short port,
          std::string httpMessage,
+         std::string invite_code,
          C onConnect,
          D onDisconnect)
     : connectionHandler{std::make_unique<ConnectionHandlerImpl<C,D>>(onConnect, onDisconnect)},
-      impl{buildImpl(*this, port, std::move(httpMessage))}
+      impl{buildImpl(*this, port, std::move(httpMessage), std::move(invite_code))}
       { }
 
   /**
@@ -154,7 +155,7 @@ private:
   };
 
   static std::unique_ptr<ServerImpl,ServerImplDeleter>
-  buildImpl(Server& server, unsigned short port, std::string httpMessage);
+  buildImpl(Server& server, unsigned short port, std::string httpMessage, std::string invite_code);
 
   std::unique_ptr<ConnectionHandler> connectionHandler;
   std::unique_ptr<ServerImpl,ServerImplDeleter> impl;
