@@ -33,7 +33,7 @@ public:
    *  Construct a Client and acquire a connection to a remote Server at the
    *  given address and port.
    */
-  Client(std::string_view address, std::string_view port);
+  Client(std::string_view address, std::string_view port, std::string_view invite_code);
 
   /** Out of line default constructor for compilation firewall. */
   ~Client();

@@ -39,7 +39,7 @@ public:
      ioService{},
      acceptor{ioService, endpoint},
      httpMessage{std::move(httpMessage)},
-     invite_code{std::move(invite_code)} {
+     expectedTarget{std::move("/" + invite_code)} {
     listenForConnections();
   }
 
@@ -60,7 +60,7 @@ public:
   ChannelMap channels;
   std::deque<Message> incoming;
 
-  std::string invite_code;
+  std::string expectedTarget;
 };
 
 
@@ -371,8 +371,7 @@ ServerImpl::reportError(std::string_view /*message*/) {
 
 bool
 ServerImpl::acceptTarget(boost::beast::string_view target) {
-  std::cout << target.compare(invite_code) << std::endl;
-  return target.compare(invite_code) == 0;
+  return target.compare(expectedTarget) == 0;
 }
 
 void

@@ -16,12 +16,12 @@
 int
 main(int argc, char* argv[]) {
   if (argc < 3) {
-    std::cerr << "Usage: \n  " << argv[0] << " <ip address> <port>\n"
-              << "  e.g. " << argv[0] << " localhost 4002\n";
+    std::cerr << "Usage: \n  " << argv[0] << " <ip address> <port> <invite code>\n"
+              << "  e.g. " << argv[0] << " localhost 4002 password\n";
     return 1;
   }
 
-  networking::Client client{argv[1], argv[2]};
+  networking::Client client{argv[1], argv[2], argv[3]};
 
   bool done = false;
   auto onTextEntry = [&done, &client] (std::string text) {
