@@ -29,27 +29,28 @@ This project requires:
 
 1. Clone the repository.
 
-        git clone https://github.com/nsumner/web-socket-networking.git
+        git clone https://csil-git1.cs.surrey.sfu.ca/373-20-1-elvis/social-gaming.git
 
-2. Create a new directory for building.
+2. Change into the project directory.
 
-        mkdir networkbuild
+        cd social-gaming
 
-3. Change into the new directory.
+3. Create a directory for building and change into the new directory.
 
-        cd networkbuild
+        mkdir build && cd build
 
 4. Run CMake with the path to the source.
 
-        cmake ../web-socket-networking/
+        cmake ..
 
 5. Run make inside the build directory:
 
-        make
+        make -j<N>
 
-This produces `chatserver` and `chatclient` tools called `bin/chatserver` and
-`bin/chatclient` respectively. The library for single threaded clients and
-servers is built in `lib/`.
+N stands for the number of available cores. This produces `chatserver` and
+`chatclient` tools called `bin/chatserver` and `bin/chatclient`
+respectively. The library for single threaded clients and servers is built
+in `lib/`.
 
 Note, building with a tool like ninja can be done by adding `-G Ninja` to
 the cmake invocation and running `ninja` instead of `make`.
@@ -58,16 +59,17 @@ the cmake invocation and running `ninja` instead of `make`.
 ## Running the Example Chat Client and Chat Server
 
 First run the chat server on an unused port of the server machine. The server
-also takes an HTML file that it will server to standard http requests for
-`index.html`.
+also takes an HTML file that it will serve to standard http requests and an 
+invite code that will be used by the clients to connect to the server.
 
-    bin/chatserver 4000 ../web-socket-networking/webchat.html
+    bin/chatserver 4000 ../webchat.html password
 
 In separate terminals, run multiple instances of the chat client using:
 
-    bin/chatclient localhost 4000
+    bin/chatclient localhost 4000 password
 
-This will connect to the given port (4000 in this case) of the local machine.
+Where the last argument is the same invite code as above. This will connect
+to the given port (4000 in this case) of the local machine.
 Connecting to a remote machine can be done by explicitly using the remote
 machine's IP address instead of `localhost`. Inside the chat client, you can
 enter commands or chat with other clients by typing text and hitting the
@@ -76,7 +78,7 @@ down the server and disconnect all clients by typing `shutdown`. Typing
 anything else will send a chat message to other clients.
 
 A browser based interface can be accessed by opening the URL
-`http://localhost:4000/index.html`. The server will respond with the
+`http://localhost:4000/<invite code>`. The server will respond with the
 specified web page above. By clicking `Connect`, the page gains access to
 chat on the server via web sockets in browsers that support web sockets.
 
