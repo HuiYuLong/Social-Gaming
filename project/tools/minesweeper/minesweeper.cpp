@@ -3,7 +3,7 @@ using namespace std;
 #define NEW 0
 #define EXPERT 1
 int bomb = 10;
-
+char FLAG;
 class Cell {
 public:
 	Cell(): number(0), isRevealed(false), isMarked(false) {}
@@ -34,7 +34,7 @@ void gameLevel ()
     cout << "Enter the Difficulty Level\n"; 
     cout << "Press 0 for BEGINNER (8 * 8 Cells and 10 Bombs)\n"; 
     cout << "Press 1 for EXPERT (8 * 8 Cells and 30 Bombs)\n"; 
-    cin >> &difficulty; 
+    cin >> difficulty; 
   
     if (difficulty == NEW) 
     { 
@@ -84,34 +84,7 @@ void draw(){
 }
 
 int placeFlag(int row, int col,int realboard[][8]){
-	bool mark[64]; 
-  
-    memset (mark, false, sizeof (mark)); 
-  
-    // Continue until all random mines have been created. 
-    for (int i = 0; i < bomb; ) 
-     { 
-        int random = rand() % (64); 
-        int temp1 = random / 8; 
-        int temp2 = random % 8; 
-  
-        // Add the mine if no mine is placed at this 
-        // position on the board 
-        if (mark[random] == false) 
-        { 
-            // Row Index of the Mine 
-            row = temp1; 
-            // Column Index of the Mine 
-            col = temp2; 
-  
-            // Place the mine 
-            realBoard[row][col] = '*'; 
-            mark[random] = true; 
-            i++; 
-        } 
-    } 
-  
-    return; 
+
 }
 bool isBomb(int row, int col,int bombset[][8]){
 	if (bombset[row][col] == '*') 
@@ -120,9 +93,8 @@ bool isBomb(int row, int col,int bombset[][8]){
         return (false); 
 }
 
-void isValid(int row, int col,int bombset[][8]){
-    return (row >= 0) && (row < 8) && 
-           (col >= 0) && (col < 8); 
+bool isValid(int row, int col,int bombset[][8]){
+    return (row >= 0) && (row < 8) && (col >= 0) && (col < 8); 
 }
 
 //check adjacent bomb nearby,and return the number of bumb.
@@ -152,7 +124,10 @@ int check_adjacent(int row, int col,int bombset[][8]){
 
 }
 
+void checkWin(){
 
+
+}
 
 
 
