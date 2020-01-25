@@ -1,3 +1,5 @@
+// A temp copy of user.h
+
 #ifndef USER_H
 #define USER_H
 
@@ -26,17 +28,14 @@ public:
     // Constructor
     User(std::string username);
 
+    // Deconstructor
+    ~User();
+
     // Join a game
     void joinGame(std::string token);
 
     // Create a game
     void createGame(/* WILL NEED TO PASS SOME FORM OF JSON OR STRING */);
-
-    // Closes a game and kicks out all players
-    bool destroyGame(std::string gameName);
-
-    // Kick player out of a game
-    bool kickPlayer(std::string username);
 
     // Leave a game
     void leaveGame();
