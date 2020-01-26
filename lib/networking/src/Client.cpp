@@ -27,9 +27,10 @@ namespace networking {
 
 class Client::ClientImpl {
 public:
-  ClientImpl(std::string_view address, std::string_view port)
+  ClientImpl(std::string_view address, std::string_view port, std::string_view invite_code)
     : isClosed{false},
       hostAddress{address.data(), address.size()},
+      invite_code{invite_code.data(), invite_code.size()},
       ioService{},
       websocket{ioService} {
     boost::asio::ip::tcp::resolver resolver{ioService};
@@ -48,6 +49,7 @@ public:
 
   bool isClosed;
   std::string hostAddress;
+  std::string invite_code;
   boost::asio::io_service ioService;
   boost::beast::websocket::stream<boost::asio::ip::tcp::socket> websocket;
   boost::beast::multi_buffer readBuffer;
@@ -84,7 +86,7 @@ Client::ClientImpl::connect(boost::asio::ip::tcp::resolver::iterator endpoint) {
 
 void
 Client::ClientImpl::handshake() {
-  websocket.async_handshake(hostAddress, "/",
+  websocket.async_handshake(hostAddress, "/" + invite_code,
     [this] (auto errorCode) {
       if (!errorCode) {
         this->readMessage();
@@ -125,8 +127,8 @@ Client::ClientImpl::reportError(std::string_view /*message*/) {
 /////////////////////////////////////////////////////////////////////////////
 
 
-Client::Client(std::string_view address, std::string_view port)
-  : impl{std::make_unique<ClientImpl>(address, port)}
+Client::Client(std::string_view address, std::string_view port, std::string_view invite_code)
+  : impl{std::make_unique<ClientImpl>(address, port, invite_code)}
     { }
 
 
