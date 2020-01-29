@@ -14,10 +14,10 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <algorithm>
 
 
 namespace networking {
-
 
 /**
  *  An identifier for a Client connected to a Server. The ID of a Connection is
@@ -28,6 +28,30 @@ struct Connection {
 
   bool
   operator==(Connection other) const {
+    return id == other.id;
+  }
+};
+
+
+/**
+ * Since the server should be able to handle multiple games,
+ * some identifier is needed to distinguish different connections.
+ * Each game corresponds to a session, and each connection of the game belongs to that session.
+ */
+struct GameSession {
+  uintptr_t id;
+  Connection gameOwner;
+  std::string invite_code;
+  std::vector<Connection> players;
+
+  GameSession(Connection gameOwner, std::string_view invite_code):
+    id(reinterpret_cast<uintptr_t>(this)),
+    gameOwner(gameOwner),
+    invite_code(invite_code.data(), invite_code.size())
+    { players.push_back(gameOwner); }
+
+  bool
+  operator==(GameSession other) const {
     return id == other.id;
   }
 };
@@ -95,11 +119,10 @@ public:
   template <typename C, typename D>
   Server(unsigned short port,
          std::string httpMessage,
-         std::string invite_code,
          C onConnect,
          D onDisconnect)
     : connectionHandler{std::make_unique<ConnectionHandlerImpl<C,D>>(onConnect, onDisconnect)},
-      impl{buildImpl(*this, port, std::move(httpMessage), std::move(invite_code))}
+      impl{buildImpl(*this, port, std::move(httpMessage))}
       { }
 
   /**
@@ -124,6 +147,11 @@ public:
    *  Disconnect the Client specified by the given Connection.
    */
   void disconnect(Connection connection);
+
+  /**
+   *  Publicly available collection of sessions
+   */
+  std::unordered_map<Connection, GameSession*, ConnectionHash> sessionMap;
 
 private:
   friend class ServerImpl;
@@ -155,7 +183,7 @@ private:
   };
 
   static std::unique_ptr<ServerImpl,ServerImplDeleter>
-  buildImpl(Server& server, unsigned short port, std::string httpMessage, std::string invite_code);
+  buildImpl(Server& server, unsigned short port, std::string httpMessage);
 
   std::unique_ptr<ConnectionHandler> connectionHandler;
   std::unique_ptr<ServerImpl,ServerImplDeleter> impl;
