@@ -15,6 +15,7 @@
 #include <string>
 #include <unordered_map>
 #include <algorithm>
+#include <sstream>
 
 
 namespace networking {
@@ -43,6 +44,7 @@ struct GameSession {
   Connection gameOwner;
   std::string invite_code;
   std::vector<Connection> players;
+  std::ostringstream communication;
 
   GameSession(Connection gameOwner, std::string_view invite_code):
     id(reinterpret_cast<uintptr_t>(this)),
@@ -152,6 +154,8 @@ public:
    *  Publicly available collection of sessions
    */
   std::unordered_map<Connection, GameSession*, ConnectionHash> sessionMap;
+
+  std::vector<std::unique_ptr<GameSession>> gameSessions;
 
 private:
   friend class ServerImpl;
