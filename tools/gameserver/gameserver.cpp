@@ -50,7 +50,7 @@ processMessages(Server& server, const std::deque<Message>& incoming) {
       if(session->gameOwner == message.connection)
       {
         std::cout << "Shutting down session " << session->id << std::endl;
-        for (Connection player : session->players)
+        for (Connection player : std::vector<Connection>(session->players))
           server.disconnect(player);
       }
     } else {

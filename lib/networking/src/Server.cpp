@@ -252,6 +252,7 @@ HTTPSession::assignGameSession(const Channel* channel)
   }
   serverImpl.server.gameSessions.emplace_back(std::make_unique<GameSession>(connection, std::string_view(request.target().data(), request.target().size())));
   serverImpl.server.sessionMap[connection] = serverImpl.server.gameSessions.back().get();
+  std::cout << "Started new session " << serverImpl.server.gameSessions.back()->id << std::endl;
 }
 
 
@@ -429,7 +430,10 @@ Server::disconnect(Connection connection) {
     auto session = impl->server.sessionMap.at(connection);
     session->players.erase(std::remove(std::begin(session->players), std::end(session->players), connection), std::end(session->players));
     if(session->players.empty())
+    {
+      std::cout << "Shutting down session " << session->id << std::endl;
       impl->server.gameSessions.erase(std::remove_if(std::begin(impl->server.gameSessions), std::end(impl->server.gameSessions), [](std::unique_ptr<GameSession>& session) { return session->players.empty(); }), std::end(impl->server.gameSessions));
+    }
     impl->server.sessionMap.erase(connection);
   }
 }
