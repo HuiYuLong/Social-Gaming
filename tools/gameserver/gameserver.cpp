@@ -19,6 +19,7 @@
 using networking::Server;
 using networking::Connection;
 using networking::Message;
+using networking::GameSession;
 
 
 std::vector<Connection> clients;
@@ -39,36 +40,39 @@ onDisconnect(Connection c) {
 }
 
 
-struct MessageResult {
-  std::string result;
-  bool shouldShutdown;
-};
-
-
-MessageResult
+std::deque<Message>
 processMessages(Server& server, const std::deque<Message>& incoming) {
-  std::ostringstream result;
-  bool quit = false;
   for (auto& message : incoming) {
     if (message.text == "quit") {
       server.disconnect(message.connection);
     } else if (message.text == "shutdown") {
-      std::cout << "Shutting down.\n";
-      quit = true;
+      GameSession* session = server.sessionMap[message.connection];
+      if(session->gameOwner == message.connection)
+      {
+        std::cout << "Shutting down session " << session->id << std::endl;
+        for (Connection player : std::vector<Connection>(session->players))
+          server.disconnect(player);
+      }
     } else {
-      result << message.connection.id << "> " << message.text << "\n";
+      server.sessionMap[message.connection]->communication << message.connection.id << "> " << message.text << "\n";
     }
   }
-  return MessageResult{result.str(), quit};
-}
 
-
-std::deque<Message>
-buildOutgoing(const std::string& log) {
   std::deque<Message> outgoing;
-  for (auto client : clients) {
-    outgoing.push_back({client, log});
+  for (auto client : clients)
+  {
+    outgoing.push_back({client, server.sessionMap[client]->communication.str()});
   }
+  for (auto& session : server.gameSessions)
+  {
+    session->communication.str(""); // clear the stream
+  }
+  // std::vector<std::string> output(server.gameSessions.size());
+  // std::transform(server.gameSessions.begin(), server.gameSessions.end(), output.begin(), [](GameSession& session) {
+  //   std::string temp = session.communication.str();
+  //   session.communication.str("");  // clear the stream
+  //   return temp;
+  // });
   return outgoing;
 }
 
@@ -90,37 +94,30 @@ getHTTPMessage(const char* htmlLocation) {
 
 int
 main(int argc, char* argv[]) {
-  if (argc < 4) {
-    std::cerr << "Usage:\n  " << argv[0] << " <port> <html response> <invite code>\n"
-              << "  e.g. " << argv[0] << " 4002 ./webchat.html password\n";
+  if (argc < 3) {
+    std::cerr << "Usage:\n  " << argv[0] << " <port> <html response>\n"
+              << "  e.g. " << argv[0] << " 4002 ./webchat.html\n";
     return 1;
   }
 
   unsigned short port = std::stoi(argv[1]);
-  Server server{port, getHTTPMessage(argv[2]), argv[3], onConnect, onDisconnect};
+  Server server{port, getHTTPMessage(argv[2]), onConnect, onDisconnect};
 
   while (true) {
-    bool errorWhileUpdating = false;
     try {
       server.update();
     } catch (std::exception& e) {
       std::cerr << "Exception from Server update:\n"
                 << " " << e.what() << "\n\n";
-      errorWhileUpdating = true;
+      break;
     }
 
     auto incoming = server.receive();
-    auto [log, shouldQuit] = processMessages(server, incoming);
-    auto outgoing = buildOutgoing(log);
+    auto outgoing = processMessages(server, incoming);
     server.send(outgoing);
-
-    if (shouldQuit || errorWhileUpdating) {
-      break;
-    }
 
     sleep(1);
   }
 
   return 0;
 }
-
