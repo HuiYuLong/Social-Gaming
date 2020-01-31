@@ -19,3 +19,12 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/lib")
 add_subdirectory(lib)
 add_subdirectory(tools)
 
+# This is for testing
+include_directories(
+  ${CMAKE_SOURCE_DIR}/test/lib/googletest/include/
+  ${CMAKE_SOURCE_DIR}/test/lib/googlemock/include/
+)
+
+add_subdirectory(lib)
+add_subdirectory(test)
+
