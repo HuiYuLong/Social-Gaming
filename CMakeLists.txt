@@ -29,5 +29,6 @@ include_directories(
   ${CMAKE_SOURCE_DIR}/test/lib/googlemock/include/
 )
 
-add_subdirectory(test)
+# Will enable tests when makefile works
+# add_subdirectory(test)
 
