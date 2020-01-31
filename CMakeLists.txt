@@ -25,6 +25,5 @@ include_directories(
   ${CMAKE_SOURCE_DIR}/test/lib/googlemock/include/
 )
 
-add_subdirectory(lib)
 add_subdirectory(test)
 
