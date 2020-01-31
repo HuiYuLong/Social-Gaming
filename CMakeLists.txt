@@ -12,9 +12,14 @@ set(CMAKE_CXX_FLAGS_DEBUG
     "-O0 -g -fsanitize=address,undefined -fno-omit-frame-pointer"
 )
 
+add_definitions(-DBOOST_ERROR_CODE_HEADER_ONLY)
+
+
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/lib")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/lib")
+
+
 
 add_subdirectory(lib)
 add_subdirectory(tools)

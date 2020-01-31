@@ -11,6 +11,12 @@
 #include <boost/asio.hpp>
 #include <boost/beast.hpp>
 
+#include <iostream>
+#include <string>
+#include <map>
+#include <vector>
+
+
 using namespace std::string_literals;
 using networking::Message;
 using networking::Server;

@@ -16,6 +16,8 @@
 #include <unordered_map>
 #include <algorithm>
 #include <sstream>
+#include <vector>
+
 
 
 namespace networking {
