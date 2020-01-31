@@ -1,4 +1,4 @@
-#include <interpreter.h>
+#include "interpreter.h"
 
 class Interpreter {
 public:
@@ -23,9 +23,24 @@ public:
 	void destoryGame() {
 		delete this->configuration;
 	}
+	
 
 private:
 };
+
+//------------------------------------------Rule Class----------------------------------------//
+using namespace std;
+using Rules::OutputRule;
+// using nlohmann::json;
+std::string OutputRule::getRule(json jsonObjet) {
+	for (auto& element : jsonObjet) {
+		cout << jsonObjet["rule"];
+	}
+}
+
+
+
+//--------------------------------------End of Rule Class-------------------------------------//
 
 int main() {
 
@@ -61,6 +76,10 @@ int main() {
 	Interpreter* interpreter = new Interpreter(jsonObject);
 	interpreter->createGame();
 	interpreter->destoryGame();
+
+	//------------------------------------Rule Class testing--------------------------------//
+	OutputRule rules;
+	rules.getRule(jsonObject);
 
 	return 0;
 }

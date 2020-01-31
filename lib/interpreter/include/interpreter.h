@@ -6,6 +6,7 @@
 #include <fstream>
 #include <sstream>
 
+using nlohmann::json;
 
 class Configuration {
 public:
@@ -13,7 +14,7 @@ public:
 	int playerCountMin;
 	int playerCountMax;
 	bool audience;
-	nlohmann::json setup;
+	json setup;
 	Configuration(std::string name) {
 		this->name = name;
 	}
@@ -34,13 +35,20 @@ public:
 // maybe we should construct separate class for the different rule classes?
 // ex) OutputRule, InputRule, ArithmeticRule, ListOpsRule, ControlStructRule ...
 
-class Rule {
-public:
+//------------------------------------------Rule Class----------------------------------------//
+namespace Rules {
+	class OutputRule {
+	public:
+		std::string getRule(json jsonObject);
+
+	};
 	std::string type; // "foreach", "scores" -> the field under "rule": in the json
 	int list;
 	std::string element;
 	//Graph rules; // a graph data structure to hold subrules ... implementation to be further discussed.
 };
+
+//--------------------------------------End of Rule Class-------------------------------------//
 
 class Player {
 public:
