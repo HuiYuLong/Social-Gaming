@@ -63,6 +63,8 @@ private:
 
 class PerPlayer {
 public:
+	int wins;
+
 };
 
 // maybe we should construct separate class for the different rule classes?
@@ -80,6 +82,7 @@ public:
 //
 class Player {
 public:
+	Player(): playerName(""),username(""),password(""),playerEmail(""){}
 	bool IsAdminPlayer;
 	bool IsActive;
 	std::string playerName;
@@ -106,9 +109,6 @@ public:
 	void printPlayerInfo();
 
 	//
-	
-
-
 
 private:
 
