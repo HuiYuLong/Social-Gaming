@@ -93,16 +93,17 @@ public:
 	std::string getplayerEmail()const;
 	std::string getplayerBirthday()const;
 	std::string getplayerFirstDayInGame()const;
-	std::string printPlayerInfo()const;
+
 
 	//setter
-	void setUsername(std::string username)const;
-	void setPlayeID(std::string playerID)const;
-	void setPassword(std::string password)const;
+	void setUsername(const std::string username);
+	void setPlayeID(const std::string playerID);
+	void setPassword(const std::string password);
 
-	void setplayerEmail(std::string playerEmail)const;
-	void setplayerBirthday(std::string playerBirthday)const;
-	void setplayerFirstDayInGame(std::string playerFirstDayInGame)const;
+	void setplayerEmail(const std::string playerEmail);
+	void setplayerBirthday(const std::string playerBirthday);
+	void setplayerFirstDayInGame(const std::string playerFirstDayInGame);
+	void printPlayerInfo();
 
 	//
 	

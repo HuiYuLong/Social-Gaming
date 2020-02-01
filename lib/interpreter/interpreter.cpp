@@ -1,9 +1,13 @@
 #include <interpreter.h>
+#include <iostream>
+
 
 class Interpreter {
 public:
 	Configuration* configuration;
 	Constants* constants;
+	Player* players;
+
 	Interpreter(nlohmann::json gameConfig) {
 		// filling out the Configuration object for the interpreter
 		// example of iterating over the jsonObject
@@ -26,6 +30,66 @@ public:
 
 private:
 };
+
+class player{
+	public:
+		std::string getUsername()const{
+			return username;
+		};
+		std::string getPlayeID()const{
+			return playerID;
+		}
+		std::string getPassword()const{
+			return password;
+		}
+
+		std::string getplayerEmail()const{
+			return playerEmail;
+		}
+		std::string getplayerBirthday()const{
+			return playerBirthday;
+		}
+		std::string getplayerFirstDayInGame()const{
+			return playerFirstDayInGame;
+		}
+		void printPlayerInfo(){
+
+			//cout<<"Birthday: "<< getplayerBirthday()<<endl;
+		}
+
+		//setter
+		
+		void setUsername(const std::string username){
+			this->username=username;
+		}
+		void setPlayeID(const std::string playerID){
+			this->playerID=playerID;
+		}
+		void setPassword(const std::string password){
+			this->password=password;
+		}
+
+		void setplayerEmail(const std::string playerEmail){
+			this->playerEmail=playerEmail;
+		}
+		void setplayerBirthday(const std::string playerBirthday){
+			this->playerBirthday=playerBirthday;
+		}
+		void setplayerFirstDayInGame(const std::string playerFirstDayInGame){
+			this->playerFirstDayInGame=playerFirstDayInGame;
+		}
+			
+	private:
+		std::string playerID;
+		std::string username; 
+		std::string password;
+
+		std::string playerEmail;
+		std::string playerBirthday;
+		std::string playerFirstDayInGame;
+
+};
+
 
 int main() {
 
