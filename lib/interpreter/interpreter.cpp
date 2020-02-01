@@ -4,31 +4,27 @@ class Interpreter {
 public:
 	Configuration* configuration;
 	Constants* constants;
-	Variables* variables;
-	PerPlayer* perPlayer;
-//	PerAudience* perAudience;
-	Rule* rules;
-
 	Interpreter(nlohmann::json gameConfig) {
 		// filling out the Configuration object for the interpreter
 		// example of iterating over the jsonObject
 		for (auto& item : gameConfig.items()) {
 			if (item.key().compare("configuration") == 0) {
-				configuration = new Configuration(item.value()["name"],item.value()["player count"]["min"], item.value()["player count"]["max"], item.value()["audience"], item.value()["setup"]["Rounds"]);
-				configuration->print();
+				configuration = new Configuration(item.value()["name"]);
+				std::cout << "We will be playing: " << item.value()["name"] << std::endl;
 			}
 		}
 
 	}
 
 	void createGame() { // more parameters to be added
-		std::cout << "just cheking what we will be playing: " << configuration->getName() << std::endl;
+		std::cout << "just cheking what we will be playing: " << configuration->name << std::endl;
 	}
 
 	void destoryGame() {
 		delete this->configuration;
 	}
 
+private:
 };
 
 int main() {
