@@ -76,6 +76,49 @@ public:
 	//Graph rules; // a graph data structure to hold subrules ... implementation to be further discussed.
 };
 
+
+//
 class Player {
 public:
+	bool IsAdminPlayer;
+	bool IsActive;
+	std::string playerName;
+	std::string Playermotto;
+
+	//getter
+	std::string getUsername()const;
+	std::string getPlayeID()const;
+	std::string getPassword()const;
+
+	std::string getplayerEmail()const;
+	std::string getplayerBirthday()const;
+	std::string getplayerFirstDayInGame()const;
+	std::string printPlayerInfo()const;
+
+	//setter
+	void setUsername(std::string username)const;
+	void setPlayeID(std::string playerID)const;
+	void setPassword(std::string password)const;
+
+	void setplayerEmail(std::string playerEmail)const;
+	void setplayerBirthday(std::string playerBirthday)const;
+	void setplayerFirstDayInGame(std::string playerFirstDayInGame)const;
+
+	//
+	
+
+
+
+private:
+
+
+	std::string playerID;
+	std::string username;  //unique
+	std::string password;
+
+	std::string playerEmail;
+	std::string playerBirthday;
+	std::string playerFirstDayInGame;
+	nlohmann::json setup;
+
 };
