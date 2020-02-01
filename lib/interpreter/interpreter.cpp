@@ -38,6 +38,38 @@ int main() {
 
 	std::ifstream jsonFileStream("../../configs/games/rock_paper_scissors.json"); // read file
 	nlohmann::json jsonObject = nlohmann::json::parse(jsonFileStream);
+	
+	// To make sure you can open the file
+    if (!jsonFileStream)
+    {
+        std::cout << "cannot open file" << std::endl;
+        return 0;
+    }
+
+//-----------------------------------------Rule Tests--------------------------------------//
+	nlohmann::json jsonObject = nlohmann::json::parse(jsonFileStream);
+    std::cout << "Objects in the file jsonObject: " << jsonObject.size() << std::endl;
+    // auto rule1 = jsonObject["rules"][0]["rule"];
+    auto rule2 = jsonObject["rules"][1]["rule"];
+    // auto rule3 = jsonObject["rules"][0]["rules"];
+    // auto Global_msg = jsonObject["rules"][0]["rules"][0];
+    // auto Rules_choices = jsonObject["rules"][0]["rules"][1];
+    // auto choices = jsonObject["rules"][0]["rules"][1]["rules"];
+    // // auto inputChoice = jsonObject["rules"][0]["rules"][1]["rules"][1];
+    // auto parallelFor = jsonObject["rules"][0]["rules"][1];    
+    // auto inputChoice = jsonObject["rules"][0]["rules"][1]["rules"];    
+    // auto Discard = jsonObject["rules"][0]["rules"][2]; 
+    // auto forEach = jsonObject["rules"][0]["rules"][3];
+    // // auto when = jsonObject["rules"][0]["rules"][3]["rules"];
+    // auto when = jsonObject["rules"][0]["rules"][4];
+    // std::cout << rule2 << std::endl;
+    // cout << rule3 << endl;
+    // cout << Global_msg << endl;
+    // cout << inputChoice << endl;
+    // cout << inputChoice << endl;
+    // cout << when << endl;
+
+    //--------------------------------------End of rule Tests------------------------------------//
 
 	// auto name = jsonObject["configuration"]["name"].get<std::string>(); // both methods work just fine
 	// auto name = jsonObject["configuration"]["name"];
