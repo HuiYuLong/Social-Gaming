@@ -91,13 +91,69 @@ public:
 // maybe we should construct separate class for the different rule classes?
 // ex) OutputRule, InputRule, ArithmeticRule, ListOpsRule, ControlStructRule ...
 
+//-------------------------------------------Rule Class---------------------------------------//
 class Rule {
-public:
-	std::string type; // "foreach", "scores" -> the field under "rule": in the json
-	int list;
-	std::string element;
+public: 
+    enum class type {  // "foreach", "scores" -> the field under "rule": in the json
+        forEach,
+        globalMsg,
+        parallelFor,
+        inputChoice,
+        Discard,
+        When,
+        Extend,
+        add,
+        scores
+    };
+	enum class forEach {
+        list,
+        element,
+        rules
+    };
+    enum class globalMsg {
+        value
+    };
+    enum class parallelFor {
+        list,
+        element,
+        rules
+    };
+    enum class inputChoice {
+        to,
+        prompt,
+        choices,
+        result,
+        timeout
+    };
+    enum class Discard {
+        from,
+        count
+    };
+    enum class When {
+        
+    };
+    enum class Extend {
+        target,
+        list
+    };
+    enum class add {
+        to,
+        value
+    };
+    enum class scores {
+        score, 
+        ascending
+    };
+
+
+    // auto getScores(json jsonObject) {
+    //     auto title = jsonObject["rules"][1]["rule"];
+    //     scores::score newGame;
+    // };
+
 	//Graph rules; // a graph data structure to hold subrules ... implementation to be further discussed.
 };
+//----------------------------------------End Of Rule Class---------------------------------------//
 
 class Player {
 public:
