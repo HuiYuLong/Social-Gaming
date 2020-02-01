@@ -6,6 +6,7 @@
 #include <fstream>
 #include <sstream>
 
+// classes in this header are under construction
 
 class Configuration {
 public:
