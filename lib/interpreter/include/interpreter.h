@@ -92,8 +92,9 @@ public:
 // ex) OutputRule, InputRule, ArithmeticRule, ListOpsRule, ControlStructRule ...
 
 //-------------------------------------------Rule Class---------------------------------------//
-class Rule {
-public: 
+namespace Rule {
+
+    template<typename scores> struct EnumTraits;
     enum class type {  // "foreach", "scores" -> the field under "rule": in the json
         forEach,
         globalMsg,
@@ -142,14 +143,29 @@ public:
     };
     enum class scores {
         score, 
-        ascending
+        ascending,
+    };
+    // reference: https://en.cppreference.com/w/cpp/language/enum
+    //enumeration types (both scoped and unscoped) can have overloaded operators
+    std::ostream& operator<<(std::ostream& os, scores c)
+    {
+        switch(c)
+        {
+            case scores::score    : os << "scores";    break;
+            case scores::ascending: os << "ascending";    break;
+            default    : os.setstate(std::ios_base::failbit);
+        }
+        return os;
+    }
+ 
+    template<> struct EnumTraits<scores> { static constexpr scores LAST = scores::ascending; };
+    auto getScores(nlohmann::json jsonObject) {    
+            auto items = EnumTraits<scores>::LAST;
+            std::cout << items << std::endl;
+        // Rule::scores newRule = Rule::scores::score;
+        // newRule = jsonObject["rules"][1]["rule"];
     };
 
-
-    // auto getScores(json jsonObject) {
-    //     auto title = jsonObject["rules"][1]["rule"];
-    //     scores::score newGame;
-    // };
 
 	//Graph rules; // a graph data structure to hold subrules ... implementation to be further discussed.
 };

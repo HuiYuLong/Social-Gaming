@@ -7,7 +7,7 @@ public:
 	Variables* variables;
 	PerPlayer* perPlayer;
 //	PerAudience* perAudience;
-	Rule* rules;
+	// Rule* rules;
 
 	Interpreter(nlohmann::json gameConfig) {
 		// filling out the Configuration object for the interpreter
@@ -36,7 +36,8 @@ int main() {
 	//std::istringstream iss("{\"json\": \"beta\"}"); // code manually create a small json file
 	//nlohmann::json jsonObject = nlohmann::json::parse(iss);
 
-	std::ifstream jsonFileStream("../../configs/games/rock_paper_scissors.json"); // read file
+	// std::ifstream jsonFileStream("../../configs/games/rock_paper_scissors.json"); // read file
+	std::ifstream jsonFileStream("/home/sophia/spring2020/cmpt373/social-gaming/configs/games/rock_paper_scissors.json"); // read file
 	nlohmann::json jsonObject = nlohmann::json::parse(jsonFileStream);
 	
 	// To make sure you can open the file
@@ -47,7 +48,6 @@ int main() {
     }
 
 //-----------------------------------------Rule Tests--------------------------------------//
-	nlohmann::json jsonObject = nlohmann::json::parse(jsonFileStream);
     std::cout << "Objects in the file jsonObject: " << jsonObject.size() << std::endl;
     // auto rule1 = jsonObject["rules"][0]["rule"];
     auto rule2 = jsonObject["rules"][1]["rule"];
@@ -67,7 +67,8 @@ int main() {
     // cout << Global_msg << endl;
     // cout << inputChoice << endl;
     // cout << inputChoice << endl;
-    // cout << when << endl;
+    // cout << when << endl; 
+    Rule::getScores(jsonObject);
 
     //--------------------------------------End of rule Tests------------------------------------//
 
