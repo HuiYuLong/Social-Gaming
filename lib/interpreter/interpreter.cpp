@@ -36,8 +36,8 @@ int main() {
 	//std::istringstream iss("{\"json\": \"beta\"}"); // code manually create a small json file
 	//nlohmann::json jsonObject = nlohmann::json::parse(iss);
 
-	// std::ifstream jsonFileStream("../../configs/games/rock_paper_scissors.json"); // read file
-	std::ifstream jsonFileStream("/home/sophia/spring2020/cmpt373/social-gaming/configs/games/rock_paper_scissors.json"); // read file
+	std::ifstream jsonFileStream("../../configs/games/rock_paper_scissors.json"); // read file
+// 	std::ifstream jsonFileStream("/home/sophia/spring2020/cmpt373/social-gaming/configs/games/rock_paper_scissors.json"); // read file
 	nlohmann::json jsonObject = nlohmann::json::parse(jsonFileStream);
 	
 	// To make sure you can open the file
