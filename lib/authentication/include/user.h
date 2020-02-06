@@ -11,7 +11,7 @@ namespace rolls
 class User {
 public:
     // Define User Types. One of 'GAMER', 'OWNER', or 'MAINTAINER'
-    enum class UserType : uint8_t {
+    enum class UserType : uint8_t{
         GAMER,      // Someone who joins a game --> DEFAULT for now
         OWNER,      // Someone who creates a game
         MAINTAINER  // Server maintainer --> Not used yet
@@ -26,17 +26,14 @@ public:
     // Constructor
     User(std::string username);
 
+    // Deconstructor
+    ~User();
+
     // Join a game
     void joinGame(std::string token);
 
     // Create a game
     void createGame(/* WILL NEED TO PASS SOME FORM OF JSON OR STRING */);
-
-    // Closes a game and kicks out all players
-    bool destroyGame(std::string gameName);
-
-    // Kick player out of a game
-    bool kickPlayer(std::string username);
 
     // Leave a game
     void leaveGame();
@@ -46,6 +43,8 @@ public:
 
     // List the game a user has created
     void listGamesCreated(const std::vector<std::string>& gamesCreated);
+
+    UserType getUserType() { return userType; };
     
 };  // class Users
 }   // namespace rolls
