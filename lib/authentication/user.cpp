@@ -11,8 +11,6 @@ User::User(std::string username)
     assert(!username.empty() && "Error, cannot create an empty username!");
 }
 
-User::~User() = default;
-
 void
 User::joinGame(std::string token)
 {
