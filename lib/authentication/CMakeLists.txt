@@ -1,4 +1,9 @@
-set(HEADER_FILES ../authentication/include}/file1.h)
+project(authentication)
+
+include_directories(include)
+add_executable(authentication user.cpp)
+
+
+set(HEADER_FILES ../authentication/include/user.h)
 
 add_library(mylib user.cpp ${HEADER_FILES})
-add_executable(myexec user.cpp ${HEADER_FILES})
