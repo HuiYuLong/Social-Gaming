@@ -32,17 +32,18 @@ public:
 };
 
 
-//parseRule function recursively searching for "rule" key and print out the value (name of the rule)
+//parseRule function recursively searching for "rule" key and print out the value (name of the)
 void parseRule(const nlohmann::json& j){
 	if(j.is_object()){
 		for (const auto& item: j.items()){
 			if (!item.key().compare("rule")){
 				std::cout << item.value() << "\n";
-			} else if(item.value().is_object() || item.value().is_array()){
+			} else if(!item.key().compare("rules") || item.value().is_array()){
 				parseRule(item.value());
 			}
 		}
 	} else if (j.is_array()){
+		// std::cout << j.size() << "\n";
 		for (const auto& item: j){
 			parseRule(item);
 		}
