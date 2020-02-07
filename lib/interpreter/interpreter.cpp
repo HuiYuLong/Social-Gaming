@@ -4,27 +4,31 @@ class Interpreter {
 public:
 	Configuration* configuration;
 	Constants* constants;
+	Variables* variables;
+	PerPlayer* perPlayer;
+//	PerAudience* perAudience;
+	// Rule* rules;
+
 	Interpreter(nlohmann::json gameConfig) {
 		// filling out the Configuration object for the interpreter
 		// example of iterating over the jsonObject
 		for (auto& item : gameConfig.items()) {
 			if (item.key().compare("configuration") == 0) {
-				configuration = new Configuration(item.value()["name"]);
-				std::cout << "We will be playing: " << item.value()["name"] << std::endl;
+				configuration = new Configuration(item.value()["name"],item.value()["player count"]["min"], item.value()["player count"]["max"], item.value()["audience"], item.value()["setup"]["Rounds"]);
+				configuration->print();
 			}
 		}
 
 	}
 
 	void createGame() { // more parameters to be added
-		std::cout << "just cheking what we will be playing: " << configuration->name << std::endl;
+		std::cout << "just cheking what we will be playing: " << configuration->getName() << std::endl;
 	}
 
 	void destoryGame() {
 		delete this->configuration;
 	}
 
-private:
 };
 
 int main() {
@@ -33,7 +37,40 @@ int main() {
 	//nlohmann::json jsonObject = nlohmann::json::parse(iss);
 
 	std::ifstream jsonFileStream("../../configs/games/rock_paper_scissors.json"); // read file
+// 	std::ifstream jsonFileStream("/home/sophia/spring2020/cmpt373/social-gaming/configs/games/rock_paper_scissors.json"); // read file
 	nlohmann::json jsonObject = nlohmann::json::parse(jsonFileStream);
+	
+	// To make sure you can open the file
+    if (!jsonFileStream)
+    {
+        std::cout << "cannot open file" << std::endl;
+        return 0;
+    }
+
+//-----------------------------------------Rule Tests--------------------------------------//
+    std::cout << "Objects in the file jsonObject: " << jsonObject.size() << std::endl;
+    // auto rule1 = jsonObject["rules"][0]["rule"];
+    auto rule2 = jsonObject["rules"][1]["rule"];
+    // auto rule3 = jsonObject["rules"][0]["rules"];
+    // auto Global_msg = jsonObject["rules"][0]["rules"][0];
+    // auto Rules_choices = jsonObject["rules"][0]["rules"][1];
+    // auto choices = jsonObject["rules"][0]["rules"][1]["rules"];
+    // // auto inputChoice = jsonObject["rules"][0]["rules"][1]["rules"][1];
+    // auto parallelFor = jsonObject["rules"][0]["rules"][1];    
+    // auto inputChoice = jsonObject["rules"][0]["rules"][1]["rules"];    
+    // auto Discard = jsonObject["rules"][0]["rules"][2]; 
+    // auto forEach = jsonObject["rules"][0]["rules"][3];
+    // // auto when = jsonObject["rules"][0]["rules"][3]["rules"];
+    // auto when = jsonObject["rules"][0]["rules"][4];
+    // std::cout << rule2 << std::endl;
+    // cout << rule3 << endl;
+    // cout << Global_msg << endl;
+    // cout << inputChoice << endl;
+    // cout << inputChoice << endl;
+    // cout << when << endl; 
+    Rule::getScores(jsonObject);
+
+    //--------------------------------------End of rule Tests------------------------------------//
 
 	// auto name = jsonObject["configuration"]["name"].get<std::string>(); // both methods work just fine
 	// auto name = jsonObject["configuration"]["name"];
