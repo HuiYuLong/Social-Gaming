@@ -235,6 +235,7 @@ public:
 };
 
 //-------------------------------Sophia's Code------------------------------//
+enum class ruleType { string, list, json };
 class forEachRule : public Rule {
 private:
     ruleType list;
