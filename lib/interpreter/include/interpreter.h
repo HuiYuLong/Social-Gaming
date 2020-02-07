@@ -44,6 +44,8 @@ private:
 	int round;
 };
 
+
+
 class Constants {
 public:
 	Constants(): name(""), beats("") {}
@@ -100,6 +102,11 @@ public:
     Rule(const type& rule): rule(rule){}
     type getRule() const {return rule;}
     void setRule(const type& rule) {this->rule = rule;}
+};
+
+class Case {
+	std::string caseString;
+	std::vector<Rule> rules;
 };
 
 //-----------------------PETER'S CODE:---------------------------------
@@ -236,12 +243,6 @@ public:
 
 //-------------------------------Sophia's Code------------------------------//
 enum class ruleType { string, list, json };
-class forEachRule : public Rule {
-private:
-    ruleType list;
-    ruleType element;
-    std::vector<Rule> subrules;
-};
 
 class extendRule : public Rule {
 private:
@@ -289,6 +290,48 @@ class listAttributesRule : public Rule {
     ruleType roles;
 };
 
+//-------------------------------Junho's Code------------------------------//
+
+class ForEachRule : public Rule {
+private:
+    ruleType list;
+    ruleType element;
+    std::vector<Rule> subrules;
+};
+
+class LoopRule : public Rule {
+private:
+    ruleType target;
+    ruleType until;
+    ruleType whileCondition;
+    std::vector<Rule> subrules;
+};
+  
+class InParallelRule : public Rule {
+private:
+    std::vector<Rule> subrules;
+};
+
+class ParallelForRule : public Rule {
+private:
+    ruleType list;
+    ruleType element;
+    std::vector<Rule> subrules;
+};
+
+// Sorts a list in ascending order
+class SwitchRule : public Rule {
+private:
+    ruleType list;
+    ruleType value;
+    std::vector<Case> cases;
+};
+
+class WhenRule : public Rule {
+private:
+    ruleType count;
+    std::vector<Case> cases;
+};
 
 //----------------------------------------End Of Rule Class---------------------------------------//
 
