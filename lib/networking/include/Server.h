@@ -49,7 +49,7 @@ struct GameSession {
   GameSession(Connection gameOwner, std::string_view invite_code):
     id(reinterpret_cast<uintptr_t>(this)),
     gameOwner(gameOwner),
-    invite_code(invite_code.data(), invite_code.size())
+    invite_code(invite_code)
     { players.push_back(gameOwner); }
 
   bool
@@ -150,13 +150,6 @@ public:
    */
   void disconnect(Connection connection);
 
-  /**
-   *  Publicly available collection of sessions
-   */
-  std::unordered_map<Connection, GameSession*, ConnectionHash> sessionMap;
-
-  std::vector<std::unique_ptr<GameSession>> gameSessions;
-
 private:
   friend class ServerImpl;
 
@@ -167,7 +160,7 @@ private:
   class ConnectionHandler {
   public:
     virtual ~ConnectionHandler() = default;
-    virtual void handleConnect(Connection) = 0;
+    virtual void handleConnect(Connection, std::string_view) = 0;
     virtual void handleDisconnect(Connection) = 0;
   };
 
@@ -179,7 +172,7 @@ private:
         onDisconnect{std::move(onDisconnect)}
         { }
     ~ConnectionHandlerImpl() override = default;
-    void handleConnect(Connection c)    override { onConnect(c);    }
+    void handleConnect(Connection c, std::string_view target)    override { onConnect(c, target);    }
     void handleDisconnect(Connection c) override { onDisconnect(c); }
   private:
     C onConnect;
