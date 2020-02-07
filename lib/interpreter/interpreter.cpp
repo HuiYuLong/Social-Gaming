@@ -37,7 +37,6 @@ int main() {
 	//nlohmann::json jsonObject = nlohmann::json::parse(iss);
 
 	std::ifstream jsonFileStream("../../configs/games/rock_paper_scissors.json"); // read file
-// 	std::ifstream jsonFileStream("/home/sophia/spring2020/cmpt373/social-gaming/configs/games/rock_paper_scissors.json"); // read file
 	nlohmann::json jsonObject = nlohmann::json::parse(jsonFileStream);
 	
 	// To make sure you can open the file
@@ -48,9 +47,8 @@ int main() {
     }
 
 //-----------------------------------------Rule Tests--------------------------------------//
-    std::cout << "Objects in the file jsonObject: " << jsonObject.size() << std::endl;
     // auto rule1 = jsonObject["rules"][0]["rule"];
-    auto rule2 = jsonObject["rules"][1]["rule"];
+    // auto rule2 = jsonObject["rules"][1]["rule"];
     // auto rule3 = jsonObject["rules"][0]["rules"];
     // auto Global_msg = jsonObject["rules"][0]["rules"][0];
     // auto Rules_choices = jsonObject["rules"][0]["rules"][1];
@@ -68,7 +66,12 @@ int main() {
     // cout << inputChoice << endl;
     // cout << inputChoice << endl;
     // cout << when << endl; 
-    Rule::getScores(jsonObject);
+    // Rule::getScores(jsonObject);
+    Add a("add", "winner.wins", "1");
+    ruleList list;
+    list.push_back(static_cast<Rule>(a));
+    Timer t("timer","12", "exact", list);
+    std::cout<< t.getSubRules().front().getRule() << "\n";
 
     //--------------------------------------End of rule Tests------------------------------------//
 
