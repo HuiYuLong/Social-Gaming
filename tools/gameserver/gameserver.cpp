@@ -31,15 +31,15 @@ std::vector<std::unique_ptr<GameSession>> gameSessions;
 
 void
 onConnect(Connection c, std::string_view target) {
-  for (std::unique_ptr<GameSession>& gameSession : gameSessions)
-  {
-    if(target.compare(gameSession->invite_code) == 0)
-    {
-      gameSession->players.push_back(c);
-      sessionMap[c] = gameSession.get();
-      std::cout << "Session " << gameSession->id << " joined by " << c.id << std::endl;
-      return;
-    }
+  auto gameSessionIter = std::find_if(gameSessions.begin(), gameSessions.end(), [target](std::unique_ptr<GameSession>& gameSession) {
+    return target.compare(gameSession->invite_code) == 0;
+  });
+  if (gameSessionIter != gameSessions.end()) {
+    auto& gameSession = *gameSessionIter;
+    gameSession->players.push_back(c);
+    sessionMap[c] = gameSession.get();
+    std::cout << "Session " << gameSession->id << " joined by " << c.id << std::endl;
+    return;
   }
   gameSessions.emplace_back(std::make_unique<GameSession>(c, target));
   sessionMap[c] = gameSessions.back().get();
