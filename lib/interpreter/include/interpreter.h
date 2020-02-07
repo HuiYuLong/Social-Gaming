@@ -233,6 +233,63 @@ public:
     void setScore(const type& score) {this->score = score;}
     void setAscending(const type& ascending) {this->ascending = ascending;}
 };
+
+//-------------------------------Sophia's Code------------------------------//
+enum class ruleType { string, list, json };
+class forEachRule : public Rule {
+private:
+    ruleType list;
+    ruleType element;
+    std::vector<Rule> subrules;
+};
+
+class extendRule : public Rule {
+private:
+    ruleType target;
+    ruleType list;
+    std::vector<Rule> subrules;
+};
+  
+class reverseRule : public Rule{
+private:
+    ruleType list;
+    std::vector<Rule> subrules;
+};
+
+class shuffleRule : public Rule{
+private:
+    ruleType list;
+    std::vector<Rule> subrules;
+};
+
+// Sorts a list in ascending order
+class sortRule : public Rule {
+private:
+    ruleType list;
+    ruleType key;
+    std::vector<Rule> subrules;
+};
+
+class dealRule : public Rule {
+private:
+    ruleType from;
+    ruleType to;
+    ruleType count;
+    std::vector<Rule> subrules;
+};
+
+class discard : public Rule {
+private:
+    ruleType from;
+    ruleType count;
+    std::vector<Rule> subrules;
+};
+
+class listAttributesRule : public Rule {
+    ruleType roles;
+};
+
+
 //----------------------------------------End Of Rule Class---------------------------------------//
 
 class Player {
