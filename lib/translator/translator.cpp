@@ -1,4 +1,4 @@
-#include <interpreter.h>
+#include <translator.h>
 
 class Interpreter {
 public:
