@@ -2,10 +2,12 @@
 #include <string>
 #include <cmath>
 #include <vector>
+#include <ctime>
+#include <cstdlib>
+#include <limits>
 #include <nlohmann/json.hpp>
 #include <fstream>
 #include <sstream>
-
 
 
 
@@ -336,5 +338,45 @@ private:
 //----------------------------------------End Of Rule Class---------------------------------------//
 
 class Player {
+
+private:
+    
+    int playerID;
+    bool isOwner;
+    int idGenerater = 10000;
+    std::string choice;
+    std::string PlayerName;
+    int roomNumber;
+    int wins;
+
 public:
+    Player(std::string const& name, bool isOwner) : PlayerName(name),isOwner(isOwner), wins(0) {std::srand(time(0));playerID = rand() % idGenerater;}
+    std::string getPlayerName() const;
+    bool isOwner() const;
+	int getPlayerId() const;
+    int getGameRoom() const;
+
+    virtual void setPlayerName(std::string name);
+	virtual void setPlayerId(int id);
+	virtual void setGameRoom(int roomId);
+    virtual ~Player() {}
+    virtual void playGame() = 0;
+    virtual void winningMessage() = 0;
 };
+
+class IndividualPlayer : public Player
+{
+   public:
+      IndividualPlayer(std::string const& name) : Player(name) {}
+      virtual void playGame()
+      {
+         std::cout << "\n Rock, Paper, or Scissors? \n";
+         std::cin >> choice;
+      }
+      // Print the winning msg if the one of the player win
+      virtual void winningMessage()
+      {
+         std::cout << "You win!" << std::endl;
+      }
+};
+
