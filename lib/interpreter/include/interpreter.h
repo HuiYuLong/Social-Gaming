@@ -92,82 +92,146 @@ public:
 // ex) OutputRule, InputRule, ArithmeticRule, ListOpsRule, ControlStructRule ...
 
 //-------------------------------------------Rule Class---------------------------------------//
-namespace Rule {
+using type = std::string;
+class Rule {
+private:
+    type rule;
+public:
+    Rule(const type& rule): rule(rule){}
+    type getRule() const {return rule;}
+    void setRule(const type& rule) {this->rule = rule;}
+};
 
-    template<typename scores> struct EnumTraits;
-    enum class type {  // "foreach", "scores" -> the field under "rule": in the json
-        forEach,
-        globalMsg,
-        parallelFor,
-        inputChoice,
-        Discard,
-        When,
-        Extend,
-        add,
-        scores
-    };
-	enum class forEach {
-        list,
-        element,
-        rules
-    };
-    enum class globalMsg {
-        value
-    };
-    enum class parallelFor {
-        list,
-        element,
-        rules
-    };
-    enum class inputChoice {
-        to,
-        prompt,
-        choices,
-        result,
-        timeout
-    };
-    enum class Discard {
-        from,
-        count
-    };
-    enum class When {
-        
-    };
-    enum class Extend {
-        target,
-        list
-    };
-    enum class add {
-        to,
-        value
-    };
-    enum class scores {
-        score, 
-        ascending,
-    };
-    // reference: https://en.cppreference.com/w/cpp/language/enum
-    //enumeration types (both scoped and unscoped) can have overloaded operators
-    std::ostream& operator<<(std::ostream& os, scores c)
-    {
-        switch(c)
-        {
-            case scores::score    : os << "scores";    break;
-            case scores::ascending: os << "ascending";    break;
-            default    : os.setstate(std::ios_base::failbit);
-        }
-        return os;
-    }
- 
-    template<> struct EnumTraits<scores> { static constexpr scores LAST = scores::ascending; };
-    auto getScores(nlohmann::json jsonObject) {    
-            auto items = EnumTraits<scores>::LAST;
-            std::cout << items << std::endl;
-        // Rule::scores newRule = Rule::scores::score;
-        // newRule = jsonObject["rules"][1]["rule"];
-    };
+//-----------------------PETER'S CODE:---------------------------------
+using ruleList = std::vector<Rule>;
+class Add : public Rule{
+private:
+    type to;
+    type value;
+public:
+    Add(const type& rule, const type& to, const type&value): Rule{rule}, to(to), value(value) {}
 
+    type getTo() const {return to;}
+    type getValue() const {return value;}
 
-	//Graph rules; // a graph data structure to hold subrules ... implementation to be further discussed.
+    void setTo(const type& to) {this->to = to;}
+    void setValue(const type& value) {this->value = value;}
+};
+
+class Timer : public Rule{
+private:
+    type duration;
+    type mode;
+    ruleList subrules;
+public:
+    Timer(const type& rule, const type& duration, const type& mode, const ruleList& subrules): Rule{rule}, duration(duration), mode(mode), subrules(subrules) {}
+
+    type getDuration() const {return duration;}
+    type getMode() const {return mode;}
+    ruleList getSubRules() const {return subrules;}
+
+    void setDuration(const type& duration) {this->duration = duration;}
+    void setMode(const type& mode) {this->mode = mode;}
+    void setSubRules(const ruleList subrules) {this->subrules = subrules;}
+};
+
+class InputChoice : public Rule{
+private:
+    type to;//TODO --- A single player/audience member. Just leave as std::string data type for now
+    type prompt;
+    type choices; //TODO --- list or name of a list to choose from. Just leave as std::string data type for now
+    type result; //TODO --- list of variable name in which to store the response. Just leave as std::string data type for now
+public:
+    InputChoice(const type& rule, const type& to, const type& choices, const type& result): Rule{rule}, to(to), choices(choices), result(result) {}
+
+    type getTo() const {return to;}
+    type getChoices() const {return choices;}
+    type getPrompt () const {return prompt;}
+    type getResult() const {return result;}
+
+    void setTo(const type& to) {this->to = to;}
+    void setChoices(const type& choices) {this->choices = choices;}
+    void setPrompt(const type& prompt) {this->prompt = prompt;}
+    void setResult(const type& result) {this->result = result;}
+};
+
+class InputText : public Rule{
+private:
+    type to; //TODO --- list of players. Just leave as std::string data type for now
+    type prompt;
+    type result; //TODO --- list of variable name in which to store the response. Just leave as std::string data type for now
+public:
+    InputText(const type& rule, const type& to, const type& prompt, const type& result): Rule{rule}, to(to), prompt(prompt), result(result) {}
+
+    type getTo() const {return to;}
+    type getPrompt () const {return prompt;}
+    type getResult() const {return result;}
+
+    void setTo(const type& to) {this->to = to;}
+    void setPrompt(const type& prompt) {this->prompt = prompt;}
+    void setResult(const type& result) {this->result = result;}
+};
+
+class InputVote : public Rule{
+private:
+    type to; //TODO --- list of players and/or audience members. Just leave as std::string data type for now
+    type prompt; 
+    type choices;
+    type result;
+public:
+    InputVote(const type& rule, const type& to, const type& choices, const type& result): Rule{rule}, to(to), choices(choices), result(result) {}
+
+    type getTo() const {return to;}
+    type getChoices() const {return choices;}
+    type getPrompt () const {return prompt;}
+    type getResult() const {return result;}
+
+    void setTo(const type& to) {this->to = to;}
+    void setChoices(const type& choices) {this->choices = choices;}
+    void setPrompt(const type& prompt) {this->prompt = prompt;}
+    void setResult(const type& result) {this->result = result;}
+};
+
+class Message : public Rule{
+private:
+    type to; //TODO --- list of players. Just leave as std::string data type for now
+    type value;
+
+public:
+    Message(const type& rule,const type& to, const type& value): Rule{rule}, to(to), value(value) {}
+
+    type getTo() const {return to;}
+    type getValue() const {return value;}
+
+    void setTo(const type& to) {this->to = to;}
+    void setValue(const type& value) {this->value = value;}
+};
+
+class GlobalMessage : public Rule{
+private:
+    type value;
+
+public:
+    GlobalMessage(const type& rule, const type& value): Rule{rule}, value(value){}
+
+    type getValue() const {return value;}
+
+    void setValue(const type& value) {this->value = value;}
+};
+
+class Scores: public Rule{
+private:
+    type score;
+    type ascending;
+
+public:
+    Scores(const type& rule, const type& score, const type& ascending): Rule{rule}, score(score), ascending(ascending){}
+
+    type getScore() const {return score;}
+    type getAscending() const {return ascending;}
+
+    void setScore(const type& score) {this->score = score;}
+    void setAscending(const type& ascending) {this->ascending = ascending;}
 };
 //----------------------------------------End Of Rule Class---------------------------------------//
 
