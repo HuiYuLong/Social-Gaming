@@ -49,7 +49,7 @@ public:
   }
 
   void listenForConnections();
-  void registerChannel(Channel& channel);
+  void registerChannel(Channel& channel, boost::beast::string_view target);
   void reportError(std::string_view message);
 
   using ChannelMap =
@@ -113,9 +113,9 @@ void
 Channel::start(boost::beast::http::request<boost::beast::http::string_body>& request) {
   auto self = shared_from_this();
   websocket.async_accept(request,
-    [this, self] (std::error_code errorCode) {
+    [this, self, target=std::string(request.target())] (std::error_code errorCode) {
       if (!errorCode) {
-        serverImpl.registerChannel(*this);
+        serverImpl.registerChannel(*this, target);
         self->readMessage();
       } else {
         serverImpl.server.disconnect(connection);
@@ -212,8 +212,6 @@ public:
 
 private:
 
-  void assignGameSession(const Channel* c);
-
   ServerImpl &serverImpl;
   boost::asio::ip::tcp::socket socket;
   boost::beast::flat_buffer streamBuf;
@@ -230,35 +228,12 @@ HTTPSession::start() {
         serverImpl.reportError("Error reading from HTTP stream.");
       } else if (boost::beast::websocket::is_upgrade(request)) {
         auto channel = std::make_shared<Channel>(std::move(socket), serverImpl);
-        session->assignGameSession(channel.get());
         channel->start(request);
 
       } else {
         session->handleRequest();
       }
     });
-}
-
-
-// Temporary implementation
-// If the provided invite code is assosiated with some session, connect to it
-// Otherwise, create a new one
-void
-HTTPSession::assignGameSession(const Channel* channel)
-{
-  Connection connection = channel->getConnection();
-  for (std::unique_ptr<GameSession>& gameSession : serverImpl.server.gameSessions)
-  {
-    if(request.target().compare(gameSession->invite_code) == 0)
-    {
-      gameSession->players.push_back(connection);
-      serverImpl.server.sessionMap[connection] = gameSession.get();
-      return;
-    }
-  }
-  serverImpl.server.gameSessions.emplace_back(std::make_unique<GameSession>(connection, std::string_view(request.target().data(), request.target().size())));
-  serverImpl.server.sessionMap[connection] = serverImpl.server.gameSessions.back().get();
-  std::cout << "Started new session " << serverImpl.server.gameSessions.back()->id << std::endl;
 }
 
 
@@ -375,10 +350,10 @@ ServerImpl::listenForConnections() {
 
 
 void
-ServerImpl::registerChannel(Channel& channel) {
+ServerImpl::registerChannel(Channel& channel, boost::beast::string_view target) {
   auto connection = channel.getConnection();
   channels[connection] = channel.shared_from_this();
-  server.connectionHandler->handleConnect(connection);
+  server.connectionHandler->handleConnect(connection, std::string_view{target.data(), target.size()});
 }
 
 
@@ -432,15 +407,6 @@ Server::disconnect(Connection connection) {
     connectionHandler->handleDisconnect(connection);
     found->second->disconnect();
     impl->channels.erase(found);
-    // remove the connection from the session
-    auto session = impl->server.sessionMap.at(connection);
-    session->players.erase(std::remove(std::begin(session->players), std::end(session->players), connection), std::end(session->players));
-    if(session->players.empty())
-    {
-      std::cout << "Shutting down session " << session->id << std::endl;
-      impl->server.gameSessions.erase(std::remove_if(std::begin(impl->server.gameSessions), std::end(impl->server.gameSessions), [](std::unique_ptr<GameSession>& session) { return session->players.empty(); }), std::end(impl->server.gameSessions));
-    }
-    impl->server.sessionMap.erase(connection);
   }
 }
 

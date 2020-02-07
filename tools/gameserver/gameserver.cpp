@@ -20,23 +20,45 @@ using networking::Server;
 using networking::Connection;
 using networking::Message;
 using networking::GameSession;
+using networking::ConnectionHash;
 
+/**
+ *  Publicly available collection of sessions
+ */
+std::unordered_map<Connection, GameSession*, ConnectionHash> sessionMap;
 
-std::vector<Connection> clients;
-
+std::vector<std::unique_ptr<GameSession>> gameSessions;
 
 void
-onConnect(Connection c) {
-  std::cout << "New connection found: " << c.id << "\n";
-  clients.push_back(c);
+onConnect(Connection c, std::string_view target) {
+  for (std::unique_ptr<GameSession>& gameSession : gameSessions)
+  {
+    if(target.compare(gameSession->invite_code) == 0)
+    {
+      gameSession->players.push_back(c);
+      sessionMap[c] = gameSession.get();
+      std::cout << "Session " << gameSession->id << " joined by " << c.id << std::endl;
+      return;
+    }
+  }
+  gameSessions.emplace_back(std::make_unique<GameSession>(c, target));
+  sessionMap[c] = gameSessions.back().get();
+  std::cout << "Session " << gameSessions.back()->id << " created by " << c.id << std::endl;
 }
 
 
 void
 onDisconnect(Connection c) {
-  std::cout << "Connection lost: " << c.id << "\n";
-  auto eraseBegin = std::remove(std::begin(clients), std::end(clients), c);
-  clients.erase(eraseBegin, std::end(clients));
+  // remove the connection from the session
+  auto session = sessionMap.at(c);
+  std::cout << "Session " << session->id << " has lost connection " << c.id << std::endl; 
+  session->players.erase(std::remove(std::begin(session->players), std::end(session->players), c), std::end(session->players));
+  if(session->players.empty())
+  {
+    std::cout << "No players left. Shutting down session " << session->id << std::endl;
+    gameSessions.erase(std::remove_if(std::begin(gameSessions), std::end(gameSessions), [](std::unique_ptr<GameSession>& session) { return session->players.empty(); }), std::end(gameSessions));
+  }
+  sessionMap.erase(c);
 }
 
 
@@ -46,24 +68,23 @@ processMessages(Server& server, const std::deque<Message>& incoming) {
     if (message.text == "quit") {
       server.disconnect(message.connection);
     } else if (message.text == "shutdown") {
-      GameSession* session = server.sessionMap[message.connection];
+      GameSession* session = sessionMap[message.connection];
       if(session->gameOwner == message.connection)
       {
-        std::cout << "Shutting down session " << session->id << std::endl;
         for (Connection player : std::vector<Connection>(session->players))
           server.disconnect(player);
       }
     } else {
-      server.sessionMap[message.connection]->communication << message.connection.id << "> " << message.text << "\n";
+      sessionMap[message.connection]->communication << message.connection.id << "> " << message.text << "\n";
     }
   }
 
   std::deque<Message> outgoing;
-  for (auto client : clients)
+  for (auto const [connection, gameSession] : sessionMap)
   {
-    outgoing.push_back({client, server.sessionMap[client]->communication.str()});
+    outgoing.push_back({connection, gameSession->communication.str()});
   }
-  for (auto& session : server.gameSessions)
+  for (auto& session : gameSessions)
   {
     session->communication.str(""); // clear the stream
   }
