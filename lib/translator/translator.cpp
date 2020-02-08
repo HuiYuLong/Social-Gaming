@@ -88,10 +88,10 @@ int main() {
     // cout << when << endl; 
     // Rule::getScores(jsonObject);
 
-    Add a("add", "winner.wins", "1");
+    AddRule a("add", "winner.wins", "1");
     ruleList list;
     list.push_back(static_cast<Rule>(a));
-    Timer t("timer","12", "exact", list);
+    TimerRule t("timer","12", "exact", list);
     std::cout<< t.getSubRules().front().getRule() << "\n";
 
     //--------------------------------------End of rule Tests------------------------------------//
