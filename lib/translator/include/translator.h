@@ -44,6 +44,8 @@ private:
 	int round;
 };
 
+
+
 class Constants {
 public:
 	Constants(): name(""), beats("") {}
@@ -100,6 +102,11 @@ public:
     Rule(const type& rule): rule(rule){}
     type getRule() const {return rule;}
     void setRule(const type& rule) {this->rule = rule;}
+};
+
+class Case {
+	std::string caseString;
+	std::vector<Rule> rules;
 };
 
 //-----------------------PETER'S CODE:---------------------------------
@@ -233,6 +240,99 @@ public:
     void setScore(const type& score) {this->score = score;}
     void setAscending(const type& ascending) {this->ascending = ascending;}
 };
+
+//-------------------------------Sophia's Code------------------------------//
+enum class ruleType { string, list, json };
+
+class extendRule : public Rule {
+private:
+    ruleType target;
+    ruleType list;
+    std::vector<Rule> subrules;
+};
+  
+class reverseRule : public Rule{
+private:
+    ruleType list;
+    std::vector<Rule> subrules;
+};
+
+class shuffleRule : public Rule{
+private:
+    ruleType list;
+    std::vector<Rule> subrules;
+};
+
+// Sorts a list in ascending order
+class sortRule : public Rule {
+private:
+    ruleType list;
+    ruleType key;
+    std::vector<Rule> subrules;
+};
+
+class dealRule : public Rule {
+private:
+    ruleType from;
+    ruleType to;
+    ruleType count;
+    std::vector<Rule> subrules;
+};
+
+class discard : public Rule {
+private:
+    ruleType from;
+    ruleType count;
+    std::vector<Rule> subrules;
+};
+
+class listAttributesRule : public Rule {
+    ruleType roles;
+};
+
+//-------------------------------Junho's Code------------------------------//
+
+class ForEachRule : public Rule {
+private:
+    ruleType list;
+    ruleType element;
+    std::vector<Rule> subrules;
+};
+
+class LoopRule : public Rule {
+private:
+    ruleType target;
+    ruleType until;
+    ruleType whileCondition;
+    std::vector<Rule> subrules;
+};
+  
+class InParallelRule : public Rule {
+private:
+    std::vector<Rule> subrules;
+};
+
+class ParallelForRule : public Rule {
+private:
+    ruleType list;
+    ruleType element;
+    std::vector<Rule> subrules;
+};
+
+// Sorts a list in ascending order
+class SwitchRule : public Rule {
+private:
+    ruleType list;
+    ruleType value;
+    std::vector<Case> cases;
+};
+
+class WhenRule : public Rule {
+private:
+    ruleType count;
+    std::vector<Case> cases;
+};
+
 //----------------------------------------End Of Rule Class---------------------------------------//
 
 class Player {

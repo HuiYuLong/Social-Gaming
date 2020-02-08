@@ -1,4 +1,4 @@
-#include <interpreter.h>
+#include <translator.h>
 
 class Interpreter {
 public:
@@ -15,14 +15,14 @@ public:
 		for (auto& item : gameConfig.items()) {
 			if (item.key().compare("configuration") == 0) {
 				configuration = new Configuration(item.value()["name"],item.value()["player count"]["min"], item.value()["player count"]["max"], item.value()["audience"], item.value()["setup"]["Rounds"]);
-				configuration->print();
+				// configuration->print();
 			}
 		}
 
 	}
 
 	void createGame() { // more parameters to be added
-		std::cout << "just cheking what we will be playing: " << configuration->getName() << std::endl;
+		// std::cout << "just cheking what we will be playing: " << configuration->getName() << std::endl;
 	}
 
 	void destoryGame() {
@@ -31,6 +31,25 @@ public:
 
 };
 
+
+//parseRule function recursively searching for "rule" key and print out the value (name of the rule)
+void parseRule(const nlohmann::json& j){
+	if(j.is_object()){
+		for (const auto& item: j.items()){
+			if (!item.key().compare("rule")){
+				std::cout << item.value() << "\n";
+			} else if(!item.key().compare("rules") || item.value().is_array()){
+				parseRule(item.value());
+			}
+		}
+	} else if (j.is_array()){
+		// std::cout << j.size() << "\n";
+		for (const auto& item: j){
+			parseRule(item);
+		}
+	}
+}
+
 int main() {
 
 	//std::istringstream iss("{\"json\": \"beta\"}"); // code manually create a small json file
@@ -38,13 +57,14 @@ int main() {
 
 	std::ifstream jsonFileStream("../../configs/games/rock_paper_scissors.json"); // read file
 	nlohmann::json jsonObject = nlohmann::json::parse(jsonFileStream);
-	
+
 	// To make sure you can open the file
     if (!jsonFileStream)
     {
         std::cout << "cannot open file" << std::endl;
         return 0;
     }
+	parseRule(jsonObject);
 
 //-----------------------------------------Rule Tests--------------------------------------//
     // auto rule1 = jsonObject["rules"][0]["rule"];
@@ -67,6 +87,7 @@ int main() {
     // cout << inputChoice << endl;
     // cout << when << endl; 
     // Rule::getScores(jsonObject);
+
     Add a("add", "winner.wins", "1");
     ruleList list;
     list.push_back(static_cast<Rule>(a));
@@ -98,9 +119,9 @@ int main() {
 	// std::cout << perAudience << std::endl;
 	// std::cout << rules << std::endl;
 
-	Interpreter* interpreter = new Interpreter(jsonObject);
-	interpreter->createGame();
-	interpreter->destoryGame();
+	// Interpreter* interpreter = new Interpreter(jsonObject);
+	// interpreter->createGame();
+	// interpreter->destoryGame();
 
 	return 0;
 }
