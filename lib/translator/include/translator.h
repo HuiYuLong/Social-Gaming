@@ -6,9 +6,6 @@
 #include <fstream>
 #include <sstream>
 
-
-
-
 class Configuration {
 public:
 	Configuration():name(""), playerCountMin(0), playerCountMax(0), audience(false), round(0) {}
@@ -44,28 +41,24 @@ private:
 	int round;
 };
 
-
-
 class Constants {
 public:
-	Constants(): name(""), beats("") {}
-	Constants(std::vector<std::pair<std::string, std::string> > weapens, std::string name, std::string beats){}
-	std::string getBeats() const;
-	std::string getName() const;
-	std::string getWeapens() const;
-	void setWeapens(const std::vector<std::pair<std::string, std::string>>& weapens);
-	void setBeats(const std::string& beats);
-	void setName(const std::string& name);
+	Constants():weapons() {}
+	Constants(std::map<std::string, std::string> weapons){
+        this->weapons = weapons;
+    }
+	void setWeapons(std::map<std::string, std::string> weapons) {
+        this->weapons = weapons;
+    }
+    std::map<std::string, std::string> getWeapons() const {
+        return this->weapons;
+    }
+    void insertToWeapons(std::string s1, std::string s2) {
+        this->weapons.emplace(s1, s2);
+    }
 
 private:
-	std::vector<std::pair<std::string, std::string> > weapens;
-	std::string name;
-	std::string beats;
-	nlohmann::json setup;
-	// Not sure since it is JSON Array string pairs Need helps for fixing 
-	Constants(std::vector<std::pair<std::string, std::string> > weapens) {
-		this -> weapens = weapens;
-	}
+	std::map<std::string, std::string> weapons;
 };
 
 class Variables {
