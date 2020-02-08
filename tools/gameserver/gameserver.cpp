@@ -14,13 +14,15 @@
 #include <string>
 #include <unistd.h>
 #include <vector>
-
+#include <nlohmann/json.hpp>
 
 using networking::Server;
 using networking::Connection;
 using networking::Message;
 using networking::GameSession;
 using networking::ConnectionHash;
+
+using json = nlohmann::json;
 
 /**
  *  Publicly available collection of sessions
@@ -99,12 +101,11 @@ processMessages(Server& server, const std::deque<Message>& incoming) {
 
 
 std::string
-getHTTPMessage(const char* htmlLocation) {
-  if (access(htmlLocation, R_OK ) != -1) {
-    std::ifstream infile{htmlLocation};
+getHTTPMessage(const std::string& htmlLocation) {
+  std::ifstream infile{htmlLocation};
+  if (infile) {
     return std::string{std::istreambuf_iterator<char>(infile),
                        std::istreambuf_iterator<char>()};
-
   } else {
     std::cerr << "Unable to open HTML index file:\n"
               << htmlLocation << "\n";
@@ -115,14 +116,17 @@ getHTTPMessage(const char* htmlLocation) {
 
 int
 main(int argc, char* argv[]) {
-  if (argc < 3) {
-    std::cerr << "Usage:\n  " << argv[0] << " <port> <html response>\n"
-              << "  e.g. " << argv[0] << " 4002 ./webchat.html\n";
+  if (argc < 2) {
+    std::cerr << "Usage:\n  " << argv[0] << "<server config>\n"
+              << "  e.g. " << argv[0] << " ../configs/server/congfig1.json\n";
     return 1;
   }
 
-  unsigned short port = std::stoi(argv[1]);
-  Server server{port, getHTTPMessage(argv[2]), onConnect, onDisconnect};
+  std::ifstream config{argv[1]};
+  json j = json::parse(config);
+
+  unsigned short port = j["port"];
+  Server server{port, getHTTPMessage(j["indexhtml"]), onConnect, onDisconnect};
 
   while (true) {
     try {
