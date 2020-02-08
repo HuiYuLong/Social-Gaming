@@ -16,6 +16,23 @@ std::unique_ptr<Constants> parseConstants(const nlohmann::json& j) {
 	return constants;
 }
 
+std::unique_ptr<Configuration> parseConfiguration(const nlohmann::json& j) {
+	// Configuration* configuration;
+	std::unique_ptr<Configuration> configuration = std::make_unique<Configuration>();
+	for (auto& item : j.items()) {
+		if (item.key().compare("configuration") == 0) {
+			configuration->setName(item.value()["name"]);
+			std::cout << item.value()["name"] << std::endl;
+			configuration->setPlayerCountMin(item.value()["player count"]["min"]);
+			configuration->setPlayerCountMax(item.value()["player count"]["max"]);
+			configuration->setAudience(item.value()["audience"]);
+			configuration->setRound(item.value()["setup"]["Rounds"]);
+		}
+}
+
+	return configuration;
+
+}
 
 //parseRule function recursively searching for "rule" key and print out the value (name of the rule)
 void parseRule(const nlohmann::json& j){
@@ -64,7 +81,12 @@ int main() {
 	// for (it = constants->getWeapons().begin(); it != constants->getWeapons().end();++it) {
 	// 	std::cout << it->first << " beats " << it->second << std::endl;
 	// }
-
+	
+	//*** Parse Configuration ***//
+	std::unique_ptr<Configuration> configuration;
+	configuration = parseConfiguration(jsonObject);
+	// std::cout << "Parsing: " << std::endl;
+	// std::cout << configuration->getName() << std::endl;
 
 //-----------------------------------------Rule Tests--------------------------------------//
     // auto rule1 = jsonObject["rules"][0]["rule"];
