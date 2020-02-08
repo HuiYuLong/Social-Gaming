@@ -1,35 +1,20 @@
 #include <translator.h>
 
-class Interpreter {
-public:
-	Configuration* configuration;
-	Constants* constants;
-	Variables* variables;
-	PerPlayer* perPlayer;
-//	PerAudience* perAudience;
-	// Rule* rules;
 
-	Interpreter(nlohmann::json gameConfig) {
-		// filling out the Configuration object for the interpreter
-		// example of iterating over the jsonObject
-		for (auto& item : gameConfig.items()) {
-			if (item.key().compare("configuration") == 0) {
-				configuration = new Configuration(item.value()["name"],item.value()["player count"]["min"], item.value()["player count"]["max"], item.value()["audience"], item.value()["setup"]["Rounds"]);
-				// configuration->print();
+
+std::unique_ptr<Constants> parseConstants(const nlohmann::json& j) {
+	std::unique_ptr<Constants> constants = std::make_unique<Constants>();
+	for (auto& item : j.items()) {
+		if (item.key().compare("constants") == 0) {
+			for (auto& item : item.value()["weapons"].items()) {
+				constants->insertToWeapons(item.value()["name"],item.value()["beats"]);
+				//std::cout << item.value()["name"] << std::endl;
+				//std::cout << item.value()["beats"] << std::endl;
 			}
 		}
-
 	}
-
-	void createGame() { // more parameters to be added
-		// std::cout << "just cheking what we will be playing: " << configuration->getName() << std::endl;
-	}
-
-	void destoryGame() {
-		delete this->configuration;
-	}
-
-};
+	return constants;
+}
 
 
 //parseRule function recursively searching for "rule" key and print out the value (name of the rule)
@@ -65,6 +50,21 @@ int main() {
         return 0;
     }
 	parseRule(jsonObject);
+
+	std::unique_ptr<Constants> constants;
+	constants = parseConstants(jsonObject);
+
+	for (auto& x : constants->getWeapons()) {
+		std::cout << x.first << " beats " << x.second << std::endl;
+	}
+
+	//constants->getWeapons();
+
+	// std::map<std::string, std::string>::iterator it;
+	// for (it = constants->getWeapons().begin(); it != constants->getWeapons().end();++it) {
+	// 	std::cout << it->first << " beats " << it->second << std::endl;
+	// }
+
 
 //-----------------------------------------Rule Tests--------------------------------------//
     // auto rule1 = jsonObject["rules"][0]["rule"];
