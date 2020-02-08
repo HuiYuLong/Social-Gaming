@@ -377,7 +377,12 @@ ServerImplDeleter::operator()(ServerImpl* serverImpl) {
 
 void
 Server::update() {
+  try {
   impl->ioService.poll();
+  }
+  catch (std::exception& e) {
+    std::cout << e.what() << std::endl;
+  }
 }
 
 
