@@ -68,20 +68,18 @@ private:
 
 class Variables {
 public:
-	Variables(): winnersName(""){}
-	Variables(std::vector<std::string> winners, std::string winnersName);
-	std::string getWinnersName() const;
-	std::string getWinners() const;
-	void setBeats(const std::string& winnersName) ;
-	void setName(const std::vector<std::string>& winners) ;
+	Variables(): winners() {}
+    // reconsider the type
+	Variables(std::vector<std::string> winners) {}
+	std::vector<std::string> getWinners() const {
+        return this->winners;
+    }
+	void setWinners(const std::vector<std::string>& winners) {
+        this->winners = winners;
+    }
+
 private:
 	std::vector<std::string> winners;
-	std::string winnersName;
-	nlohmann::json setup;
-	// Not sure since it is JSON Array string pairs Need helps for fixing 
-	Variables(std::vector<std::string> winners) {
-		this -> winners = winners;
-	}
 };
 
 class PerPlayer {
