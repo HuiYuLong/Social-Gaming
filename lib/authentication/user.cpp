@@ -5,8 +5,8 @@
 using rolls::User;
 
 User::User(std::string username)
-    : userName{username},
-     userType{UserType::GAMER}
+    // : userName{username},
+    //  userType{UserType::GAMER}
 {
     assert(!username.empty() && "Error, cannot create an empty username!");
 }
