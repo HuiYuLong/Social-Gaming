@@ -2,11 +2,13 @@
 #include <string>
 #include <cmath>
 #include <vector>
+#include <deque>
 #include <nlohmann/json.hpp>
 #include <fstream>
 #include <sstream>
+#include "../../common.h"
 
-
+using networking::Message;
 
 
 class Configuration {
@@ -44,28 +46,24 @@ private:
 	int round;
 };
 
-
-
 class Constants {
 public:
-	Constants(): name(""), beats("") {}
-	Constants(std::vector<std::pair<std::string, std::string> > weapens, std::string name, std::string beats){}
-	std::string getBeats() const;
-	std::string getName() const;
-	std::string getWeapens() const;
-	void setWeapens(const std::vector<std::pair<std::string, std::string>>& weapens);
-	void setBeats(const std::string& beats);
-	void setName(const std::string& name);
+	Constants():weapons() {}
+	Constants(std::map<std::string, std::string> weapons){
+        this->weapons = weapons;
+    }
+	void setWeapons(std::map<std::string, std::string> weapons) {
+        this->weapons = weapons;
+    }
+    std::map<std::string, std::string> getWeapons() const {
+        return this->weapons;
+    }
+    void insertToWeapons(std::string s1, std::string s2) {
+        this->weapons.emplace(s1, s2);
+    }
 
 private:
-	std::vector<std::pair<std::string, std::string> > weapens;
-	std::string name;
-	std::string beats;
-	nlohmann::json setup;
-	// Not sure since it is JSON Array string pairs Need helps for fixing 
-	Constants(std::vector<std::pair<std::string, std::string> > weapens) {
-		this -> weapens = weapens;
-	}
+	std::map<std::string, std::string> weapons;
 };
 
 class Variables {
@@ -97,6 +95,7 @@ public:
 // enum class ruleType { string, list, json };
 using ruleType = std::string;
 class Rule {
+
 private:
     ruleType rule;
 public:
@@ -107,12 +106,12 @@ public:
 
 class Case {
 	std::string caseString;
-	std::vector<Rule> rules;
+	std::vector<Rule*> rules;
 };
 
 //-----------------------PETER'S CODE:---------------------------------
 
-using ruleList = std::vector<Rule>;
+using ruleList = std::vector<Rule*>;
 class Add : public Rule{
 private:
     ruleType to;
@@ -127,13 +126,13 @@ public:
     void setValue(const ruleType& value) {this->value = value;}
 };
 
-class Timer : public Rule{
+class TimerRule : public Rule{
 private:
     ruleType duration;
     ruleType mode;
     ruleList subrules;
 public:
-    Timer(const ruleType& rule, const ruleType& duration, const ruleType& mode, const ruleList& subrules): Rule{rule}, duration(duration), mode(mode), subrules(subrules) {}
+    TimerRule(const ruleType& rule, const ruleType& duration, const ruleType& mode, const ruleList& subrules): Rule{rule}, duration(duration), mode(mode), subrules(subrules) {}
 
     ruleType getDuration() const {return duration;}
     ruleType getMode() const {return mode;}
@@ -144,14 +143,14 @@ public:
     void setSubRules(const ruleList subrules) {this->subrules = subrules;}
 };
 
-class InputChoice : public Rule{
+class InputChoiceRule : public Rule{
 private:
     ruleType to;//TODO --- A single player/audience member. Just leave as std::string data ruleType for now
     ruleType prompt;
     ruleType choices; //TODO --- list or name of a list to choose from. Just leave as std::string data ruleType for now
     ruleType result; //TODO --- list of variable name in which to store the response. Just leave as std::string data ruleType for now
 public:
-    InputChoice(const ruleType& rule, const ruleType& to, const ruleType& choices, const ruleType& result): Rule{rule}, to(to), choices(choices), result(result) {}
+    InputChoiceRule(const ruleType& rule, const ruleType& to, const ruleType& choices, const ruleType& result): Rule{rule}, to(to), choices(choices), result(result) {}
 
     ruleType getTo() const {return to;}
     ruleType getChoices() const {return choices;}
@@ -164,13 +163,13 @@ public:
     void setResult(const ruleType& result) {this->result = result;}
 };
 
-class InputText : public Rule{
+class InputTextRule : public Rule{
 private:
     ruleType to; //TODO --- list of players. Just leave as std::string data ruleType for now
     ruleType prompt;
     ruleType result; //TODO --- list of variable name in which to store the response. Just leave as std::string data ruleType for now
 public:
-    InputText(const ruleType& rule, const ruleType& to, const ruleType& prompt, const ruleType& result): Rule{rule}, to(to), prompt(prompt), result(result) {}
+    InputTextRule(const ruleType& rule, const ruleType& to, const ruleType& prompt, const ruleType& result): Rule{rule}, to(to), prompt(prompt), result(result) {}
 
     ruleType getTo() const {return to;}
     ruleType getPrompt () const {return prompt;}
@@ -181,14 +180,14 @@ public:
     void setResult(const ruleType& result) {this->result = result;}
 };
 
-class InputVote : public Rule{
+class InputVoteRule : public Rule{
 private:
     ruleType to; //TODO --- list of players and/or audience members. Just leave as std::string data ruleType for now
     ruleType prompt; 
     ruleType choices;
     ruleType result;
 public:
-    InputVote(const ruleType& rule, const ruleType& to, const ruleType& choices, const ruleType& result): Rule{rule}, to(to), choices(choices), result(result) {}
+    InputVoteRule(const ruleType& rule, const ruleType& to, const ruleType& choices, const ruleType& result): Rule{rule}, to(to), choices(choices), result(result) {}
 
     ruleType getTo() const {return to;}
     ruleType getChoices() const {return choices;}
@@ -201,13 +200,13 @@ public:
     void setResult(const ruleType& result) {this->result = result;}
 };
 
-class Message : public Rule{
+class MessageRule : public Rule{
 private:
     ruleType to; //TODO --- list of players. Just leave as std::string data ruleType for now
     ruleType value;
 
 public:
-    Message(const ruleType& rule,const ruleType& to, const ruleType& value): Rule{rule}, to(to), value(value) {}
+    MessageRule(const ruleType& rule,const ruleType& to, const ruleType& value): Rule{rule}, to(to), value(value) {}
 
     ruleType getTo() const {return to;}
     ruleType getValue() const {return value;}
@@ -216,25 +215,25 @@ public:
     void setValue(const ruleType& value) {this->value = value;}
 };
 
-class GlobalMessage : public Rule{
+class GlobalMessageRule : public Rule{
 private:
     ruleType value;
 
 public:
-    GlobalMessage(const ruleType& rule, const ruleType& value): Rule{rule}, value(value){}
+    GlobalMessageRule(const ruleType& rule, const ruleType& value): Rule{rule}, value(value){}
 
     ruleType getValue() const {return value;}
 
     void setValue(const ruleType& value) {this->value = value;}
 };
 
-class Scores: public Rule{
+class ScoresRule: public Rule{
 private:
     ruleType score;
     ruleType ascending;
 
 public:
-    Scores(const ruleType& rule, const ruleType& score, const ruleType& ascending): Rule{rule}, score(score), ascending(ascending){}
+    ScoresRule(const ruleType& rule, const ruleType& score, const ruleType& ascending): Rule{rule}, score(score), ascending(ascending){}
 
     ruleType getScore() const {return score;}
     ruleType getAscending() const {return ascending;}
@@ -249,30 +248,30 @@ class Extend : public Rule {
 private:
     ruleType target;
     ruleType list;
-    std::vector<Rule> subrules;
+    std::vector<Rule*> subrules;
 public:
-    Extend(const ruleType& rule,const ruleType& target,const ruleType & list,const std::vector<Rule>& subrules):Rule{rule},target(target),list(list),subrules(subrules){}
+    Extend(const ruleType& rule,const ruleType& target,const ruleType & list,const std::vector<Rule*>& subrules):Rule{rule},target(target),list(list),subrules(subrules){}
     ruleType getTarget() const{return target;}
     ruleType getList() const{return list;}
-    std::vector<Rule> getSubrules() const {return subrules;}
+    std::vector<Rule*> getSubrules() const {return subrules;}
     
     void setTarget(const ruleType& target){this->target=target;}
     void setList(const ruleType & list){this->list=list;}
-    void setSubrules(const std::vector<Rule>& subrules){this->subrules=subrules;}
+    void setSubrules(const std::vector<Rule*>& subrules){this->subrules=subrules;}
 };
 
   
 class Reverse : public Rule{
 private:
     ruleType list;
-    std::vector<Rule> subrules;
+    std::vector<Rule*> subrules;
 public:
     Reverse(const ruleType& rule, const ruleType& list,const std::vector<Rule>& subrules):Rule{rule},list(list),subrules(subrules){}
     ruleType getList() const{return list;}
-    std::vector<Rule> getSubrules() const {return subrules;}
+    std::vector<Rule*> getSubrules() const {return subrules;}
     
     void setList(const ruleType & list){this->list=list;}
-    void setSubrules(const std::vector<Rule>& subrules){this->subrules=subrules;}
+    void setSubrules(const std::vector<Rule*>& subrules){this->subrules=subrules;}
 };
 
 class Shuffle : public Rule{
@@ -414,7 +413,9 @@ public:
 };
 
 //----------------------------------------End Of Rule Class---------------------------------------//
-
+// Not completed
 class Player {
-public:
+
 };
+
+

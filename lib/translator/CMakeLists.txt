@@ -10,4 +10,5 @@ target_include_directories(translator_test
     ${Boost_INCLUDE_DIR}
 )
 
-target_link_libraries(translator_test PRIVATE nlohmann_json::nlohmann_json)
+target_link_libraries(translator_test
+  PRIVATE nlohmann_json::nlohmann_json)

@@ -13,8 +13,9 @@ set_target_properties(gameserver
 find_package(Threads REQUIRED)
 
 target_link_libraries(gameserver
-  networking
-  ${CMAKE_THREAD_LIBS_INIT}
+  PRIVATE networking
+  PRIVATE Threads::Threads
+  PRIVATE nlohmann_json::nlohmann_json
 )
 
 install(TARGETS gameserver
