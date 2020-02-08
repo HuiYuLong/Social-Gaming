@@ -335,7 +335,13 @@ public:
     DiscardRule(const ruleType& rule, const ruleType& from, const ruleType& count, const std::vector<Rule>& subrules ):
     Rule{rule},from(from),count(count),subrules(subrules){}
 
-    //TODO: geter and setter
+    ruleType getFrom() const{return from;}
+    ruleType getCount() const{return count;}
+    std::vector<Rule> getSubrules() const {return subrules;}
+
+    void setFrom(const ruleType & from){this->from=from;}
+    void setCount(const ruleType& count){this->count=count;}
+    void setSubrules(const std::vector<Rule>& subrules){this->subrules=subrules;}
 
 };
 
@@ -345,7 +351,10 @@ private:
 public:
     ListAttributesRule(const ruleType& rule, const ruleType& roles) :
     Rule{rule},roles(roles){}
-   //TODO: geter and setter
+    
+    ruleType getRoles() const{return roles;}
+
+    void setRoles(const ruleType& roles) {this->roles=roles;}
 
 };
 
