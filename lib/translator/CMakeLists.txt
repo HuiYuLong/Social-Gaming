@@ -11,4 +11,5 @@ target_include_directories(translator_test
 )
 
 target_link_libraries(translator_test
-  PRIVATE nlohmann_json::nlohmann_json)
+  PRIVATE nlohmann_json::nlohmann_json
+  PUBLIC common)

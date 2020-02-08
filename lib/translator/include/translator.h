@@ -6,7 +6,7 @@
 #include <nlohmann/json.hpp>
 #include <fstream>
 #include <sstream>
-#include "../../common.h"
+#include "common.h"
 
 using networking::Message;
 

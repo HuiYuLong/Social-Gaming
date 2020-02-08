@@ -17,7 +17,7 @@
 #include <algorithm>
 #include <sstream>
 #include <vector>
-#include "../../common.h"
+#include "common.h"
 
 
 namespace networking {
