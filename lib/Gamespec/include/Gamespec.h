@@ -11,54 +11,27 @@ class Gamespec {
     Constants constants;
     Variables variables;
     PerPlayer perplayer;
-    //PerAudience peraudience;
-    Rule rule;
+    Rule rules;
     IndividualPlayer player;
+    //PerAudience peraudience;
     public:
-    void play_game();
-    void play_game(IndividualPlayer& player1, IndividualPlayer& player2);
-    void play_with_others();
-    void play_with_computer();
-    void print_winner(IndividualPlayer& player1, IndividualPlayer& player2);
-    bool is_game_over(IndividualPlayer& player1, IndividualPlayer& player2);
+    Gamespec(Configuration configuration, Constants constants, Variables variables, PerPlayer perplayer, Rule rules, IndividualPlayer player) : Configuration(configuration), Constants(constants), Variables(variables), PerPlayer(perplayer), Rule(rules), IndividualPlayer(player) {}
+    Configuration getConfiguration() const;
+    Constants getConstants() const;
+    Variables getVariables() const;
+    PerPlayer getPerplayer() const;
+    Rule getRules() const;
+    IndividualPlayer getPlayer() const;
+
+    Configuration setConfiguration(Configuration configuration);
+    Constants setConstants(Constants constants);
+    Variables setVariables(Variables variables);
+    PerPlayer setPerplayer(PerPlayer perplayer);
+    Rule setRules(Rule rules);
+    IndividualPlayer setPlayer(IndividualPlayer player);
+
+    virtual ~Gamespec() {}
 
 };
-enum PlayChoice { Play, Exit };
-enum PlayMode { with_Computer, with_Other_Players };
-PlayChoice get_choice();
-PlayMode get_play_mode();
-PlayChoice get_choice()
-{
-   
-   std::cout << "Welcome to Rock, Paper, Scissors.\nTo play, type '1'. \nTo exit, type '2'.\n";
-   
-   int choice;
-   std::cin >> choice;
-   if ( std::cin ) // Reading was successful.
-   {
-      switch (choice)
-      {
-         case 1:
-            return Play;
-         case 2:
-            return Exit;
-         default:
-            std::cout << "You made an invalid choice. Try again...\n";
-      }
-      return get_choice();
-   }
-   else
-   {
-      std::cout << "You made an invalid choice. Try again...\n";
 
-      // Clear the stream
-      std::cin.clear();
-
-      // Skip bad input
-      std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-
-      // Try again.
-      return get_choice();
-   }
-}
 
