@@ -68,25 +68,31 @@ private:
 
 class Variables {
 public:
-	Variables(): winnersName(""){}
-	Variables(std::vector<std::string> winners, std::string winnersName);
-	std::string getWinnersName() const;
-	std::string getWinners() const;
-	void setBeats(const std::string& winnersName) ;
-	void setName(const std::vector<std::string>& winners) ;
+	Variables(): winners() {}
+    // reconsider the type
+	Variables(std::vector<std::string> winners) {}
+	std::vector<std::string> getWinners() const {
+        return this->winners;
+    }
+	void setWinners(const std::vector<std::string>& winners) {
+        this->winners = winners;
+    }
+
 private:
 	std::vector<std::string> winners;
-	std::string winnersName;
-	nlohmann::json setup;
-	// Not sure since it is JSON Array string pairs Need helps for fixing 
-	Variables(std::vector<std::string> winners) {
-		this -> winners = winners;
-	}
 };
 
-class PerPlayer {
+class PerPlayer{
 public:
+    PerPlayer(): wins(0) {}
+    int getWins() {return this->wins;}
+    void setWins(int wins) {this->wins = wins;}
+
+private:
+    int wins;
 };
+
+
 
 // maybe we should construct separate class for the different rule classes?
 // ex) OutputRule, InputRule, ArithmeticRule, ListOpsRule, ControlStructRule ...
@@ -369,6 +375,14 @@ private:
 public:
     ForEachRule(const ruleType& rule,const ruleType& list, const ruleType& element, const std::vector<Rule>& subrules):
     Rule{rule},list(list),element(element),subrules(subrules){}
+
+    ruleType getList() const {return list;}
+    void setList(const ruleType& list) {this->list = list;}
+    ruleType getElement() const {return element;}
+    void setElement(const ruleType& element) {this->element = element;}
+    std::vector<Rule> getSubrules() const {return this->subrules;}
+    void setSubrules(const std::vector<Rule>& subrules) {this->subrules=subrules;}
+
 };
 
 class LoopRule : public Rule {
@@ -380,6 +394,15 @@ private:
 public:
     LoopRule(const ruleType& rule,const ruleType& target,const ruleType& until,const ruleType& whileCondition,const std::vector<Rule>& subrules):
     Rule{rule},target(target),until(until),whileCondition(whileCondition),subrules(subrules){}
+
+    ruleType getTarget() const {return this->target;}
+    void setTarget(const ruleType& target) {this->target = target;}
+    ruleType getUntil() const {return this->until;}
+    void setUntil(const ruleType& until) {this->until = until;}
+    ruleType getWhile() const {return this->whileCondition;}
+    void setWhile(const ruleType& whileCondition) {this->whileCondition = whileCondition;}
+    std::vector<Rule> getSubrules() const {return this->subrules;}
+    void setSubrules(const std::vector<Rule>& subrules) {this->subrules=subrules;}
 };
   
 class InParallelRule : public Rule {
@@ -387,8 +410,10 @@ private:
     std::vector<Rule> subrules;
 public:
     InParallelRule(const ruleType& rule,const std::vector<Rule> subrules):
-     Rule{rule},subrules(subrules){}
+    Rule{rule},subrules(subrules){}
 
+    std::vector<Rule> getSubrules() const {return this->subrules;}
+    void setSubrules(const std::vector<Rule>& subrules) {this->subrules=subrules;}
 };
 
 class ParallelForRule : public Rule {
@@ -399,6 +424,14 @@ private:
 public:
     ParallelForRule(const ruleType& rule,const ruleType& list,const ruleType& element,const std::vector<Rule> subrules):
     Rule{rule},list(list),element(element),subrules(subrules){}
+
+    ruleType getList() const {return list;}
+    void setList(const ruleType& list) {this->list = list;}
+    ruleType getElement() const {return element;}
+    void setElement(const ruleType& element) {this->element = element;}
+    std::vector<Rule> getSubrules() const {return this->subrules;}
+    void setSubrules(const std::vector<Rule>& subrules) {this->subrules=subrules;}
+
 };
 
 // Sorts a list in ascending order
@@ -410,6 +443,13 @@ private:
 public:
     SwitchRule(const ruleType& rule,const ruleType& list,const ruleType& value,const  std::vector<Case> cases):
     Rule{rule},list(list),value(value),cases(cases){}
+
+    ruleType getList() const {return list;}
+    void setList(const ruleType& list) {this->list = list;}
+    ruleType getValue() const {return this->value;}
+    void setValue(const ruleType& value) {this->value = value;}
+    std::vector<Case> getCases() const {return this->cases;}
+    void setCases(const std::vector<Case>& cases) {this->cases=cases;}
 };
 
 class WhenRule : public Rule {
@@ -419,6 +459,11 @@ private:
 public:
     WhenRule(const ruleType& rule,const ruleType& count,const std::vector<Case>& cases):
     Rule{rule},count(count),cases(cases){}
+
+    void setCount(const ruleType& list) {this->count = count;}
+    ruleType getCount() const {return count;}
+    std::vector<Case> getCases() const {return this->cases;}
+    void setCases(const std::vector<Case>& cases) {this->cases=cases;}
 };
 
 //----------------------------------------End Of Rule Class---------------------------------------//

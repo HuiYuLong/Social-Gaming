@@ -1,4 +1,4 @@
-#include <translator.h>
+#include "include/translator.h"
 
 
 
@@ -16,8 +16,17 @@ std::unique_ptr<Constants> parseConstants(const nlohmann::json& j) {
 	return constants;
 }
 
+std::unique_ptr<PerPlayer> parsePerPlayer(const nlohmann::json& j) {
+	std::unique_ptr<PerPlayer> perPlayer = std::make_unique<PerPlayer>();
+	for (auto& item: j.items()) {
+		if (item.key().compare("per-player") == 0) {
+			perPlayer->setWins(item.value()["wins"]);
+		}
+	}
+	return perPlayer;
+}
+
 std::unique_ptr<Configuration> parseConfiguration(const nlohmann::json& j) {
-	// Configuration* configuration;
 	std::unique_ptr<Configuration> configuration = std::make_unique<Configuration>();
 	for (auto& item : j.items()) {
 		if (item.key().compare("configuration") == 0) {
@@ -28,10 +37,20 @@ std::unique_ptr<Configuration> parseConfiguration(const nlohmann::json& j) {
 			configuration->setAudience(item.value()["audience"]);
 			configuration->setRound(item.value()["setup"]["Rounds"]);
 		}
-}
+	}
 
 	return configuration;
 
+}
+
+std::unique_ptr<Variables> parseVariables(const nlohmann::json& j) {
+	std::unique_ptr<Variables> variables = std::make_unique<Variables>();
+	for (auto& item : j.items()) { 
+		if (item.key().compare("variables") == 0) {
+			variables->setWinners(item.value()[""]);
+		}
+	}
+	return variables;
 }
 
 //parseRule function recursively searching for "rule" key and print out the value (name of the rule)
@@ -82,11 +101,15 @@ int main() {
 	// 	std::cout << it->first << " beats " << it->second << std::endl;
 	// }
 	
-	//*** Parse Configuration ***//
 	std::unique_ptr<Configuration> configuration;
 	configuration = parseConfiguration(jsonObject);
-	// std::cout << "Parsing: " << std::endl;
-	// std::cout << configuration->getName() << std::endl;
+	std::cout << "-------> Parsing configuration ------->" << std::endl;
+	std::cout << "Configuration Name: " << configuration->getName() << std::endl;
+
+	// std::unique_ptr<Variables> variables;
+	// variables = parseVariables(jsonObject);
+	// std::cout << "-------> Parsing variables ------->";
+	// To print
 
 //-----------------------------------------Rule Tests--------------------------------------//
     // auto rule1 = jsonObject["rules"][0]["rule"];
