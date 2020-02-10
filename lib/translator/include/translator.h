@@ -6,6 +6,9 @@
 #include <nlohmann/json.hpp>
 #include <fstream>
 #include <sstream>
+#include <variant>
+#include <cassert>
+
 #include "common.h"
 
 using networking::Message;
@@ -110,7 +113,36 @@ public:
     void setRule(const ruleType& rule) {this->rule = rule;}
 };
 
-using ruleList = std::vector<Rule*>;
+//Class forward declaration
+class AddRule;
+class TimerRule;
+class InputChoiceRule;
+class InputTextRule;
+class InputVoteRule;
+class MessageRule;
+class GlobalMessageRule;
+class ScoresRule;
+class ExtendRule;
+class ReverseRule;
+class ShuffleRule;
+class SortRule;
+class DealRule;
+class DiscardRule;
+class ListAttributesRule;
+class ForEachRule;
+class LoopRule;
+class InParallelRule;
+class ParallelForRule;
+class SwitchRule;
+class WhenRule;
+
+using ruleList = std::vector<std::variant<AddRule, TimerRule, InputChoiceRule,
+                                          InputTextRule, InputVoteRule, MessageRule, 
+                                          GlobalMessageRule, ScoresRule, ExtendRule, 
+                                          ReverseRule, ShuffleRule, SortRule, 
+                                          DealRule, DiscardRule, ListAttributesRule, 
+                                          ForEachRule, LoopRule, InParallelRule, 
+                                          ParallelForRule, SwitchRule, WhenRule>>;
 class Case { 
 	std::string caseString;
 	ruleList rules;
