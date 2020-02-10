@@ -27,6 +27,8 @@
         $('#messages').scrollTop($('#messages')[0].scrollHeight);
       }
 
+      // Endpoints are considered the same if the only difference between them is the ending '/' symbol
+      // It seems like this is how websockets think
       function sameEndpoint(url1, url2) {
         if (url1.slice(-1) == '/') {
           url1 = url1.slice(0, -1);
@@ -53,28 +55,28 @@
           return;
         }
         else {
-          appendText("Already connected!\n");
+          appendText("Already connected!\n\n");
           return;
         }
         ws.onopen = function(ev) {
-          appendText("Connected!\n");
+          appendText("Connected!\n\n");
         };
         ws.onclose = function(ev) {
           ws = null;
           if (changeEndpoint) {
             changeEndpoint = false;
-            appendText("Changing session...\n");
+            appendText("Changing session...\n\n");
             $('#connect').click();
           }
           else {
-            appendText("Disconnected!\n");
+            appendText("Disconnected!\n\n");
           }
         };
         ws.onmessage = function(ev) {
-          appendText(ev.data + "\n");
+          appendText(ev.data + "\n\n");
         };
         ws.onerror = function(ev) {
-          appendText("[error]\n");
+          appendText("[error]\n\n");
           console.log(ev);
         };
       });
