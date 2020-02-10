@@ -110,14 +110,14 @@ public:
     void setRule(const ruleType& rule) {this->rule = rule;}
 };
 
-class Case {
+using ruleList = std::vector<Rule*>;
+class Case { 
 	std::string caseString;
-	std::vector<Rule*> rules;
+	ruleList rules;
 };
 
 //-----------------------PETER'S CODE:---------------------------------
 
-using ruleList = std::vector<Rule>;
 class AddRule : public Rule{
 private:
     ruleType to;
@@ -254,43 +254,43 @@ class ExtendRule : public Rule {
 private:
     ruleType target;
     ruleType list;
-    std::vector<Rule*> subrules;
+    ruleList subrules;
 public:
-    ExtendRule(const ruleType& rule,const ruleType& target,const ruleType & list,const std::vector<Rule*>& subrules):Rule{rule},target(target),list(list),subrules(subrules){}
+    ExtendRule(const ruleType& rule,const ruleType& target,const ruleType & list,const ruleList& subrules):Rule{rule},target(target),list(list),subrules(subrules){}
     ruleType getTarget() const{return target;}
     ruleType getList() const{return list;}
-    std::vector<Rule*> getSubrules() const {return subrules;}
+    ruleList getSubrules() const {return subrules;}
     
     void setTarget(const ruleType& target){this->target=target;}
     void setList(const ruleType & list){this->list=list;}
-    void setSubrules(const std::vector<Rule*>& subrules){this->subrules=subrules;}
+    void setSubrules(const ruleList& subrules){this->subrules=subrules;}
 };
 
   
 class ReverseRule : public Rule{
 private:
     ruleType list;
-    std::vector<Rule*> subrules;
+    ruleList subrules;
 public:
-    ReverseRule(const ruleType& rule, const ruleType& list,const std::vector<Rule*>& subrules):Rule{rule},list(list),subrules(subrules){}
+    ReverseRule(const ruleType& rule, const ruleType& list,const ruleList& subrules):Rule{rule},list(list),subrules(subrules){}
     ruleType getList() const{return list;}
-    std::vector<Rule*> getSubrules() const {return subrules;}
+    ruleList getSubrules() const {return subrules;}
     
     void setList(const ruleType & list){this->list=list;}
-    void setSubrules(const std::vector<Rule*>& subrules){this->subrules=subrules;}
+    void setSubrules(const ruleList& subrules){this->subrules=subrules;}
 };
 
 class ShuffleRule : public Rule{
 private:
     ruleType list;
-    std::vector<Rule> subrules;
+    ruleList subrules;
 public:
-    ShuffleRule(const ruleType& rule, const ruleType& list, const std::vector<Rule>& subrules):Rule{rule},list(list),subrules(subrules){}
+    ShuffleRule(const ruleType& rule, const ruleType& list, const ruleList& subrules):Rule{rule},list(list),subrules(subrules){}
     ruleType getList() const{return list;}
-    std::vector<Rule> getSubrules() const {return subrules;}
+    ruleList getSubrules() const {return subrules;}
     
     void setList(const ruleType & list){this->list=list;}
-    void setSubrules(const std::vector<Rule>& subrules){this->subrules=subrules;}
+    void setSubrules(const ruleList& subrules){this->subrules=subrules;}
 };
 
 // Sorts a list in ascending order
@@ -298,16 +298,16 @@ class SortRule : public Rule {
 private:
     ruleType list;
     ruleType key;
-    std::vector<Rule> subrules;
+    ruleList subrules;
 public:
-    SortRule(const ruleType& rule, const ruleType& list, const ruleType& key,const std::vector<Rule>& subrules):Rule{rule},list(list),key(key),subrules(subrules){}
+    SortRule(const ruleType& rule, const ruleType& list, const ruleType& key,const ruleList& subrules):Rule{rule},list(list),key(key),subrules(subrules){}
     ruleType getList() const{return list;}
     ruleType getKey() const{return key;}
-    std::vector<Rule> getSubrules() const {return subrules;}
+    ruleList getSubrules() const {return subrules;}
     
     void setList(const ruleType & list){this->list=list;}
     void setKey(const ruleType & key){this->key=key;}
-    void setSubrules(const std::vector<Rule>& subrules){this->subrules=subrules;}
+    void setSubrules(const ruleList& subrules){this->subrules=subrules;}
 };
 
 class DealRule : public Rule {
@@ -315,20 +315,20 @@ private:
     ruleType from;
     ruleType to;
     ruleType count;
-    std::vector<Rule> subrules;
+    ruleList subrules;
 public:
-    DealRule(const ruleType& rule, const ruleType& from, const ruleType& to,const ruleType& count,const std::vector<Rule>& subrules):
+    DealRule(const ruleType& rule, const ruleType& from, const ruleType& to,const ruleType& count,const ruleList& subrules):
     Rule{rule}, from(from),to(to),count(count),subrules(subrules){}
 
     ruleType getFrom() const{return from;}
     ruleType getTo() const{return to;}
     ruleType getCount() const{return count;}
-    std::vector<Rule> getSubrules() const {return subrules;}
+    ruleList getSubrules() const {return subrules;}
     
     void setFrom(const ruleType & from){this->from=from;}
     void setTo(const ruleType & to){this->from=from;}
     void setCount(const ruleType& count){this->count=count;}
-    void setSubrules(const std::vector<Rule>& subrules){this->subrules=subrules;}
+    void setSubrules(const ruleList& subrules){this->subrules=subrules;}
 
 };
 //todo: geter and steter ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -336,18 +336,18 @@ class DiscardRule : public Rule {
 private:
     ruleType from;
     ruleType count;
-    std::vector<Rule> subrules;
+    ruleList subrules;
 public:
-    DiscardRule(const ruleType& rule, const ruleType& from, const ruleType& count, const std::vector<Rule>& subrules ):
+    DiscardRule(const ruleType& rule, const ruleType& from, const ruleType& count, const ruleList& subrules ):
     Rule{rule},from(from),count(count),subrules(subrules){}
 
     ruleType getFrom() const{return from;}
     ruleType getCount() const{return count;}
-    std::vector<Rule> getSubrules() const {return subrules;}
+    ruleList getSubrules() const {return subrules;}
 
     void setFrom(const ruleType & from){this->from=from;}
     void setCount(const ruleType& count){this->count=count;}
-    void setSubrules(const std::vector<Rule>& subrules){this->subrules=subrules;}
+    void setSubrules(const ruleList& subrules){this->subrules=subrules;}
 
 };
 
@@ -370,18 +370,18 @@ class ForEachRule : public Rule {
 private:
     ruleType list;
     ruleType element;
-    std::vector<Rule> subrules;
+    ruleList subrules;
 
 public:
-    ForEachRule(const ruleType& rule,const ruleType& list, const ruleType& element, const std::vector<Rule>& subrules):
+    ForEachRule(const ruleType& rule,const ruleType& list, const ruleType& element, const ruleList& subrules):
     Rule{rule},list(list),element(element),subrules(subrules){}
 
     ruleType getList() const {return list;}
     void setList(const ruleType& list) {this->list = list;}
     ruleType getElement() const {return element;}
     void setElement(const ruleType& element) {this->element = element;}
-    std::vector<Rule> getSubrules() const {return this->subrules;}
-    void setSubrules(const std::vector<Rule>& subrules) {this->subrules=subrules;}
+    ruleList getSubrules() const {return this->subrules;}
+    void setSubrules(const ruleList& subrules) {this->subrules=subrules;}
 
 };
 
@@ -390,9 +390,9 @@ private:
     ruleType target;
     ruleType until;
     ruleType whileCondition;
-    std::vector<Rule> subrules;
+    ruleList subrules;
 public:
-    LoopRule(const ruleType& rule,const ruleType& target,const ruleType& until,const ruleType& whileCondition,const std::vector<Rule>& subrules):
+    LoopRule(const ruleType& rule,const ruleType& target,const ruleType& until,const ruleType& whileCondition,const ruleList& subrules):
     Rule{rule},target(target),until(until),whileCondition(whileCondition),subrules(subrules){}
 
     ruleType getTarget() const {return this->target;}
@@ -401,36 +401,36 @@ public:
     void setUntil(const ruleType& until) {this->until = until;}
     ruleType getWhile() const {return this->whileCondition;}
     void setWhile(const ruleType& whileCondition) {this->whileCondition = whileCondition;}
-    std::vector<Rule> getSubrules() const {return this->subrules;}
-    void setSubrules(const std::vector<Rule>& subrules) {this->subrules=subrules;}
+    ruleList getSubrules() const {return this->subrules;}
+    void setSubrules(const ruleList& subrules) {this->subrules=subrules;}
 };
   
 class InParallelRule : public Rule {
 private:
-    std::vector<Rule> subrules;
+    ruleList subrules;
 public:
-    InParallelRule(const ruleType& rule,const std::vector<Rule> subrules):
+    InParallelRule(const ruleType& rule,const ruleList subrules):
     Rule{rule},subrules(subrules){}
 
-    std::vector<Rule> getSubrules() const {return this->subrules;}
-    void setSubrules(const std::vector<Rule>& subrules) {this->subrules=subrules;}
+    ruleList getSubrules() const {return this->subrules;}
+    void setSubrules(const ruleList& subrules) {this->subrules=subrules;}
 };
 
 class ParallelForRule : public Rule {
 private:
     ruleType list;
     ruleType element;
-    std::vector<Rule> subrules;
+    ruleList subrules;
 public:
-    ParallelForRule(const ruleType& rule,const ruleType& list,const ruleType& element,const std::vector<Rule> subrules):
+    ParallelForRule(const ruleType& rule,const ruleType& list,const ruleType& element,const ruleList subrules):
     Rule{rule},list(list),element(element),subrules(subrules){}
 
     ruleType getList() const {return list;}
     void setList(const ruleType& list) {this->list = list;}
     ruleType getElement() const {return element;}
     void setElement(const ruleType& element) {this->element = element;}
-    std::vector<Rule> getSubrules() const {return this->subrules;}
-    void setSubrules(const std::vector<Rule>& subrules) {this->subrules=subrules;}
+    ruleList getSubrules() const {return this->subrules;}
+    void setSubrules(const ruleList& subrules) {this->subrules=subrules;}
 
 };
 
