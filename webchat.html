@@ -27,22 +27,48 @@
         $('#messages').scrollTop($('#messages')[0].scrollHeight);
       }
 
+      function sameEndpoint(url1, url2) {
+        if (url1.slice(-1) == '/') {
+          url1 = url1.slice(0, -1);
+        }
+        if (url2.slice(-1) == '/') {
+          url2 = url2.slice(0, -1);
+        }
+        return url1 == url2;
+      }
+
       var ws = null;
       var uriPieces = window.location.href.split('/');
       var wsLocation = 'ws://' + uriPieces[2];
+      var changeEndpoint = false;
       $('#uri:text').val(wsLocation);
       
       $('#connect').click(function() {
-        if (ws == null || !(ws.url == uri.value || ws.url.slice(0, -1) == uri.value))
+        if (ws == null) {
           ws = new WebSocket(uri.value);
-        else
-          appendText("Already connected!\n")
+        }
+        else if (!sameEndpoint(ws.url, uri.value)) {
+          changeEndpoint = true;
+          ws.close();
+          return;
+        }
+        else {
+          appendText("Already connected!\n");
+          return;
+        }
         ws.onopen = function(ev) {
           appendText("Connected!\n");
         };
         ws.onclose = function(ev) {
-          appendText("Disconnected!\n");
           ws = null;
+          if (changeEndpoint) {
+            changeEndpoint = false;
+            appendText("Changing session...\n");
+            $('#connect').click();
+          }
+          else {
+            appendText("Disconnected!\n");
+          }
         };
         ws.onmessage = function(ev) {
           appendText(ev.data + "\n");
@@ -50,7 +76,6 @@
         ws.onerror = function(ev) {
           appendText("[error]\n");
           console.log(ev);
-          ws = null;
         };
       });
 
