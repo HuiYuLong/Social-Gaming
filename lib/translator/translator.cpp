@@ -71,7 +71,6 @@ void parseRule(const nlohmann::json& j){
 	}
 }
 
-
 int main() {
 
 	//std::istringstream iss("{\"json\": \"beta\"}"); // code manually create a small json file
@@ -89,9 +88,10 @@ int main() {
 	//----------------------------TEST: Rule class--------------------------------------//
     AddRule a("add", "winner.wins", "1");
     ruleList list;
-    list.push_back(static_cast<Rule>(a));
+    list.push_back(&a);
     TimerRule t("timer","12", "exact", list);
-    std::cout<< t.getSubRules().front().getRule() << "\n";
+    std::cout<< t.getSubRules().front()->getRule() << "\n";
+
 	//----------------------------TEST: parseRule function---------------------------------
 	parseRule(jsonObject);
 
