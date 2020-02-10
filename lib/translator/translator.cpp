@@ -71,6 +71,7 @@ void parseRule(const nlohmann::json& j){
 	}
 }
 
+
 int main() {
 
 	//std::istringstream iss("{\"json\": \"beta\"}"); // code manually create a small json file

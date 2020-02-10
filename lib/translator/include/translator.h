@@ -110,7 +110,7 @@ public:
     void setRule(const ruleType& rule) {this->rule = rule;}
 };
 
-using ruleList = std::vector<Rule>;
+using ruleList = std::vector<Rule*>;
 class Case { 
 	std::string caseString;
 	ruleList rules;
