@@ -6,6 +6,7 @@
 #include <nlohmann/json.hpp>
 #include <fstream>
 #include <sstream>
+#include <random>
 #include "common.h"
 
 using networking::Message;
@@ -469,6 +470,23 @@ public:
 //----------------------------------------End Of Rule Class---------------------------------------//
 // Not completed
 class Player {
+        private:
+        std::string playerName;
+        int playerID;
+        int playerScores;
+    public:
+        Player(): playerScores(0),playerID(IDGenerator()) {}
+        Player(std::string name): playerName(name), playerScores(0), playerID(IDGenerator()){}
+        int getScores() {return this->playerScores;}
+        void setScores(int Scores) {this->playerScores = Scores;}
+        void addScores(int Scores) {this->playerScores += Scores;}
+        //playID generator method, return a 5-digits integer,may add more 
+        int IDGenerator(){
+            std::random_device ranNumber;
+            return ranNumber()%10000;
+        } 
+        //maybe need weapon;
+    
 
 };
 
