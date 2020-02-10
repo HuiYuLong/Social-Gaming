@@ -85,88 +85,40 @@ int main() {
         std::cout << "cannot open file" << std::endl;
         return 0;
     }
-	parseRule(jsonObject);
-
-	std::unique_ptr<Constants> constants;
-	constants = parseConstants(jsonObject);
-
-	for (auto& x : constants->getWeapons()) {
-		std::cout << x.first << " beats " << x.second << std::endl;
-	}
-
-	//constants->getWeapons();
-
-	// std::map<std::string, std::string>::iterator it;
-	// for (it = constants->getWeapons().begin(); it != constants->getWeapons().end();++it) {
-	// 	std::cout << it->first << " beats " << it->second << std::endl;
-	// }
-	
-	std::unique_ptr<Configuration> configuration;
-	configuration = parseConfiguration(jsonObject);
-	std::cout << "-------> Parsing configuration ------->" << std::endl;
-	std::cout << "Configuration Name: " << configuration->getName() << std::endl;
-
-	// std::unique_ptr<Variables> variables;
-	// variables = parseVariables(jsonObject);
-	// std::cout << "-------> Parsing variables ------->";
-	// To print
-
-//-----------------------------------------Rule Tests--------------------------------------//
-    // auto rule1 = jsonObject["rules"][0]["rule"];
-    // auto rule2 = jsonObject["rules"][1]["rule"];
-    // auto rule3 = jsonObject["rules"][0]["rules"];
-    // auto Global_msg = jsonObject["rules"][0]["rules"][0];
-    // auto Rules_choices = jsonObject["rules"][0]["rules"][1];
-    // auto choices = jsonObject["rules"][0]["rules"][1]["rules"];
-    // // auto inputChoice = jsonObject["rules"][0]["rules"][1]["rules"][1];
-    // auto parallelFor = jsonObject["rules"][0]["rules"][1];    
-    // auto inputChoice = jsonObject["rules"][0]["rules"][1]["rules"];    
-    // auto Discard = jsonObject["rules"][0]["rules"][2]; 
-    // auto forEach = jsonObject["rules"][0]["rules"][3];
-    // // auto when = jsonObject["rules"][0]["rules"][3]["rules"];
-    // auto when = jsonObject["rules"][0]["rules"][4];
-    // std::cout << rule2 << std::endl;
-    // cout << rule3 << endl;
-    // cout << Global_msg << endl;
-    // cout << inputChoice << endl;
-    // cout << inputChoice << endl;
-    // cout << when << endl; 
-    // Rule::getScores(jsonObject);
-
+	//----------------------------TEST: Rule class--------------------------------------//
     AddRule a("add", "winner.wins", "1");
     ruleList list;
     list.push_back(static_cast<Rule>(a));
     TimerRule t("timer","12", "exact", list);
     std::cout<< t.getSubRules().front().getRule() << "\n";
+	//----------------------------TEST: parseRule function---------------------------------
+	parseRule(jsonObject);
 
-    //--------------------------------------End of rule Tests------------------------------------//
+	//----------------------------TEST:parseConstants function------------------------------
+	std::unique_ptr<Constants> constants;
+	constants = parseConstants(jsonObject);
+	for (auto& x : constants->getWeapons()) {
+		std::cout << x.first << " beats " << x.second << std::endl;
+	}
+	//constants->getWeapons();
+	// std::map<std::string, std::string>::iterator it;
+	// for (it = constants->getWeapons().begin(); it != constants->getWeapons().end();++it) {
+	// 	std::cout << it->first << " beats " << it->second << std::endl;
+	// }
+	
+	//-------------------------------TEST:parseConfiguration function-----------------------
+	std::unique_ptr<Configuration> configuration;
+	configuration = parseConfiguration(jsonObject);
+	std::cout << "-------> Parsing configuration ------->" << std::endl;
+	std::cout << "Configuration Name: " << configuration->getName() << std::endl;
 
-	// auto name = jsonObject["configuration"]["name"].get<std::string>(); // both methods work just fine
-	// auto name = jsonObject["configuration"]["name"];
-	// auto playerCountMin = jsonObject["configuration"]["player count"]["min"];
-	// auto playerCountMax = jsonObject["configuration"]["player count"]["max"];
-	// auto audience = jsonObject["configuration"]["audience"];
-	// auto setup = jsonObject["configuration"]["setup"];
-	// auto constants = jsonObject["constants"];
-	// auto variables = jsonObject["variables"];
-	// auto perPlayer = jsonObject["per-player"];
-	// auto perAudience = jsonObject["per-audience"];
-	// auto rules = jsonObject["rules"];
+	//-------------------------------TEST:parseVariables function-----------------------
+	// std::unique_ptr<Variables> variables;
+	// variables = parseVariables(jsonObject);
+	// std::cout << "-------> Parsing variables ------->";
+	// To print
 
-	// std::cout << name << std::endl;
-	// std::cout << playerCountMin << std::endl;
-	// std::cout << playerCountMax << std::endl;
-	// std::cout << audience << std::endl;
-	// std::cout << setup << std::endl;
-	// std::cout << constants << std::endl;
-	// std::cout << variables << std::endl;
-	// std::cout << perPlayer << std::endl;
-	// std::cout << perAudience << std::endl;
-	// std::cout << rules << std::endl;
 
-	// Interpreter* interpreter = new Interpreter(jsonObject);
-	// interpreter->createGame();
-	// interpreter->destoryGame();
 
 	return 0;
 }
