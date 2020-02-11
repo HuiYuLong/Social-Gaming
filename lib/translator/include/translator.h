@@ -108,41 +108,14 @@ class Rule {
 private:
     ruleType rule;
 public:
+    
     Rule(const ruleType& rule): rule(rule){}
     ruleType getRule() const {return rule;}
     void setRule(const ruleType& rule) {this->rule = rule;}
 };
 
-//Class forward declaration
-class AddRule;
-class TimerRule;
-class InputChoiceRule;
-class InputTextRule;
-class InputVoteRule;
-class MessageRule;
-class GlobalMessageRule;
-class ScoresRule;
-class ExtendRule;
-class ReverseRule;
-class ShuffleRule;
-class SortRule;
-class DealRule;
-class DiscardRule;
-class ListAttributesRule;
-class ForEachRule;
-class LoopRule;
-class InParallelRule;
-class ParallelForRule;
-class SwitchRule;
-class WhenRule;
+using ruleList = std::vector<Rule*>;
 
-using ruleList = std::vector<std::variant<AddRule, TimerRule, InputChoiceRule,
-                                          InputTextRule, InputVoteRule, MessageRule, 
-                                          GlobalMessageRule, ScoresRule, ExtendRule, 
-                                          ReverseRule, ShuffleRule, SortRule, 
-                                          DealRule, DiscardRule, ListAttributesRule, 
-                                          ForEachRule, LoopRule, InParallelRule, 
-                                          ParallelForRule, SwitchRule, WhenRule>>;
 class Case { 
 	std::string caseString;
 	ruleList rules;
@@ -258,7 +231,7 @@ private:
     ruleType value;
 
 public:
-    GlobalMessageRule(const ruleType& rule, const ruleType& value): Rule{rule}, value(value){}
+    GlobalMessageRule(nlohmann::json& rule);
 
     ruleType getValue() const {return value;}
 
@@ -405,8 +378,7 @@ private:
     ruleList subrules;
 
 public:
-    ForEachRule(const ruleType& rule,const ruleType& list, const ruleType& element, const ruleList& subrules):
-    Rule{rule},list(list),element(element),subrules(subrules){}
+    ForEachRule(nlohmann::json& rule);
 
     ruleType getList() const {return list;}
     void setList(const ruleType& list) {this->list = list;}
@@ -497,6 +469,20 @@ public:
     std::vector<Case> getCases() const {return this->cases;}
     void setCases(const std::vector<Case>& cases) {this->cases=cases;}
 };
+
+std::unordered_map<std::string, std::function<Rule*(nlohmann::json&)>> rulemap = {
+		{"foreach", [](nlohmann::json& rule) { return new ForEachRule(rule); }},
+        {"global-message", [](nlohmann::json& rule) { return new GlobalMessageRule(rule); }}
+};
+
+GlobalMessageRule::GlobalMessageRule(nlohmann::json& rule): Rule{rule["rule"]}, value(rule["value"]){}
+
+ForEachRule::ForEachRule(nlohmann::json& rule): Rule(rule["rule"]), list(rule["list"]), element(rule["round"]) {
+    for (nlohmann::json& rule : rule["rules"])
+    {
+        subrules.push_back(rulemap[rule["rule"]](rule));
+    }
+}
 
 //----------------------------------------End Of Rule Class---------------------------------------//
 // Not completed

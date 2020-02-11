@@ -1,0 +1,14 @@
+{
+    "rules": [
+      { "rule": "foreach",
+        "list": "configuration.Rounds.upfrom(1)",
+        "element": "round",
+        "rules": [
+  
+          { "rule": "global-message",
+            "value": "Round {round}. Choose your weapon!"
+          }
+        ]
+      }
+    ]
+}
