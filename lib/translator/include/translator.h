@@ -112,6 +112,7 @@ public:
     Rule(const ruleType& rule): rule(rule){}
     ruleType getRule() const {return rule;}
     void setRule(const ruleType& rule) {this->rule = rule;}
+    virtual ~Rule() {};
 };
 
 using ruleList = std::vector<Rule*>;
@@ -231,7 +232,8 @@ private:
     ruleType value;
 
 public:
-    GlobalMessageRule(nlohmann::json& rule);
+    GlobalMessageRule(const nlohmann::json& rule);
+    ~GlobalMessageRule() override;
 
     ruleType getValue() const {return value;}
 
@@ -378,7 +380,8 @@ private:
     ruleList subrules;
 
 public:
-    ForEachRule(nlohmann::json& rule);
+    ForEachRule(const nlohmann::json& rule);
+    ~ForEachRule() override;
 
     ruleType getList() const {return list;}
     void setList(const ruleType& list) {this->list = list;}
@@ -470,19 +473,27 @@ public:
     void setCases(const std::vector<Case>& cases) {this->cases=cases;}
 };
 
-std::unordered_map<std::string, std::function<Rule*(nlohmann::json&)>> rulemap = {
-		{"foreach", [](nlohmann::json& rule) { return new ForEachRule(rule); }},
-        {"global-message", [](nlohmann::json& rule) { return new GlobalMessageRule(rule); }}
+std::unordered_map<std::string, std::function<Rule*(const nlohmann::json&)>> rulemap = {
+		{"foreach", [](const nlohmann::json& rule) { return new ForEachRule(rule); }},
+        {"global-message", [](const nlohmann::json& rule) { return new GlobalMessageRule(rule); }}
 };
 
-GlobalMessageRule::GlobalMessageRule(nlohmann::json& rule): Rule{rule["rule"]}, value(rule["value"]){}
+GlobalMessageRule::GlobalMessageRule(const nlohmann::json& rule): Rule{rule["rule"]}, value(rule["value"]) { std::cout << "Global message: " << value << std::endl; }
 
-ForEachRule::ForEachRule(nlohmann::json& rule): Rule(rule["rule"]), list(rule["list"]), element(rule["round"]) {
-    for (nlohmann::json& rule : rule["rules"])
+ForEachRule::ForEachRule(const nlohmann::json& rule): Rule(rule["rule"]), list(rule["list"]), element(rule["element"]) {
+    std::cout << "For each: " << element << std::endl;
+    for (const auto& it : rule["rules"].items())
     {
-        subrules.push_back(rulemap[rule["rule"]](rule));
+		subrules.push_back(rulemap[it.value()["rule"]](it.value()));
     }
 }
+
+ForEachRule::~ForEachRule() {
+    for (auto ruleptr : subrules)
+        ruleptr->~Rule();
+}
+
+GlobalMessageRule::~GlobalMessageRule() {}
 
 //----------------------------------------End Of Rule Class---------------------------------------//
 // Not completed

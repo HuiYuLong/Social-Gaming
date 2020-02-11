@@ -9,6 +9,10 @@
             "value": "Round {round}. Choose your weapon!"
           }
         ]
+      },
+
+      { "rule": "global-message",
+        "value": "R!"
       }
     ]
 }

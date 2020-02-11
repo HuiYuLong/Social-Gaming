@@ -72,6 +72,11 @@ void parseRule(const nlohmann::json& j){
 }
 
 int main(int argc, char** argv) {
+	if (argc != 2)
+	{
+		std::cout << "Pass the json file location as the first parameter" << std::endl;
+		return 1;
+	}
 	std::ifstream jsonFileStream(argv[1]); // read file
 	// To make sure you can open the file
     if (jsonFileStream.fail())
@@ -79,18 +84,19 @@ int main(int argc, char** argv) {
         std::cout << "cannot open file" << std::endl;
         return 0;
     }
-	// std::cout << jsonFileStream.rdbuf() << std::endl;
-	// return 0;
+
 	nlohmann::json jsonObject = nlohmann::json::parse(jsonFileStream);
 
-	
-
     ruleList ruleTree;
-	for (auto& rule: jsonObject["rules"])
+	for (const auto& it: jsonObject["rules"].items())
 	{
-		ruleTree.push_back(rulemap[rule["rule"]](rule));
+		const nlohmann::json& rule = it.value();
+		const std::string& rulename = rule["rule"];
+		ruleTree.push_back(rulemap[rulename](rule));
 	}
 
+	for (auto ruleptr : ruleTree)
+		ruleptr->~Rule();
 
 	return 0;
 }
