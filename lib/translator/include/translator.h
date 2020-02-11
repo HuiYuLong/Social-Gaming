@@ -473,6 +473,14 @@ public:
     void setCases(const std::vector<Case>& cases) {this->cases=cases;}
 };
 
+class RuleTree {
+    ruleList ruleTree;
+public:
+    RuleTree(const nlohmann::json& gameConfig);
+
+    ~RuleTree();
+};
+
 std::unordered_map<std::string, std::function<Rule*(const nlohmann::json&)>> rulemap = {
 		{"foreach", [](const nlohmann::json& rule) { return new ForEachRule(rule); }},
         {"global-message", [](const nlohmann::json& rule) { return new GlobalMessageRule(rule); }}
@@ -480,7 +488,8 @@ std::unordered_map<std::string, std::function<Rule*(const nlohmann::json&)>> rul
 
 GlobalMessageRule::GlobalMessageRule(const nlohmann::json& rule): Rule{rule["rule"]}, value(rule["value"]) { std::cout << "Global message: " << value << std::endl; }
 
-ForEachRule::ForEachRule(const nlohmann::json& rule): Rule(rule["rule"]), list(rule["list"]), element(rule["element"]) {
+ForEachRule::ForEachRule(const nlohmann::json& rule): Rule(rule["rule"]), list(rule["list"]), element(rule["element"])
+{
     std::cout << "For each: " << element << std::endl;
     for (const auto& it : rule["rules"].items())
     {
@@ -488,12 +497,29 @@ ForEachRule::ForEachRule(const nlohmann::json& rule): Rule(rule["rule"]), list(r
     }
 }
 
-ForEachRule::~ForEachRule() {
+RuleTree::RuleTree(const nlohmann::json& gameConfig)
+{
+    for (const auto& it: gameConfig["rules"].items())
+    {
+        const nlohmann::json& rule = it.value();
+        const std::string& rulename = rule["rule"];
+        ruleTree.push_back(rulemap[rulename](rule));
+    }
+}
+
+ForEachRule::~ForEachRule()
+{
     for (auto ruleptr : subrules)
         delete ruleptr;
 }
 
 GlobalMessageRule::~GlobalMessageRule() {}
+
+RuleTree::~RuleTree()
+{
+    for (auto ruleptr : ruleTree)
+		delete ruleptr;
+}
 
 //----------------------------------------End Of Rule Class---------------------------------------//
 // Not completed

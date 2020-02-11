@@ -85,18 +85,9 @@ int main(int argc, char** argv) {
         return 0;
     }
 
-	nlohmann::json jsonObject = nlohmann::json::parse(jsonFileStream);
+	nlohmann::json gameConfig = nlohmann::json::parse(jsonFileStream);
 
-    ruleList ruleTree;
-	for (const auto& it: jsonObject["rules"].items())
-	{
-		const nlohmann::json& rule = it.value();
-		const std::string& rulename = rule["rule"];
-		ruleTree.push_back(rulemap[rulename](rule));
-	}
-
-	for (auto ruleptr : ruleTree)
-		delete ruleptr;
+	RuleTree ruleTree(gameConfig);
 
 	return 0;
 }
