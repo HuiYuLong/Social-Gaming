@@ -88,9 +88,13 @@ int main() {
 	//----------------------------TEST: Rule class--------------------------------------//
     AddRule a("add", "winner.wins", "1");
     ruleList list;
-    list.push_back(&a);
+    list.push_back(a);
+    // std::cout << std::get<AddRule>(list.front()).getRule() << "\n";
+
     TimerRule t("timer","12", "exact", list);
-    std::cout<< t.getSubRules().front()->getRule() << "\n";
+    std::cout << std::get<AddRule>(t.getSubRules().front()).getRule() << "\n";
+    std::cout << std::get<AddRule>(t.getSubRules().front()).getTo() << "\n";
+    std::cout << std::get<AddRule>(t.getSubRules().front()).getValue() << "\n";
 
 	//----------------------------TEST: parseRule function---------------------------------
 	parseRule(jsonObject);
