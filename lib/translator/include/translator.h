@@ -490,7 +490,7 @@ ForEachRule::ForEachRule(const nlohmann::json& rule): Rule(rule["rule"]), list(r
 
 ForEachRule::~ForEachRule() {
     for (auto ruleptr : subrules)
-        ruleptr->~Rule();
+        delete ruleptr;
 }
 
 GlobalMessageRule::~GlobalMessageRule() {}

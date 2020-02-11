@@ -96,7 +96,7 @@ int main(int argc, char** argv) {
 	}
 
 	for (auto ruleptr : ruleTree)
-		ruleptr->~Rule();
+		delete ruleptr;
 
 	return 0;
 }
