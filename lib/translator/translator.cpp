@@ -196,6 +196,7 @@ void createObject(const nlohmann::json& j, ruleList& list){
 					temp.setResult(item.value());
 				} 
 			}
+			list.push_back(temp);
 		}
 	}
 	return;
@@ -273,9 +274,9 @@ int main() {
 	std::vector<nlohmann::json> v;
 	ruleList l;
 	parseRule(jsonObject, v);
-	for (auto item:v){
-		std::cout << item << "\n";
-	}
+	// for (auto item:v){
+	// 	std::cout << item << "\n";
+	// }
 	for(auto& item: v){
 		createObject(item, l);
 	}
