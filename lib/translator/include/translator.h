@@ -9,6 +9,7 @@
 #include <variant>
 #include <cassert>
 #include <iomanip>
+#include <stack>
 #include <type_traits>
 #include "common.h"
 

@@ -115,7 +115,7 @@ RulesIdentity readRuleType(std::string s){
 	return INVALID;
 }
 
-void createObject(const nlohmann::json& j, ruleList& list){
+void createObject(const nlohmann::json& j, ruleList& list, std::stack<ruleType>& s){
 	if (j.is_object()){
 		RulesIdentity ruleIden;
 		//Identify type of rule
@@ -135,6 +135,7 @@ void createObject(const nlohmann::json& j, ruleList& list){
 				}
 			}
 			list.push_back(temp);
+			s.push(temp);
 		} else if (ruleIden == SCORES){
 			ScoresRule temp;
 			temp.setRule("scores");
@@ -146,6 +147,7 @@ void createObject(const nlohmann::json& j, ruleList& list){
 				}
 			}
 			list.push_back(temp);
+			s.push(temp);
 		} else if (ruleIden == FOR_EACH){
 			ForEachRule temp;
 			temp.setRule("foreach");
@@ -155,15 +157,16 @@ void createObject(const nlohmann::json& j, ruleList& list){
 				} else if (!item.key().compare("element")){
 					temp.setElement(item.value());
 				} else if (!item.key().compare("rules")){
-					// auto size = item.value().size();
-					// ruleList tempList(list.end()-size, list.end());
-					// for(auto& item :tempList){
-					// 	temp.insert(item);
-					// }
-					temp.insert(list.back());
+					auto size = item.value().size();
+					for(unsigned i = 0; i < size; i++){
+						temp.insert(s.top());
+						s.pop();
+					}
+
 				}
 			}
 			list.push_back(temp);
+			s.push(temp);
 		} else if (ruleIden == PARALLEL_FOR){
 			ParallelForRule temp;
 			temp.setRule("parallelfor");
@@ -173,15 +176,16 @@ void createObject(const nlohmann::json& j, ruleList& list){
 				} else if (!item.key().compare("element")){
 					temp.setElement(item.value());
 				} else if (!item.key().compare("rules")){
-					// auto size = item.value().size();
-					// ruleList tempList(list.end()-size, list.end());
-					// for(auto& item :tempList){
-					// 	temp.insert(item);
-					// }
-					temp.insert(list.back());
+					auto size = item.value().size();
+					std::cout << size << "\n";
+					for(unsigned i = 0; i < size; i++){
+						temp.insert(s.top());
+						s.pop();
+					}
 				}
 			}
 			list.push_back(temp);
+			s.push(temp);
 		} else if (ruleIden == INPUT_CHOICE){
 			InputChoiceRule temp;
 			temp.setRule("input-choice");
@@ -197,6 +201,7 @@ void createObject(const nlohmann::json& j, ruleList& list){
 				} 
 			}
 			list.push_back(temp);
+			s.push(temp);
 		}
 	}
 	return;
@@ -250,7 +255,7 @@ int main() {
 
     std::unique_ptr<std::vector<Rule>> ruleVector = std::make_unique<std::vector<Rule>>();
 	
-	std::ifstream jsonFileStream("../../configs/games/rock_paper_scissors.json"); // read file
+	std::ifstream jsonFileStream("../configs/games/rock_paper_scissors.json"); // read file
 	nlohmann::json jsonObject = nlohmann::json::parse(jsonFileStream);
 
 	// To make sure you can open the file
@@ -272,20 +277,18 @@ int main() {
 
 	//----------------------------TEST: parseRule function---------------------------------
 	std::vector<nlohmann::json> v;
+	std::stack<ruleType> s;
 	ruleList l;
 	parseRule(jsonObject, v);
 	// for (auto item:v){
 	// 	std::cout << item << "\n";
 	// }
 	for(auto& item: v){
-		createObject(item, l);
+		createObject(item, l, s);
 	}
-
 	for(auto& item: l){
 		printRules(item);
 	}
-
-
 
 	// std::visit(output_visitor{}, l.front());
 
