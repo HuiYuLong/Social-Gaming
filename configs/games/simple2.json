@@ -13,6 +13,16 @@
 
       { "rule": "global-message",
         "value": "R!"
+      },
+
+      { "rule": "loop",
+        "until": "nothing",
+        "rules": [
+          { "rule": "global-message",
+            "value": "R!"
+          }
+
+        ]
       }
     ]
 }
