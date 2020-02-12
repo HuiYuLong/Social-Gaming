@@ -75,6 +75,7 @@ int main(int argc, char** argv) {
 	if (argc != 2)
 	{
 		std::cout << "Pass the json file location as the first parameter" << std::endl;
+		// ex) ../../configs/games/simple2.json
 		return 1;
 	}
 	std::ifstream jsonFileStream(argv[1]); // read file

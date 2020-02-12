@@ -393,15 +393,12 @@ public:
 
 class LoopRule : public Rule {
 private:
-    ruleType target;
     ruleType until;
     ruleType whileCondition;
     ruleList subrules;
 public:
     LoopRule(const nlohmann::json& rule);
 
-    ruleType getTarget() const {return this->target;}
-    void setTarget(const ruleType& target) {this->target = target;}
     ruleType getUntil() const {return this->until;}
     void setUntil(const ruleType& until) {this->until = until;}
     ruleType getWhile() const {return this->whileCondition;}
@@ -459,13 +456,9 @@ public:
 
 class WhenRule : public Rule {
 private:
-    ruleType count;
     std::vector<Case> cases;
 public:
     WhenRule(const nlohmann::json& rule);
-
-    void setCount(const ruleType& list) {this->count = count;}
-    ruleType getCount() const {return count;}
 
     std::vector<Case> const& getCases() const {return this->cases;}
     void setCases(std::vector<Case> cases) {this->cases=std::move(cases);}
@@ -481,7 +474,10 @@ public:
 
 std::unordered_map<std::string, std::function<std::unique_ptr<Rule>(const nlohmann::json&)>> rulemap = {
 		{"foreach", [](const nlohmann::json& rule) { return std::make_unique<ForEachRule>(rule); }},
-        {"global-message", [](const nlohmann::json& rule) { return std::make_unique<GlobalMessageRule>(rule); }}
+        {"global-message", [](const nlohmann::json& rule) { return std::make_unique<GlobalMessageRule>(rule); }},
+        {"loop", [](const nlohmann::json&rule) {return std::make_unique<LoopRule>(rule);}},
+        {"inparallel", [](const nlohmann::json&rule) {return std::make_unique<InParallelRule>(rule);}},
+        {"parallelfor", [](const nlohmann::json&rule) {return std::make_unique<ParallelForRule>(rule);}}
 };
 
 //----------------------------------------Constructor implementation-------------------------------------------------------------------------------------------------
@@ -495,6 +491,49 @@ ForEachRule::ForEachRule(const nlohmann::json& rule): Rule(rule["rule"]), list(r
 		subrules.push_back(rulemap[it.value()["rule"]](it.value()));
     }
 }
+
+LoopRule::LoopRule(const nlohmann::json& rule): Rule(rule["rule"]), until(rule["until"]), whileCondition("placeholder") {
+    std::cout << "Loop: " << until << " or " << whileCondition << std::endl;
+    for (const auto& it : rule["rules"].items()) {
+        subrules.push_back(rulemap[it.value()["rule"]](it.value()));
+    }
+}
+
+InParallelRule::InParallelRule(const nlohmann::json& rule): Rule(rule["rule"]) {
+    std::cout << "In Parallel: " << rule["rule"] << std::endl;
+    for (const auto& it : rule["rules"].items()) {
+        subrules.push_back(rulemap[it.value()["rule"]](it.value()));
+    }
+}
+
+ParallelForRule::ParallelForRule(const nlohmann::json& rule): Rule(rule["rule"]), list(rule["list"]), element(rule["element"]) {
+    std::cout << "ParallelFor: " << rule["list"] << std::endl;
+    for (const auto& it : rule["rules"].items()) {
+        subrules.push_back(rulemap[it.value()["rule"]](it.value()));
+    }
+}
+
+// SwitchRule and WhenRule are under construction - needs to work on cases constructor
+
+// SwitchRule::SwitchRule(const nlohmann::json& rule): Rule(rule["rule"]), list(rule["list"]), value(rule["value"]) {
+
+//     // needs cases constructor first
+
+//     std::cout << "Switch For: " << rule["rule"] << std::endl;
+//     for (const auto& it : rule["cases"].items()) {
+//         subrules.push_back(rulemap[it.value()["rule"]](it.value()));
+//     }
+// }
+
+// WhenRule::WhenRule(const nlohmann::json& rule): Rule(rule["rule"]) {
+
+//     // needs cases constructor first
+
+//     std::cout << "When: " << rule["rule"] << std::endl;
+//     for (const auto& it : rule["cases"].items()) {
+//         subrules.push_back(rulemap[it.value()["rule"]](it.value()));
+//     }
+// }
 
 //TODO:Implement constructor of LoopRule,ParallelForRule,etc classes
 
