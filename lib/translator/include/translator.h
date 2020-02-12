@@ -112,7 +112,7 @@ public:
     Rule(const ruleType& rule): rule(rule){}
     ruleType getRule() const {return rule;}
     void setRule(const ruleType& rule) {this->rule = rule;}
-    // virtual ~Rule() {};
+    virtual ~Rule() {};
 };
 
 using ruleList = std::vector<std::unique_ptr<Rule>>;
