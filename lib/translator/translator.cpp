@@ -16,15 +16,21 @@ std::unique_ptr<Constants> parseConstants(const nlohmann::json& j) {
 	return constants;
 }
 
-std::unique_ptr<PerPlayer> parsePerPlayer(const nlohmann::json& j) {
-	std::unique_ptr<PerPlayer> perPlayer = std::make_unique<PerPlayer>();
+template<class Key, class Value>
+std::unique_ptr<PerPlayer<Key,Value>> parsePerPlayer(const nlohmann::json& j) {
+	std::unique_ptr<PerPlayer<Key,Value>> perPlayer = std::make_unique<PerPlayer<Key,Value>>();
 	for (auto& item: j.items()) {
-		if (item.key().compare("per-player") == 0) {
-			perPlayer->setWins(item.value()["wins"]);
+		if (!item.key().compare("per-player")) {
+			for(auto& item2 : item.value().items()){
+				Key k = item2.key();
+				Value v = item2.value();
+				perPlayer->insertToPlayerMap(k,v);
+			}
 		}
 	}
 	return perPlayer;
 }
+
 
 std::unique_ptr<Configuration> parseConfiguration(const nlohmann::json& j) {
 	std::unique_ptr<Configuration> configuration = std::make_unique<Configuration>();
