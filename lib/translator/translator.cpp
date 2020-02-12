@@ -88,7 +88,13 @@ int main(int argc, char** argv) {
 
 	nlohmann::json gameConfig = nlohmann::json::parse(jsonFileStream);
 
-	RuleTree ruleTree(gameConfig);
+	std::unique_ptr<PerPlayer<std::string,int>> player = parsePerPlayer<std::string,int>(gameConfig);
+	for(auto& item: player->getPerPlayer()){
+		std::cout << item.first << " -> " << item.second << std::endl;
+	}
+
+
+	// RuleTree ruleTree(gameConfig);
 
 	return 0;
 }
