@@ -71,59 +71,23 @@ void parseRule(const nlohmann::json& j){
 	}
 }
 
-int main() {
-
-	//std::istringstream iss("{\"json\": \"beta\"}"); // code manually create a small json file
-	//nlohmann::json jsonObject = nlohmann::json::parse(iss);
-
-	std::ifstream jsonFileStream("../../configs/games/rock_paper_scissors.json"); // read file
-	nlohmann::json jsonObject = nlohmann::json::parse(jsonFileStream);
-
+int main(int argc, char** argv) {
+	if (argc != 2)
+	{
+		std::cout << "Pass the json file location as the first parameter" << std::endl;
+		return 1;
+	}
+	std::ifstream jsonFileStream(argv[1]); // read file
 	// To make sure you can open the file
-    if (!jsonFileStream)
+    if (jsonFileStream.fail())
     {
         std::cout << "cannot open file" << std::endl;
         return 0;
     }
-	//----------------------------TEST: Rule class--------------------------------------//
-    AddRule a("add", "winner.wins", "1");
-    ruleList list;
-    list.push_back(a);
-    // std::cout << std::get<AddRule>(list.front()).getRule() << "\n";
 
-    TimerRule t("timer","12", "exact", list);
-    std::cout << std::get<AddRule>(t.getSubRules().front()).getRule() << "\n";
-    std::cout << std::get<AddRule>(t.getSubRules().front()).getTo() << "\n";
-    std::cout << std::get<AddRule>(t.getSubRules().front()).getValue() << "\n";
+	nlohmann::json gameConfig = nlohmann::json::parse(jsonFileStream);
 
-	//----------------------------TEST: parseRule function---------------------------------
-	parseRule(jsonObject);
-
-	//----------------------------TEST:parseConstants function------------------------------
-	std::unique_ptr<Constants> constants;
-	constants = parseConstants(jsonObject);
-	for (auto& x : constants->getWeapons()) {
-		std::cout << x.first << " beats " << x.second << std::endl;
-	}
-	//constants->getWeapons();
-	// std::map<std::string, std::string>::iterator it;
-	// for (it = constants->getWeapons().begin(); it != constants->getWeapons().end();++it) {
-	// 	std::cout << it->first << " beats " << it->second << std::endl;
-	// }
-	
-	//-------------------------------TEST:parseConfiguration function-----------------------
-	std::unique_ptr<Configuration> configuration;
-	configuration = parseConfiguration(jsonObject);
-	std::cout << "-------> Parsing configuration ------->" << std::endl;
-	std::cout << "Configuration Name: " << configuration->getName() << std::endl;
-
-	//-------------------------------TEST:parseVariables function-----------------------
-	// std::unique_ptr<Variables> variables;
-	// variables = parseVariables(jsonObject);
-	// std::cout << "-------> Parsing variables ------->";
-	// To print
-
-
+	RuleTree ruleTree(gameConfig);
 
 	return 0;
 }
