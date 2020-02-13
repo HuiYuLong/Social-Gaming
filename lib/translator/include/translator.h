@@ -166,6 +166,7 @@ private:
     ruleType prompt;
     ruleType choices; 
     ruleType result; 
+public:
     InputChoiceRule(const nlohmann::json& rule);
 
     ruleType getTo() const {return to;}
@@ -247,16 +248,16 @@ public:
 class ScoresRule: public Rule{
 private:
     ruleType score;
-    ruleType ascending;
+    bool ascending;
 
 public:
     ScoresRule(const nlohmann::json& rule);
 
     ruleType getScore() const {return score;}
-    ruleType getAscending() const {return ascending;}
+    bool getAscending() const {return ascending;}
 
-    void setScore(const ruleType& score) {this->score = score;}
-    void setAscending(const ruleType& ascending) {this->ascending = ascending;}
+    void setScore(const bool& score) {this->score = score;}
+    void setAscending(const bool& ascending) {this->ascending = ascending;}
 };
 
 //-------------------------------Sophia's Code------------------------------//
@@ -481,7 +482,13 @@ std::unordered_map<std::string, std::function<std::unique_ptr<Rule>(const nlohma
         {"global-message", [](const nlohmann::json& rule) { return std::make_unique<GlobalMessageRule>(rule); }},
         {"loop", [](const nlohmann::json&rule) {return std::make_unique<LoopRule>(rule);}},
         {"inparallel", [](const nlohmann::json&rule) {return std::make_unique<InParallelRule>(rule);}},
-        {"parallelfor", [](const nlohmann::json&rule) {return std::make_unique<ParallelForRule>(rule);}}
+        {"parallelfor", [](const nlohmann::json&rule) {return std::make_unique<ParallelForRule>(rule);}},
+        {"extend", [](const nlohmann::json& rule) {return std::make_unique<ExtendRule>(rule); }}, 
+        {"reverse", [](const nlohmann::json& rule) {return std::make_unique<ReverseRule>(rule); }},
+        {"discard", [](const nlohmann::json& rule) {return std::make_unique<DiscardRule>(rule); }}, 
+        {"input-choice", [](const nlohmann::json& rule) {return std::make_unique<InputChoiceRule>(rule); }},
+        {"add", [](const nlohmann::json& rule) {return std::make_unique<AddRule>(rule); }},
+        {"scores", [](const nlohmann::json& rule) {return std::make_unique<ScoresRule>(rule); }}
 };
 
 //----------------------------------------Constructor implementation-------------------------------------------------------------------------------------------------
@@ -540,6 +547,33 @@ ParallelForRule::ParallelForRule(const nlohmann::json& rule): Rule(rule["rule"])
 // }
 
 //TODO:Implement constructor of LoopRule,ParallelForRule,etc classes
+ExtendRule::ExtendRule(const nlohmann::json& rule) : Rule(rule["rule"]), target(rule["target"]), list(rule["list"]) {
+    std::cout << "Extend list: " << rule["list"] << std::endl;
+}
+
+ReverseRule::ReverseRule(const nlohmann::json& rule) : Rule(rule["rule"]), list(rule["list"]) {
+    std::cout << "Reserve list: " << list << std::endl;
+    for(const auto& it : rule["rules"].items()) {
+        subrules.push_back(rulemap[it.value()["rule"]](it.value()));
+    }
+}
+
+DiscardRule::DiscardRule(const nlohmann::json& rule) : Rule(rule["rule"]), from(rule["from"]), count(rule["count"]) {
+    std::cout << "Discard count: " << count << std::endl;
+}
+
+InputChoiceRule::InputChoiceRule(const nlohmann::json& rule) : Rule(rule["rule"]), to(rule["to"]), prompt(rule["prompt"]), choices(rule["choices"]), result(rule["result"]) {
+    std::cout << "Input-Choice to: " << to << std::endl;
+}
+
+AddRule::AddRule(const nlohmann::json& rule) : Rule(rule["rule"]), to(rule["to"]), value(rule["rule"]) {
+    std::cout << "Add to: " << to << std::endl; 
+}
+
+ScoresRule::ScoresRule(const nlohmann::json& rule) : Rule(rule["rule"]), score(rule["score"]), ascending(rule["ascending"]) {
+    std::cout << "Score: " << score << std::endl;
+}
+
 
 RuleTree::RuleTree(const nlohmann::json& gameConfig)
 {
