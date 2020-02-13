@@ -2,19 +2,6 @@
 
 using namespace std;
 
-// std::unique_ptr<Constants> parseConstants(const nlohmann::json& j) {
-// 	std::unique_ptr<Constants> constants = std::make_unique<Constants>();
-// 	for (auto& item : j.items()) {
-// 		if (item.key().compare("constants") == 0) {
-// 			for (auto& item : item.value()["weapons"].items()) {
-// 				constants->insertToWeapons(item.value()["name"],item.value()["beats"]);
-// 				//std::cout << item.value()["name"] << std::endl;
-// 				//std::cout << item.value()["beats"] << std::endl;
-// 			}
-// 		}
-// 	}
-// 	return constants;
-// }
 
 template<class Key, class Value>
 std::unique_ptr<Constants<Key, Value>> parseConstants(const nlohmann::json& constantsConfig) {
