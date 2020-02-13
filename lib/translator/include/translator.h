@@ -513,10 +513,15 @@ ForEachRule::ForEachRule(const nlohmann::json& rule): Rule(rule["rule"]){
 }
 
 LoopRule::LoopRule(const nlohmann::json& rule): Rule(rule["rule"]){
-    definingDataType(rule["until"],until);
-    definingDataType(rule["placeholder"],whileCondition);
+    auto isUntil = rule.find("until");
+    if(isUntil != rule.end()){
+        definingDataType(rule["until"],until);
+        std::cout << "Loop until: " << until << std::endl;
+    } else {
+        definingDataType(rule["while"],whileCondition);
+        std::cout << "Loop while: " << whileCondition << std::endl;
+    }
 
-    std::cout << "Loop: " << until << " or " << whileCondition << std::endl;
     for (const auto& it : rule["rules"].items()) {
         subrules.push_back(rulemap[it.value()["rule"]](it.value()));
     }
