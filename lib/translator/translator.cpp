@@ -107,7 +107,6 @@ int main(int argc, char** argv) {
 
 	nlohmann::json perAudience = DivideSection(gameConfig,"per-audience");
 
-	nlohmann::json perPlayerConfig = DivideSection(gameConfig,"per-player");
 	
 
 	std::unique_ptr<PerPlayer<std::string,int>> player = parsePerPlayer<std::string,int>(perPlayerConfig);
