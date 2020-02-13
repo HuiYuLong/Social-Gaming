@@ -1,5 +1,8 @@
 #include "include/translator.h"
 
+using namespace std;
+
+
 
 
 std::unique_ptr<Constants> parseConstants(const nlohmann::json& j) {
@@ -16,11 +19,12 @@ std::unique_ptr<Constants> parseConstants(const nlohmann::json& j) {
 	return constants;
 }
 
-nlohmann::json PerPlayerSection(const nlohmann::json& j){
+nlohmann::json DivideSection(const nlohmann::json& j,std::string name){
 	for(auto& item: j.items()){
-		if(item.key() == "per-player"){
+		if((item.key() == name)){
 			return item.value();
 		}
+		
 	}
 	return nullptr;
 }
@@ -97,14 +101,27 @@ int main(int argc, char** argv) {
         return 0;
     }
 
-	nlohmann::json gameConfig = nlohmann::json::parse(jsonFileStream);
 
-	nlohmann::json perPlayerConfig = PerPlayerSection(gameConfig);
+	nlohmann::json gameConfig = nlohmann::json::parse(jsonFileStream);
+	nlohmann::json perPlayerConfig = DivideSection(gameConfig,"per-player");
+
+	nlohmann::json perAudience = DivideSection(gameConfig,"per-audience");
+
+	nlohmann::json perPlayerConfig = DivideSection(gameConfig,"per-player");
+	
+
 	std::unique_ptr<PerPlayer<std::string,int>> player = parsePerPlayer<std::string,int>(perPlayerConfig);
+
+
+
+	
 	
 	for(auto& item: player->getPerPlayer()){
 		std::cout << item.first << " -> " << item.second << std::endl;
 	}
+
+
+	
 
 
 	// RuleTree ruleTree(gameConfig);
