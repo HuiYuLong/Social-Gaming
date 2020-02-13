@@ -16,17 +16,22 @@ std::unique_ptr<Constants> parseConstants(const nlohmann::json& j) {
 	return constants;
 }
 
+nlohmann::json PerPlayerSection(const nlohmann::json& j){
+	for(auto& item: j.items()){
+		if(item.key() == "per-player"){
+			return item.value();
+		}
+	}
+	return nullptr;
+}
+
 template<class Key, class Value>
 std::unique_ptr<PerPlayer<Key,Value>> parsePerPlayer(const nlohmann::json& j) {
 	std::unique_ptr<PerPlayer<Key,Value>> perPlayer = std::make_unique<PerPlayer<Key,Value>>();
-	for (auto& item: j.items()) {
-		if (!item.key().compare("per-player")) {
-			for(auto& item2 : item.value().items()){
-				Key k = item2.key();
-				Value v = item2.value();
-				perPlayer->insertToPlayerMap(k,v);
-			}
-		}
+	for(auto& item : j.items()){
+		Key k = item.key();
+		Value v = item.value();
+		perPlayer->insertToPlayerMap(k,v);
 	}
 	return perPlayer;
 }
@@ -94,7 +99,9 @@ int main(int argc, char** argv) {
 
 	nlohmann::json gameConfig = nlohmann::json::parse(jsonFileStream);
 
-	std::unique_ptr<PerPlayer<std::string,int>> player = parsePerPlayer<std::string,int>(gameConfig);
+	nlohmann::json perPlayerConfig = PerPlayerSection(gameConfig);
+	std::unique_ptr<PerPlayer<std::string,int>> player = parsePerPlayer<std::string,int>(perPlayerConfig);
+	
 	for(auto& item: player->getPerPlayer()){
 		std::cout << item.first << " -> " << item.second << std::endl;
 	}
