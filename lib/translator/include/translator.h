@@ -14,40 +14,37 @@
 using networking::Message;
 
 
+// template<class Key, class Value>
+// class PerPlayer {make
+// public:
+//     PerPlayer(): playerMap(){}
+//     PerPlayer(const std::unordered_map<Key,Value>& playerMap): playerMap(playerMap){}
+//     std::unordered_map<Key,Value> getPerPlayer() const {return this->playerMap;}
+//     void insertToPlayerMap(const Key& k, const Value& v){
+//         this->playerMap.emplace(k,v);
+//     }
+// private:
+//     std::unordered_map<Key,Value> playerMap;
+// };
+template<class Key, class Value>
 class Configuration {
 public:
-	Configuration():name(""), playerCountMin(0), playerCountMax(0), audience(false), round(0) {}
-	Configuration(std::string name, int playerCountMin, int playerCountMax, bool audience, int round):
-					name(name), playerCountMin(playerCountMin), playerCountMax(playerCountMax),
-					audience(audience), round(round) {}
 
-	std::string getName() const {return name;}
-	int getPlayerCountMin() const {return playerCountMin;}
-	int getPlayerCountMax() const {return playerCountMax;}
-	bool getAudience() const {return audience;}
-	int getRound() const {return round;}
+    Configuration(): ConfigurationMap(){}
+	Configuration(const std::unordered_map<Key,Value>& ConfigurationMap):
+    ConfigurationMap(ConfigurationMap){}
 
-	void setName(const std::string& name) {this->name = name;}
-	void setPlayerCountMin(const int& playerCountMin) {this->playerCountMin = playerCountMin;}
-	void setPlayerCountMax(const int& playerCountMax) {this->playerCountMax = playerCountMax;}
-	void setAudience(const bool& audience) {this->audience = audience;}
-	void setRound(const int& round) {this->round = round;}
+    std::unordered_map<Key,Value> getConfigurationMap() const {
+        return this->ConfigurationMap;
+    }
 
-	void print(){
-		std::cout << "Configuration: " << "\n";
-		std::cout << "\tName: " << this->getName() << "\n";
-		std::cout << "\tMin Player: " << this->getPlayerCountMin() << "\n";
-		std::cout << "\tMax Player: " << this->getPlayerCountMax() << "\n";
-		std::cout << "\tAudience: " << this->getAudience() << "\n";
-		std::cout << "\tRound: " << this->getRound() << "\n";
-	}
+    void insertToConfigurationMap(const Key& k, const Value& v){
+        this->ConfigurationMap.emplace(k,v);
+    }
 private:
-	std::string name;
-	int playerCountMin;
-	int playerCountMax;
-	bool audience;
-	int round;
+    std::unordered_map<Key,Value> ConfigurationMap;
 };
+			
 
 class Constants {
 public:
@@ -336,7 +333,7 @@ public:
     ruleType getCount() const{return count;}
     
     void setFrom(const ruleType & from){this->from=from;}
-    void setTo(const ruleType & to){this->from=from;}
+    void setTo(const ruleType & to){this->to=to;}
     void setCount(const ruleType& count){this->count=count;}
 
     ruleList const& getSubrules() const {return this->subrules;}
@@ -539,6 +536,9 @@ ParallelForRule::ParallelForRule(const nlohmann::json& rule): Rule(rule["rule"])
 // }
 
 //TODO:Implement constructor of LoopRule,ParallelForRule,etc classes
+
+ 
+
 
 RuleTree::RuleTree(const nlohmann::json& gameConfig)
 {

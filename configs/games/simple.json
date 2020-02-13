@@ -21,7 +21,8 @@
     },
   
     "per-player": {
-      "wins": 0
+      "wins": 0,
+      "lose": 2
     },
   
     "per-audience": {},
