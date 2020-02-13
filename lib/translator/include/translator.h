@@ -49,24 +49,25 @@ private:
 	int round;
 };
 
+template<class Key, class Value>
 class Constants {
 public:
-	Constants():weapons() {}
-	Constants(std::map<std::string, std::string> weapons){
-        this->weapons = weapons;
+    Constants(): assignments(){}
+    Constants(std::unordered_map<Key, Value> assignments){
+        this->assignments = assignments;
     }
-	void setWeapons(std::map<std::string, std::string> weapons) {
-        this->weapons = weapons;
+    void setWeapons(std::unordered_map<Key, Value> assignments) {
+        this->assignments = assignments;
     }
-    std::map<std::string, std::string> getWeapons() const {
-        return this->weapons;
+    std::unordered_map<Key, Value> getAssignments() const {
+        return this->assignments;
     }
-    void insertToWeapons(std::string s1, std::string s2) {
-        this->weapons.emplace(s1, s2);
+    void insertToAssignments(Key& key, Value& val) {
+        this->assignments.emplace(key, val);
     }
 
 private:
-	std::map<std::string, std::string> weapons;
+    std::unordered_map<Key, Value> assignments;
 };
 
 class Variables {
