@@ -82,46 +82,22 @@ std::unique_ptr<Configuration<Key,Value>> parseConfiguration(const nlohmann::jso
 
 }
 
-template<class Key, class Value>
-std::unique_ptr<Constants<Key, Value>> parseConstants(const nlohmann::json& constantsConfig) {
-	std::unique_ptr<Constants<Key, Value>> constants = std::make_unique<Constants<Key, Value>>();
-	for (auto& item : constantsConfig.items()) {
-		for (auto& item2 : item.value().items()) {
-			//std::cout << item2.value() << std::endl;
-			Key k = item2.value()["name"];
-			Value v = item2.value()["beats"];
-			//std::cout << k << std::endl;
-			//std::cout << v << std::endl;
-			constants->insertToAssignments(k,v);
 
-			// if (item2.value().is_array()) {
-			// 	std::cout << item2.key() << std::endl;
-			// 	}
-			//  else {
-			// 	Key k = item2.key();
-			// 	Value v = item2.value();
-			// 	constants->insertToAssignments(k,v);
-			// }
 
+std::unique_ptr<Constants> parseConstants(const nlohmann::json& j) {
+	std::unique_ptr<Constants> constants = std::make_unique<Constants>();
+	for (auto& item : j.items()) {
+		if (item.key().compare("constants") == 0) {
+			for (auto& item : item.value()["weapons"].items()) {
+				constants->insertToWeapons(item.value()["name"],item.value()["beats"]);
+				//std::cout << item.value()["name"] << std::endl;
+				//std::cout << item.value()["beats"] << std::endl;
+			}
 		}
 	}
 	return constants;
 }
 
-<<<<<<< HEAD
-=======
-
-nlohmann::json DivideSection(const nlohmann::json& j,std::string name){
-	for(auto& item: j.items()){
-		if((item.key() == name)){
-			return item.value();
-		}
-		
-	}
-	return nullptr;
-}
-
->>>>>>> 31ca17436c1b36a5a884e8a0a3e6f8bc9f405371
 template<class Key, class Value>
 std::unique_ptr<PerPlayer<Key,Value>> parsePerPlayer(const nlohmann::json& pp) {
 	std::unique_ptr<PerPlayer<Key,Value>> perPlayer = std::make_unique<PerPlayer<Key,Value>>();
@@ -180,7 +156,6 @@ int main(int argc, char** argv) {
 
 	nlohmann::json gameConfig = nlohmann::json::parse(jsonFileStream);
 	nlohmann::json perPlayerConfig = DivideSection(gameConfig,"per-player");
-<<<<<<< HEAD
 
 	nlohmann::json ConfigurationConfig = DivideSection(gameConfig,"configuration");
 	cout<<ConfigurationConfig<<endl;
@@ -192,7 +167,7 @@ int main(int argc, char** argv) {
 	// cout <<pen<<" "<<stock<<endl;
 	typedef boost::variant<int, string, bool> dataType;
 	dataType u="hello world";
-	dataType storck=4;
+	dataType storck=4;  
 
 	string s=boost::get<string>(u);
     std::cout << s<<" "<<storck<<endl; // output: hello world
@@ -218,7 +193,7 @@ int main(int argc, char** argv) {
 
 	// std::unique_ptr<PerPlayer<std::string,int>> player = parsePerPlayer<std::string,int>(perPlayerConfig);
 
-	//  std::unique_ptr<Configuration<std::string,dataType>> Configuration = parseConfiguration<std::string,dataType>(ConfigurationConfig);
+   std::unique_ptr<Configuration<std::string,dataType>> Configuration = parseConfiguration<std::string,dataType>(ConfigurationConfig);
 
 
 	// output: hello world
@@ -231,20 +206,11 @@ int main(int argc, char** argv) {
 	// for(auto& item: Configuration->getConfigurationMap()){
 	// 	std::cout << item.first << " -> " << item.second << std::endl;
 	// }
-=======
-	nlohmann::json perAudience = DivideSection(gameConfig,"per-audience");
-	nlohmann::json constants = DivideSection(gameConfig,"constants");
 
-	std::unique_ptr<PerPlayer<std::string,int>> player = parsePerPlayer<std::string,int>(perPlayerConfig);
-	for(auto& item: player->getPerPlayer()){
-		std::cout << item.first << " -> " << item.second << std::endl;
-	}
->>>>>>> 31ca17436c1b36a5a884e8a0a3e6f8bc9f405371
 
-	std::unique_ptr<Constants<std::string,std::string>> constant = parseConstants<std::string,std::string>(constants);
-	for(auto& item: constant->getAssignments()){
-		std::cout << item.first << " -> " << item.second << std::endl;
-	}
+	
+
+
 	// RuleTree ruleTree(gameConfig);
 
 	return 0;
