@@ -31,45 +31,42 @@ void definingDataType( const nlohmann::basic_json<> &item, DataType& value);
 // private:
 //     std::unordered_map<Key,Value> playerMap;
 // };
-template<class Key, class Value>
 class Configuration {
 public:
-
     Configuration(): ConfigurationMap(){}
-	Configuration(const std::unordered_map<Key,Value>& ConfigurationMap):
+	Configuration(const nlohmann::json):
     ConfigurationMap(ConfigurationMap){}
 
-    std::unordered_map<Key,Value> getConfigurationMap() const {
+    Map getConfigurationMap() const {
         return this->ConfigurationMap;
     }
 
-    void insertToConfigurationMap(const Key& k, const Value& v){
-        this->ConfigurationMap.emplace(k,v);
+    void insertToConfigurationMap(const std::string& name, const DataType& value){
+        this->ConfigurationMap.emplace(name,value);
     }
 private:
-    std::unordered_map<Key,Value> ConfigurationMap;
+    Map ConfigurationMap;
 };
 			
 
-template<class Key, class Value>
 class Constants {
 public:
-    Constants(): assignments(){}
-    Constants(std::unordered_map<Key, Value> assignments){
-        this->assignments = assignments;
+    Constants(): ConstantsMap(){}
+    Constants(const Map& ConstantsMap){
+        this->ConstantsMap = ConstantsMap;
     }
-    void setWeapons(std::unordered_map<Key, Value> assignments) {
-        this->assignments = assignments;
+    // void setWeapons(std::unordered_map<Key, Value> ConstantsMap) {
+    //     this->ConstantsMap = ConstantsMap;
+    // }
+    Map getConstantsMap() const {
+        return this->ConstantsMap;
     }
-    std::unordered_map<Key, Value> getAssignments() const {
-        return this->assignments;
-    }
-    void insertToAssignments(Key& key, Value& val) {
-        this->assignments.emplace(key, val);
+    void insertToConstantsMap(const std::string& name, const DataType& value) {
+        this->ConstantsMap.emplace(name, value);
     }
 
 private:
-    std::unordered_map<Key, Value> assignments;
+    Map ConstantsMap;
 };
 
 class Variables {
@@ -339,15 +336,9 @@ public:
     DataType getTo() const{return to;}
     DataType getCount() const{return count;}
     
-<<<<<<< HEAD
-    void setFrom(const ruleType & from){this->from=from;}
-    void setTo(const ruleType & to){this->to=to;}
-    void setCount(const ruleType& count){this->count=count;}
-=======
     void setFrom(const DataType & from){this->from=from;}
-    void setTo(const DataType & to){this->from=from;}
+    void setTo(const DataType & to){this->to=to;}
     void setCount(const DataType& count){this->count=count;}
->>>>>>> 89bd9ec5a95a98954bd7932de142778d92b8c036
 
     ruleList const& getSubrules() const {return this->subrules;}
     void setSubrules(ruleList subrules) {this->subrules=std::move(subrules);}
