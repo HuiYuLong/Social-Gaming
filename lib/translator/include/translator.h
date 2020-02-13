@@ -7,12 +7,17 @@
 #include <fstream>
 #include <sstream>
 #include <memory>
+#include <boost/variant.hpp>
 #include <utility>
 
 #include "common.h"
 
 using networking::Message;
 
+using DataType = boost::variant<std::string, int, bool, unsigned>;
+using Map = std::unordered_map<std::string, DataType>;
+
+void definingDataType( const nlohmann::basic_json<> &item, DataType& value);
 
 class Configuration {
 public:
@@ -86,17 +91,17 @@ private:
 	std::vector<std::string> winners;
 };
 
-template<class Key, class Value>
+
 class PerPlayer {
 public:
     PerPlayer(): playerMap(){}
-    PerPlayer(const std::unordered_map<Key,Value>& playerMap): playerMap(playerMap){}
-    std::unordered_map<Key,Value> getPerPlayer() const {return this->playerMap;}
-    void insertToPlayerMap(const Key& k, const Value& v){
-        this->playerMap.emplace(k,v);
+    PerPlayer(const Map& playerMap): playerMap(playerMap){}
+    Map getPerPlayer() const {return this->playerMap;}
+    void insertToPlayerMap(const std::string& name, const DataType& value){
+        this->playerMap.emplace(name,value);
     }
 private:
-    std::unordered_map<Key,Value> playerMap;
+    Map playerMap;
 };
 
 
@@ -105,17 +110,17 @@ private:
 // ex) OutputRule, InputRule, ArithmeticRule, ListOpsRule, ControlStructRule ...
 
 //-------------------------------------------Rule Class---------------------------------------//
-// enum class ruleType { string, list, json };
-using ruleType = std::string;
+// enum class DataType { string, list, json };
+
 class Rule {
 
 private:
-    ruleType rule;
+    std::string rule;
 public:
     
-    Rule(const ruleType& rule): rule(rule){}
-    ruleType getRule() const {return rule;}
-    void setRule(const ruleType& rule) {this->rule = rule;}
+    Rule(const std::string& rule): rule(rule){}
+    std::string getRule() const {return rule;}
+    void setRule(const std::string& rule) {this->rule = rule;}
     virtual ~Rule() {};
 };
 
@@ -130,31 +135,31 @@ class Case {
 
 class AddRule : public Rule{
 private:
-    ruleType to;
-    ruleType value;
+    DataType to;
+    DataType value;
 public:
     AddRule(const nlohmann::json& rule);
 
-    ruleType getTo() const {return to;}
-    ruleType getValue() const {return value;}
+    DataType getTo() const {return to;}
+    DataType getValue() const {return value;}
 
-    void setTo(const ruleType& to) {this->to = to;}
-    void setValue(const ruleType& value) {this->value = value;}
+    void setTo(const DataType& to) {this->to = to;}
+    void setValue(const DataType& value) {this->value = value;}
 };
 
 class TimerRule : public Rule{
 private:
-    ruleType duration;
-    ruleType mode;
+    DataType duration;
+    DataType mode;
     ruleList subrules;
 public:
     TimerRule(const nlohmann::json& rule);
 
-    ruleType getDuration() const {return duration;}
-    ruleType getMode() const {return mode;}
+    DataType getDuration() const {return duration;}
+    DataType getMode() const {return mode;}
 
-    void setDuration(const ruleType& duration) {this->duration = duration;}
-    void setMode(const ruleType& mode) {this->mode = mode;}
+    void setDuration(const DataType& duration) {this->duration = duration;}
+    void setMode(const DataType& mode) {this->mode = mode;}
 
     ruleList const& getSubrules() const {return this->subrules;}
     void setSubrules(ruleList subrules) {this->subrules=std::move(subrules);}
@@ -162,99 +167,99 @@ public:
 
 class InputChoiceRule : public Rule{
 private:
-    ruleType to;
-    ruleType prompt;
-    ruleType choices; 
-    ruleType result; 
+    DataType to;
+    DataType prompt;
+    DataType choices; 
+    DataType result; 
 public:
     InputChoiceRule(const nlohmann::json& rule);
 
-    ruleType getTo() const {return to;}
-    ruleType getChoices() const {return choices;}
-    ruleType getPrompt () const {return prompt;}
-    ruleType getResult() const {return result;}
+    DataType getTo() const {return to;}
+    DataType getChoices() const {return choices;}
+    DataType getPrompt () const {return prompt;}
+    DataType getResult() const {return result;}
 
-    void setTo(const ruleType& to) {this->to = to;}
-    void setChoices(const ruleType& choices) {this->choices = choices;}
-    void setPrompt(const ruleType& prompt) {this->prompt = prompt;}
-    void setResult(const ruleType& result) {this->result = result;}
+    void setTo(const DataType& to) {this->to = to;}
+    void setChoices(const DataType& choices) {this->choices = choices;}
+    void setPrompt(const DataType& prompt) {this->prompt = prompt;}
+    void setResult(const DataType& result) {this->result = result;}
 };
 
 class InputTextRule : public Rule{
 private:
-    ruleType to; 
-    ruleType prompt;
-    ruleType result; 
+    DataType to; 
+    DataType prompt;
+    DataType result; 
 public:
     InputTextRule(const nlohmann::json& rule);
 
-    ruleType getTo() const {return to;}
-    ruleType getPrompt () const {return prompt;}
-    ruleType getResult() const {return result;}
+    DataType getTo() const {return to;}
+    DataType getPrompt () const {return prompt;}
+    DataType getResult() const {return result;}
 
-    void setTo(const ruleType& to) {this->to = to;}
-    void setPrompt(const ruleType& prompt) {this->prompt = prompt;}
-    void setResult(const ruleType& result) {this->result = result;}
+    void setTo(const DataType& to) {this->to = to;}
+    void setPrompt(const DataType& prompt) {this->prompt = prompt;}
+    void setResult(const DataType& result) {this->result = result;}
 };
 
 class InputVoteRule : public Rule{
 private:
-    ruleType to; 
-    ruleType prompt; 
-    ruleType choices;
-    ruleType result;
+    DataType to; 
+    DataType prompt; 
+    DataType choices;
+    DataType result;
 public:
     InputVoteRule(const nlohmann::json& rule);
 
-    ruleType getTo() const {return to;}
-    ruleType getChoices() const {return choices;}
-    ruleType getPrompt () const {return prompt;}
-    ruleType getResult() const {return result;}
+    DataType getTo() const {return to;}
+    DataType getChoices() const {return choices;}
+    DataType getPrompt () const {return prompt;}
+    DataType getResult() const {return result;}
 
-    void setTo(const ruleType& to) {this->to = to;}
-    void setChoices(const ruleType& choices) {this->choices = choices;}
-    void setPrompt(const ruleType& prompt) {this->prompt = prompt;}
-    void setResult(const ruleType& result) {this->result = result;}
+    void setTo(const DataType& to) {this->to = to;}
+    void setChoices(const DataType& choices) {this->choices = choices;}
+    void setPrompt(const DataType& prompt) {this->prompt = prompt;}
+    void setResult(const DataType& result) {this->result = result;}
 };
 
 class MessageRule : public Rule{
 private:
-    ruleType to; 
-    ruleType value;
+    DataType to; 
+    DataType value;
 
 public:
     MessageRule(const nlohmann::json& rule);
 
-    ruleType getTo() const {return to;}
-    ruleType getValue() const {return value;}
+    DataType getTo() const {return to;}
+    DataType getValue() const {return value;}
 
-    void setTo(const ruleType& to) {this->to = to;}
-    void setValue(const ruleType& value) {this->value = value;}
+    void setTo(const DataType& to) {this->to = to;}
+    void setValue(const DataType& value) {this->value = value;}
 };
 
 class GlobalMessageRule : public Rule{
 private:
-    ruleType value;
+    DataType value;
 
 public:
     GlobalMessageRule(const nlohmann::json& rule);
     // ~GlobalMessageRule() override;
 
-    ruleType getValue() const {return value;}
+    DataType getValue() const {return value;}
 
-    void setValue(const ruleType& value) {this->value = value;}
+    void setValue(const DataType& value) {this->value = value;}
 };
 
 class ScoresRule: public Rule{
 private:
-    ruleType score;
-    bool ascending;
+    DataType score;
+    DataType ascending;
 
 public:
     ScoresRule(const nlohmann::json& rule);
 
-    ruleType getScore() const {return score;}
-    bool getAscending() const {return ascending;}
+    DataType getScore() const {return score;}
+    DataType getAscending() const {return ascending;}
 
     void setScore(const bool& score) {this->score = score;}
     void setAscending(const bool& ascending) {this->ascending = ascending;}
@@ -264,16 +269,16 @@ public:
 
 class ExtendRule : public Rule {
 private:
-    ruleType target;
-    ruleType list;
+    DataType target;
+    DataType list;
     ruleList subrules;
 public:
     ExtendRule(const nlohmann::json& rule);
-    ruleType getTarget() const{return target;}
-    ruleType getList() const{return list;}
+    DataType getTarget() const{return target;}
+    DataType getList() const{return list;}
     
-    void setTarget(const ruleType& target){this->target=target;}
-    void setList(const ruleType & list){this->list=list;}
+    void setTarget(const DataType& target){this->target=target;}
+    void setList(const DataType & list){this->list=list;}
 
     ruleList const& getSubrules() const {return this->subrules;}
     void setSubrules(ruleList subrules) {this->subrules=std::move(subrules);}
@@ -282,12 +287,12 @@ public:
   
 class ReverseRule : public Rule{
 private:
-    ruleType list;
+    DataType list;
     ruleList subrules;
 public:
     ReverseRule(const nlohmann::json& rule);
-    ruleType getList() const{return list;}
-    void setList(const ruleType & list){this->list=list;}
+    DataType getList() const{return list;}
+    void setList(const DataType & list){this->list=list;}
 
     ruleList const& getSubrules() const {return this->subrules;}
     void setSubrules(ruleList subrules) {this->subrules=std::move(subrules);}
@@ -295,12 +300,12 @@ public:
 
 class ShuffleRule : public Rule{
 private:
-    ruleType list;
+    DataType list;
     ruleList subrules;
 public:
     ShuffleRule(const nlohmann::json& rule);
-    ruleType getList() const{return list;}    
-    void setList(const ruleType & list){this->list=list;}
+    DataType getList() const{return list;}    
+    void setList(const DataType & list){this->list=list;}
 
     ruleList const& getSubrules() const {return this->subrules;}
     void setSubrules(ruleList subrules) {this->subrules=std::move(subrules);}
@@ -309,16 +314,16 @@ public:
 // Sorts a list in ascending order
 class SortRule : public Rule {
 private:
-    ruleType list;
-    ruleType key;
+    DataType list;
+    DataType key;
     ruleList subrules;
 public:
     SortRule(const nlohmann::json& rule);
-    ruleType getList() const{return list;}
-    ruleType getKey() const{return key;}
+    DataType getList() const{return list;}
+    DataType getKey() const{return key;}
     
-    void setList(const ruleType & list){this->list=list;}
-    void setKey(const ruleType & key){this->key=key;}
+    void setList(const DataType & list){this->list=list;}
+    void setKey(const DataType & key){this->key=key;}
 
     ruleList const& getSubrules() const {return this->subrules;}
     void setSubrules(ruleList subrules) {this->subrules=std::move(subrules);}
@@ -326,20 +331,20 @@ public:
 
 class DealRule : public Rule {
 private:
-    ruleType from;
-    ruleType to;
-    ruleType count;
+    DataType from;
+    DataType to;
+    DataType count;
     ruleList subrules;
 public:
     DealRule(const nlohmann::json& rule);
 
-    ruleType getFrom() const{return from;}
-    ruleType getTo() const{return to;}
-    ruleType getCount() const{return count;}
+    DataType getFrom() const{return from;}
+    DataType getTo() const{return to;}
+    DataType getCount() const{return count;}
     
-    void setFrom(const ruleType & from){this->from=from;}
-    void setTo(const ruleType & to){this->from=from;}
-    void setCount(const ruleType& count){this->count=count;}
+    void setFrom(const DataType & from){this->from=from;}
+    void setTo(const DataType & to){this->from=from;}
+    void setCount(const DataType& count){this->count=count;}
 
     ruleList const& getSubrules() const {return this->subrules;}
     void setSubrules(ruleList subrules) {this->subrules=std::move(subrules);}
@@ -347,17 +352,17 @@ public:
 
 class DiscardRule : public Rule {
 private:
-    ruleType from;
-    ruleType count;
+    DataType from;
+    DataType count;
     ruleList subrules;
 public:
     DiscardRule(const nlohmann::json& rule);
 
-    ruleType getFrom() const{return from;}
-    ruleType getCount() const{return count;}
+    DataType getFrom() const{return from;}
+    DataType getCount() const{return count;}
 
-    void setFrom(const ruleType & from){this->from=from;}
-    void setCount(const ruleType& count){this->count=count;}
+    void setFrom(const DataType & from){this->from=from;}
+    void setCount(const DataType& count){this->count=count;}
 
     ruleList const& getSubrules() const {return this->subrules;}
     void setSubrules(ruleList subrules) {this->subrules=std::move(subrules);}
@@ -365,13 +370,13 @@ public:
 
 class ListAttributesRule : public Rule {
 private:
-    ruleType roles;
+    DataType roles;
 public:
     ListAttributesRule(const nlohmann::json& rule);
     
-    ruleType getRoles() const{return roles;}
+    DataType getRoles() const{return roles;}
 
-    void setRoles(const ruleType& roles) {this->roles=roles;}
+    void setRoles(const DataType& roles) {this->roles=roles;}
 
 };
 
@@ -379,18 +384,18 @@ public:
 
 class ForEachRule : public Rule {
 private:
-    ruleType list;
-    ruleType element;
+    DataType list;
+    DataType element;
     ruleList subrules;
 
 public:
     ForEachRule(const nlohmann::json& rule);
     // ~ForEachRule() override;
 
-    ruleType getList() const {return list;}
-    void setList(const ruleType& list) {this->list = list;}
-    ruleType getElement() const {return element;}
-    void setElement(const ruleType& element) {this->element = element;}
+    DataType getList() const {return list;}
+    void setList(const DataType& list) {this->list = list;}
+    DataType getElement() const {return element;}
+    void setElement(const DataType& element) {this->element = element;}
     ruleList const& getSubrules() const {return this->subrules;}
     void setSubrules(ruleList subrules) {this->subrules=std::move(subrules);}
 
@@ -398,16 +403,16 @@ public:
 
 class LoopRule : public Rule {
 private:
-    ruleType until;
-    ruleType whileCondition;
+    DataType until;
+    DataType whileCondition;
     ruleList subrules;
 public:
     LoopRule(const nlohmann::json& rule);
 
-    ruleType getUntil() const {return this->until;}
-    void setUntil(const ruleType& until) {this->until = until;}
-    ruleType getWhile() const {return this->whileCondition;}
-    void setWhile(const ruleType& whileCondition) {this->whileCondition = whileCondition;}
+    DataType getUntil() const {return this->until;}
+    void setUntil(const DataType& until) {this->until = until;}
+    DataType getWhile() const {return this->whileCondition;}
+    void setWhile(const DataType& whileCondition) {this->whileCondition = whileCondition;}
 
     ruleList const& getSubrules() const {return this->subrules;}
     void setSubrules(ruleList subrules) {this->subrules=std::move(subrules);}
@@ -425,16 +430,16 @@ public:
 
 class ParallelForRule : public Rule {
 private:
-    ruleType list;
-    ruleType element;
+    DataType list;
+    DataType element;
     ruleList subrules;
 public:
     ParallelForRule(const nlohmann::json& rule);
 
-    ruleType getList() const {return list;}
-    void setList(const ruleType& list) {this->list = list;}
-    ruleType getElement() const {return element;}
-    void setElement(const ruleType& element) {this->element = element;}
+    DataType getList() const {return list;}
+    void setList(const DataType& list) {this->list = list;}
+    DataType getElement() const {return element;}
+    void setElement(const DataType& element) {this->element = element;}
 
     ruleList const& getSubrules() const {return this->subrules;}
     void setSubrules(ruleList subrules) {this->subrules=std::move(subrules);}
@@ -444,16 +449,16 @@ public:
 // Sorts a list in ascending order
 class SwitchRule : public Rule {
 private:
-    ruleType list;
-    ruleType value;
+    DataType list;
+    DataType value;
     std::vector<Case> cases;
 public:
     SwitchRule(const nlohmann::json& rule);
 
-    ruleType getList() const {return list;}
-    void setList(const ruleType& list) {this->list = list;}
-    ruleType getValue() const {return this->value;}
-    void setValue(const ruleType& value) {this->value = value;}
+    DataType getList() const {return list;}
+    void setList(const DataType& list) {this->list = list;}
+    DataType getValue() const {return this->value;}
+    void setValue(const DataType& value) {this->value = value;}
 
     std::vector<Case> const& getCases() const {return this->cases;}
     void setCases(std::vector<Case> cases) {this->cases=std::move(cases);}
@@ -492,10 +497,14 @@ std::unordered_map<std::string, std::function<std::unique_ptr<Rule>(const nlohma
 };
 
 //----------------------------------------Constructor implementation-------------------------------------------------------------------------------------------------
-GlobalMessageRule::GlobalMessageRule(const nlohmann::json& rule): Rule{rule["rule"]}, value(rule["value"]) { std::cout << "Global message: " << value << std::endl; }
+GlobalMessageRule::GlobalMessageRule(const nlohmann::json& rule): Rule{rule["rule"]}{ 
+    definingDataType(rule["value"],value);
+    std::cout << "Global message: " << value << std::endl; 
+}
 
-ForEachRule::ForEachRule(const nlohmann::json& rule): Rule(rule["rule"]), list(rule["list"]), element(rule["element"])
-{
+ForEachRule::ForEachRule(const nlohmann::json& rule): Rule(rule["rule"]){
+    definingDataType(rule["list"],list);
+    definingDataType(rule["element"],element);
     std::cout << "For each: " << element << std::endl;
     for (const auto& it : rule["rules"].items())
     {
@@ -503,8 +512,16 @@ ForEachRule::ForEachRule(const nlohmann::json& rule): Rule(rule["rule"]), list(r
     }
 }
 
-LoopRule::LoopRule(const nlohmann::json& rule): Rule(rule["rule"]), until(rule["until"]), whileCondition("placeholder") {
-    std::cout << "Loop: " << until << " or " << whileCondition << std::endl;
+LoopRule::LoopRule(const nlohmann::json& rule): Rule(rule["rule"]){
+    auto isUntil = rule.find("until");
+    if(isUntil != rule.end()){
+        definingDataType(rule["until"],until);
+        std::cout << "Loop until: " << until << std::endl;
+    } else {
+        definingDataType(rule["while"],whileCondition);
+        std::cout << "Loop while: " << whileCondition << std::endl;
+    }
+
     for (const auto& it : rule["rules"].items()) {
         subrules.push_back(rulemap[it.value()["rule"]](it.value()));
     }
@@ -517,7 +534,10 @@ InParallelRule::InParallelRule(const nlohmann::json& rule): Rule(rule["rule"]) {
     }
 }
 
-ParallelForRule::ParallelForRule(const nlohmann::json& rule): Rule(rule["rule"]), list(rule["list"]), element(rule["element"]) {
+ParallelForRule::ParallelForRule(const nlohmann::json& rule): Rule(rule["rule"]){
+    definingDataType(rule["list"],list);
+    definingDataType(rule["element"],element);
+
     std::cout << "ParallelFor: " << rule["list"] << std::endl;
     for (const auto& it : rule["rules"].items()) {
         subrules.push_back(rulemap[it.value()["rule"]](it.value()));
@@ -547,30 +567,45 @@ ParallelForRule::ParallelForRule(const nlohmann::json& rule): Rule(rule["rule"])
 // }
 
 //TODO:Implement constructor of LoopRule,ParallelForRule,etc classes
-ExtendRule::ExtendRule(const nlohmann::json& rule) : Rule(rule["rule"]), target(rule["target"]), list(rule["list"]) {
+ExtendRule::ExtendRule(const nlohmann::json& rule) : Rule(rule["rule"]){
+    definingDataType(rule["target"],target);
+    definingDataType(rule["list"],list);
+
     std::cout << "Extend list: " << rule["list"] << std::endl;
 }
 
-ReverseRule::ReverseRule(const nlohmann::json& rule) : Rule(rule["rule"]), list(rule["list"]) {
+ReverseRule::ReverseRule(const nlohmann::json& rule) : Rule(rule["rule"]){
+    definingDataType(rule["list"],list);
     std::cout << "Reserve list: " << list << std::endl;
     for(const auto& it : rule["rules"].items()) {
         subrules.push_back(rulemap[it.value()["rule"]](it.value()));
     }
 }
 
-DiscardRule::DiscardRule(const nlohmann::json& rule) : Rule(rule["rule"]), from(rule["from"]), count(rule["count"]) {
+DiscardRule::DiscardRule(const nlohmann::json& rule) : Rule(rule["rule"]){
+    definingDataType(rule["from"],from);
+    definingDataType(rule["count"],count);
     std::cout << "Discard count: " << count << std::endl;
 }
 
-InputChoiceRule::InputChoiceRule(const nlohmann::json& rule) : Rule(rule["rule"]), to(rule["to"]), prompt(rule["prompt"]), choices(rule["choices"]), result(rule["result"]) {
+InputChoiceRule::InputChoiceRule(const nlohmann::json& rule) : Rule(rule["rule"]) {
+    definingDataType(rule["to"],to);
+    definingDataType(rule["prompt"],prompt);
+    definingDataType(rule["choices"],choices);
+    definingDataType(rule["result"],result);
+
     std::cout << "Input-Choice to: " << to << std::endl;
 }
 
-AddRule::AddRule(const nlohmann::json& rule) : Rule(rule["rule"]), to(rule["to"]), value(rule["rule"]) {
+AddRule::AddRule(const nlohmann::json& rule) : Rule(rule["rule"]){
+    definingDataType(rule["to"],to);
+    definingDataType(rule["value"],value);
     std::cout << "Add to: " << to << std::endl; 
 }
 
-ScoresRule::ScoresRule(const nlohmann::json& rule) : Rule(rule["rule"]), score(rule["score"]), ascending(rule["ascending"]) {
+ScoresRule::ScoresRule(const nlohmann::json& rule) : Rule(rule["rule"]){
+    definingDataType(rule["score"],score);
+    definingDataType(rule["ascending"],ascending);
     std::cout << "Score: " << score << std::endl;
 }
 
@@ -585,21 +620,21 @@ RuleTree::RuleTree(const nlohmann::json& gameConfig)
     }
 }
 
-//-----------------------------------End of constructor implementation-----------------------------
+// //-----------------------------------End of constructor implementation-----------------------------
 
-// ForEachRule::~ForEachRule()
-// {
-//     for (auto ruleptr : subrules)
-//         delete ruleptr;
-// }
+// // ForEachRule::~ForEachRule()
+// // {
+// //     for (auto ruleptr : subrules)
+// //         delete ruleptr;
+// // }
 
-// GlobalMessageRule::~GlobalMessageRule() {}
+// // GlobalMessageRule::~GlobalMessageRule() {}
 
-// RuleTree::~RuleTree()
-// {
-//     for (auto ruleptr : ruleTree)
-// 		delete ruleptr;
-// }
+// // RuleTree::~RuleTree()
+// // {
+// //     for (auto ruleptr : ruleTree)
+// // 		delete ruleptr;
+// // }
 
 //----------------------------------------End Of Rule Class---------------------------------------//
 // Not completed
