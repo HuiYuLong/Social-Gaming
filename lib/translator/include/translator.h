@@ -70,20 +70,23 @@ private:
     std::unordered_map<Key, Value> assignments;
 };
 
+
+template<class Key, class Value>
 class Variables {
 public:
-	Variables(): winners() {}
-    // reconsider the type
-	Variables(std::vector<std::string> winners) {}
-	std::vector<std::string> getWinners() const {
-        return this->winners;
+    Variables(): variablesList(){}
+    Variables(std::unordered_map<Key, Value> variablesList){
+        this->variablesList = variablesList;
     }
-	void setWinners(const std::vector<std::string>& winners) {
-        this->winners = winners;
+    std::unordered_map<Key, Value> getWinners() const {
+        return this->variablesList;
+    }
+    void insertToVariablesList(Key& key, Value& val) {
+        this->variablesList.emplace(key, val);
     }
 
 private:
-	std::vector<std::string> winners;
+    std::unordered_map<Key, Value> variablesList;
 };
 
 template<class Key, class Value>

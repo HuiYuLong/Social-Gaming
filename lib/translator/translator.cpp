@@ -69,15 +69,19 @@ std::unique_ptr<Configuration> parseConfiguration(const nlohmann::json& j) {
 
 }
 
-std::unique_ptr<Variables> parseVariables(const nlohmann::json& j) {
-	std::unique_ptr<Variables> variables = std::make_unique<Variables>();
-	for (auto& item : j.items()) { 
-		if (item.key().compare("variables") == 0) {
-			variables->setWinners(item.value()[""]);
-		}
+template<class Key, class Value>
+std::unique_ptr<Variables<Key, Value>> parseVariables(const nlohmann::json& variablesConfig) {
+	std::unique_ptr<Variables<Key, Value>> variables = std::make_unique<Variables<Key, Value>>();
+	for (auto& item : variablesConfig.items()) {
+		//std::cout << item.value() << std::endl;
+		Key k = item.key();
+		Value v = item.value();
+		variables->insertToVariablesList(k,v);
 	}
+	//std::cout << "PV called!" << std::endl;
 	return variables;
 }
+
 
 //parseRule function recursively searching for "rule" key and print out the value (name of the rule)
 void parseRule(const nlohmann::json& j){
@@ -117,6 +121,7 @@ int main(int argc, char** argv) {
 	nlohmann::json perPlayerConfig = DivideSection(gameConfig,"per-player");
 	nlohmann::json perAudience = DivideSection(gameConfig,"per-audience");
 	nlohmann::json constants = DivideSection(gameConfig,"constants");
+	nlohmann::json variableConfig = DivideSection(gameConfig,"variables");
 
 	std::unique_ptr<PerPlayer<std::string,int>> player = parsePerPlayer<std::string,int>(perPlayerConfig);
 	for(auto& item: player->getPerPlayer()){
@@ -127,6 +132,20 @@ int main(int argc, char** argv) {
 	for(auto& item: constant->getAssignments()){
 		std::cout << item.first << " -> " << item.second << std::endl;
 	}
+
+	//std::cout << variableConfig << std::endl;
+	//assuming the winner variable contain an array of strings "winners": ["playername1","playername2"] in json file
+	//the first item is string, second is a string array
+	std::unique_ptr<Variables<std::string,std::vector<std::string>>> var = parseVariables<std::string,std::vector<std::string>>(variableConfig);
+	for(auto& item: var->getWinners()){
+	 	std::cout << item.first << " -> ";
+		//print every element in the string array
+		for(auto& str:item.second){
+			std::cout << str << " ";
+		}
+		std::cout << std::endl;
+	}
+
 	// RuleTree ruleTree(gameConfig);
 
 	return 0;
