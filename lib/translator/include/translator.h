@@ -19,60 +19,54 @@ using Map = std::unordered_map<std::string, DataType>;
 
 void definingDataType( const nlohmann::basic_json<> &item, DataType& value);
 
+// template<class Key, class Value>
+// class PerPlayer {make
+// public:
+//     PerPlayer(): playerMap(){}
+//     PerPlayer(const std::unordered_map<Key,Value>& playerMap): playerMap(playerMap){}
+//     std::unordered_map<Key,Value> getPerPlayer() const {return this->playerMap;}
+//     void insertToPlayerMap(const Key& k, const Value& v){
+//         this->playerMap.emplace(k,v);
+//     }
+// private:
+//     std::unordered_map<Key,Value> playerMap;
+// };
 class Configuration {
 public:
-	Configuration():name(""), playerCountMin(0), playerCountMax(0), audience(false), round(0) {}
-	Configuration(std::string name, int playerCountMin, int playerCountMax, bool audience, int round):
-					name(name), playerCountMin(playerCountMin), playerCountMax(playerCountMax),
-					audience(audience), round(round) {}
+    Configuration(): ConfigurationMap(){}
+	Configuration(const nlohmann::json):
+    ConfigurationMap(ConfigurationMap){}
 
-	std::string getName() const {return name;}
-	int getPlayerCountMin() const {return playerCountMin;}
-	int getPlayerCountMax() const {return playerCountMax;}
-	bool getAudience() const {return audience;}
-	int getRound() const {return round;}
+    Map getConfigurationMap() const {
+        return this->ConfigurationMap;
+    }
 
-	void setName(const std::string& name) {this->name = name;}
-	void setPlayerCountMin(const int& playerCountMin) {this->playerCountMin = playerCountMin;}
-	void setPlayerCountMax(const int& playerCountMax) {this->playerCountMax = playerCountMax;}
-	void setAudience(const bool& audience) {this->audience = audience;}
-	void setRound(const int& round) {this->round = round;}
-
-	void print(){
-		std::cout << "Configuration: " << "\n";
-		std::cout << "\tName: " << this->getName() << "\n";
-		std::cout << "\tMin Player: " << this->getPlayerCountMin() << "\n";
-		std::cout << "\tMax Player: " << this->getPlayerCountMax() << "\n";
-		std::cout << "\tAudience: " << this->getAudience() << "\n";
-		std::cout << "\tRound: " << this->getRound() << "\n";
-	}
+    void insertToConfigurationMap(const std::string& name, const DataType& value){
+        this->ConfigurationMap.emplace(name,value);
+    }
 private:
-	std::string name;
-	int playerCountMin;
-	int playerCountMax;
-	bool audience;
-	int round;
+    Map ConfigurationMap;
 };
+			
 
-template<class Key, class Value>
 class Constants {
 public:
-    Constants(): assignments(){}
-    Constants(std::unordered_map<Key, Value> assignments){
-        this->assignments = assignments;
+    Constants(): ConstantsMap(){}
+    Constants(const Map& ConstantsMap){
+        this->ConstantsMap = ConstantsMap;
     }
-    void setWeapons(std::unordered_map<Key, Value> assignments) {
-        this->assignments = assignments;
+    // void setWeapons(std::unordered_map<Key, Value> ConstantsMap) {
+    //     this->ConstantsMap = ConstantsMap;
+    // }
+    Map getConstantsMap() const {
+        return this->ConstantsMap;
     }
-    std::unordered_map<Key, Value> getAssignments() const {
-        return this->assignments;
-    }
-    void insertToAssignments(Key& key, Value& val) {
-        this->assignments.emplace(key, val);
+    void insertToConstantsMap(const std::string& name, const DataType& value) {
+        this->ConstantsMap.emplace(name, value);
     }
 
 private:
-    std::unordered_map<Key, Value> assignments;
+    Map ConstantsMap;
 };
 
 class Variables {
@@ -343,7 +337,7 @@ public:
     DataType getCount() const{return count;}
     
     void setFrom(const DataType & from){this->from=from;}
-    void setTo(const DataType & to){this->from=from;}
+    void setTo(const DataType & to){this->to=to;}
     void setCount(const DataType& count){this->count=count;}
 
     ruleList const& getSubrules() const {return this->subrules;}
@@ -608,6 +602,9 @@ ScoresRule::ScoresRule(const nlohmann::json& rule) : Rule(rule["rule"]){
     definingDataType(rule["ascending"],ascending);
     std::cout << "Score: " << score << std::endl;
 }
+
+
+ 
 
 
 RuleTree::RuleTree(const nlohmann::json& gameConfig)
