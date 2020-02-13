@@ -85,14 +85,17 @@ private:
 	std::vector<std::string> winners;
 };
 
-class PerPlayer{
+template<class Key, class Value>
+class PerPlayer {
 public:
-    PerPlayer(): wins(0) {}
-    int getWins() {return this->wins;}
-    void setWins(int wins) {this->wins = wins;}
-
+    PerPlayer(): playerMap(){}
+    PerPlayer(const std::unordered_map<Key,Value>& playerMap): playerMap(playerMap){}
+    std::unordered_map<Key,Value> getPerPlayer() const {return this->playerMap;}
+    void insertToPlayerMap(const Key& k, const Value& v){
+        this->playerMap.emplace(k,v);
+    }
 private:
-    int wins;
+    std::unordered_map<Key,Value> playerMap;
 };
 
 
