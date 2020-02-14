@@ -4,31 +4,31 @@
 #include <cstdlib>
 #include <limits>
 #include <translator.h>
-// Mot completed
+
 class Gamespec {
     private:
-    Configuration configuration;
-    Constants constants;
-    Variables variables;
-    PerPlayer perplayer;
-    Rule rules;
-    IndividualPlayer player;
+    std::unique_ptr<Configuration> configuration;
+    std::unique_ptr<Constants> constants;
+    std::unique_ptr<Variables> variables;
+    std::unique_ptr<PerPlayer> perplayer;
+    std::vector<std::unique_ptr<Rule*>> ruleTree;
+  
     //PerAudience peraudience;
     public:
-    Gamespec(Configuration configuration, Constants constants, Variables variables, PerPlayer perplayer, Rule rules, IndividualPlayer player) : Configuration(configuration), Constants(constants), Variables(variables), PerPlayer(perplayer), Rule(rules), IndividualPlayer(player) {}
-    Configuration getConfiguration() const;
-    Constants getConstants() const;
-    Variables getVariables() const;
-    PerPlayer getPerplayer() const;
-    Rule getRules() const;
-    IndividualPlayer getPlayer() const;
+    Gamespec(std::unique_ptr<Configuration> configuration, std::unique_ptr<Constants> constants, std::unique_ptr<Variables> variables, std::unique_ptr<PerPlayer> perplayer, std::vector<std::unique_ptr<Rule*>> ruleTree) : std::unique_ptr<Configuration>(configuration), std::unique_ptr<Constants>(constants), std::unique_ptr<Variables>(variables), std::unique_ptr<PerPlayer>(perplayer), std::vector<std::unique_ptr<Rule*>>(ruleTree) {}
+    std::unique_ptr<Configuration> getConfiguration() const;
+    std::unique_ptr<Constants> getConstants() const;
+    std::unique_ptr<Variables> getVariables() const;
+    std::unique_ptr<PerPlayer> getPerplayer() const;
+    std::vector<std::unique_ptr<Rule*>> getRuleTree() const;
 
-    Configuration setConfiguration(Configuration configuration);
-    Constants setConstants(Constants constants);
-    Variables setVariables(Variables variables);
-    PerPlayer setPerplayer(PerPlayer perplayer);
-    Rule setRules(Rule rules);
-    IndividualPlayer setPlayer(IndividualPlayer player);
+
+    std::unique_ptr<Configuration> setConfiguration(std::unique_ptr<Configuration> configuration);
+    std::unique_ptr<Constants> setConstants(std::unique_ptr<Constants> constants);
+    std::unique_ptr<Variables> setVariables(std::unique_ptr<Variables> variables);
+    std::unique_ptr<PerPlayer> setPerplayer(std::unique_ptr<PerPlayer> perplayer);
+    std::vector<std::unique_ptr<Rule*>> setRuleTree(std::vector<std::unique_ptr<Rule*>> ruleTree);
+  
 
     virtual ~Gamespec() {}
 
