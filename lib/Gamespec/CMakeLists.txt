@@ -1,6 +1,6 @@
 project(Gamespec)
-add_subdirectory(interpreter)
-
+add_executable(Gamespec Gamespec.cpp)
+include_directories(../translator/include)
 target_include_directories(Gamespec
   PUBLIC
     $<INSTALL_INTERFACE:include>
