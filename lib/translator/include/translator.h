@@ -8,6 +8,7 @@
 #include <sstream>
 #include <memory>
 #include <boost/variant.hpp>
+#include <boost/lexical_cast.hpp>
 #include <utility>
 #include "common.h"
 
@@ -33,7 +34,7 @@ void definingDataType( const nlohmann::basic_json<> &item, DataType& value);
 class Configuration {
 public:
     Configuration(): ConfigurationMap(){}
-	Configuration(const nlohmann::json):
+	    Configuration(const nlohmann::json):
     ConfigurationMap(ConfigurationMap){}
 
     Map getConfigurationMap() const {
@@ -141,9 +142,9 @@ public:
     void setValue(const DataType& value) {this->value = value;}
 
     std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
-		std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
-		return outputs;
-	}
+        std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
+        return outputs;
+    }
 
 };
 
@@ -165,9 +166,9 @@ public:
     void setSubrules(ruleList subrules) {this->subrules=std::move(subrules);}
 
     std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
-		std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>();
-		return outputs;
-	}
+        std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
+        return outputs;
+    }
 };
 
 class InputChoiceRule : public Rule{
@@ -188,11 +189,11 @@ public:
     void setChoices(const DataType& choices) {this->choices = choices;}
     void setPrompt(const DataType& prompt) {this->prompt = prompt;}
     void setResult(const DataType& result) {this->result = result;}
-
+    
     std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
-		std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
-		return outputs;
-	}
+        std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
+        return outputs;
+    }
 };
 
 class InputTextRule : public Rule{
@@ -212,9 +213,9 @@ public:
     void setResult(const DataType& result) {this->result = result;}
 
     std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
-		std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
-		return outputs;
-	}
+        std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
+        return outputs;
+    }
 };
 
 class InputVoteRule : public Rule{
@@ -237,9 +238,9 @@ public:
     void setResult(const DataType& result) {this->result = result;}
 
     std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
-		std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
-		return outputs;
-	}
+        std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
+        return outputs;
+    }
 };
 
 class MessageRule : public Rule{
@@ -256,17 +257,22 @@ public:
     void setTo(const DataType& to) {this->to = to;}
     void setValue(const DataType& value) {this->value = value;}
 
+    // std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
+	// 	std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
+	// 	for (auto msg : incoming) {
+	// 		Message output;
+	// 		output.connection = msg.connection;
+	// 		output.text = this->getValue();
+	// 		std::cout << "we are running global-message: " << this->getValue() << std::endl;
+	// 		outputs->push_back(output);
+	// 	}
+	// 	return outputs;
+	// }
+
     std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
-		std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
-		for (auto msg : incoming) {
-			Message output;
-			output.connection = msg.connection;
-			output.text = this->getValue();
-			std::cout << "we are running global-message: " << this->getValue() << std::endl;
-			outputs.push_back(output);
-		}
-		return outputs;
-	}
+        std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
+        return outputs;
+    }
 
 };
 
@@ -283,20 +289,16 @@ public:
     	for (auto msg : incoming) {
     		Message output;
     		output.connection = msg.connection;
-    		output.text = this->getValue();
+    		output.text = boost::lexical_cast<std::string>(this->getValue());
     		std::cout << "we are running global-message: " << this->getValue() << std::endl;
-    		outputs.push_back(output);
+    		outputs->push_back(output);
     	}
     	return outputs;
     }
 
     DataType getValue() const {return value;}
-    void setValue(const DataType& value) {this->value = value;}
+    void setValue(const DataType value) {this->value = value;}
 
-    std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
-		std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
-		return outputs;
-	}
 };
 
 class ScoresRule: public Rule{
@@ -314,14 +316,9 @@ public:
     void setAscending(const bool& ascending) {this->ascending = ascending;}
 
     std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
-		std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
-		return outputs;
-	}
-
-    std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
-		std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
-		return outputs;
-	}
+        std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
+        return outputs;
+    }
 };
 
 //-------------------------------Sophia's Code------------------------------//
@@ -343,9 +340,9 @@ public:
     void setSubrules(ruleList subrules) {this->subrules=std::move(subrules);}
 
     std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
-		std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
-		return outputs;
-	}
+        std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
+        return outputs;
+    }
 };
 
   
@@ -362,9 +359,9 @@ public:
     void setSubrules(ruleList subrules) {this->subrules=std::move(subrules);}
 
     std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
-		std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
-		return outputs;
-	}
+        std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
+        return outputs;
+    }
 };
 
 class ShuffleRule : public Rule{
@@ -380,9 +377,9 @@ public:
     void setSubrules(ruleList subrules) {this->subrules=std::move(subrules);}
 
     std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
-		std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
-		return outputs;
-	}
+        std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
+        return outputs;
+    }
 };
 
 // Sorts a list in ascending order
@@ -403,9 +400,9 @@ public:
     void setSubrules(ruleList subrules) {this->subrules=std::move(subrules);}
 
     std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
-		std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
-		return outputs;
-	}
+        std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
+        return outputs;
+    }
 };
 
 class DealRule : public Rule {
@@ -429,9 +426,9 @@ public:
     void setSubrules(ruleList subrules) {this->subrules=std::move(subrules);}
 
     std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
-		std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
-		return outputs;
-	}
+        std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
+        return outputs;
+    }
 };
 
 class DiscardRule : public Rule {
@@ -452,9 +449,9 @@ public:
     void setSubrules(ruleList subrules) {this->subrules=std::move(subrules);}
 
     std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
-		std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
-		return outputs;
-	}
+        std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
+        return outputs;
+    }
 };
 
 class ListAttributesRule : public Rule {
@@ -462,13 +459,15 @@ private:
     DataType roles;
 public:
     ListAttributesRule(const nlohmann::json& rule);
+    
     DataType getRoles() const{return roles;}
+
     void setRoles(const DataType& roles) {this->roles=roles;}
 
     std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
-		std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
-		return outputs;
-	}
+        std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
+        return outputs;
+    }
 
 };
 
@@ -492,9 +491,9 @@ public:
     void setSubrules(ruleList subrules) {this->subrules=std::move(subrules);}
 
     std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
-		std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
-		return outputs;
-	}
+        std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
+        return outputs;
+    }
 
 };
 
@@ -515,9 +514,9 @@ public:
     void setSubrules(ruleList subrules) {this->subrules=std::move(subrules);}
 
     std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
-		std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
-		return outputs;
-	}
+        std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
+        return outputs;
+    }
 };
   
 class InParallelRule : public Rule {
@@ -530,7 +529,9 @@ public:
     void setSubrules(ruleList subrules) {this->subrules=std::move(subrules);}
 
     std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
-	}
+        std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
+        return outputs;
+    }
 };
 
 class ParallelForRule : public Rule {
@@ -550,9 +551,9 @@ public:
     void setSubrules(ruleList subrules) {this->subrules=std::move(subrules);}
 
     std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
-		std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
-		return outputs;
-	}
+        std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
+        return outputs;
+    }
 
 };
 
@@ -574,16 +575,9 @@ public:
     void setCases(std::vector<Case> cases) {this->cases=std::move(cases);}
 
     std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
-		std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
-		for (auto msg : incoming) {
-			Message output;
-			output.connection = msg.connection;
-			output.text = this->getValue();
-			std::cout << "we are running global-message: " << this->getValue() << std::endl;
-			outputs.push_back(output);
-		}
-		return outputs;
-	}
+        std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
+        return outputs;
+    }
 };
 
 class WhenRule : public Rule {
@@ -596,9 +590,9 @@ public:
     void setCases(std::vector<Case> cases) {this->cases=std::move(cases);}
 
     std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
-		std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
-		return outputs;
-	}
+        std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
+        return outputs;
+    }
 };
 
 class RuleTree {
