@@ -9,7 +9,6 @@
 #include <memory>
 #include <boost/variant.hpp>
 #include <utility>
-
 #include "common.h"
 
 using networking::Message;
@@ -111,7 +110,8 @@ class Rule {
 private:
     std::string rule;
 public:
-    
+    virtual std::deque<Message> run(const std::deque<Message>& incoming) = 0;
+
     Rule(const std::string& rule): rule(rule){}
     std::string getRule() const {return rule;}
     void setRule(const std::string& rule) {this->rule = rule;}
@@ -139,6 +139,7 @@ public:
 
     void setTo(const DataType& to) {this->to = to;}
     void setValue(const DataType& value) {this->value = value;}
+
 };
 
 class TimerRule : public Rule{
@@ -229,6 +230,19 @@ public:
 
     void setTo(const DataType& to) {this->to = to;}
     void setValue(const DataType& value) {this->value = value;}
+
+    std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
+		std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
+		for (auto msg : incoming) {
+			Message output;
+			output.connection = msg.connection;
+			output.text = this->getValue();
+			std::cout << "we are running global-message: " << this->getValue() << std::endl;
+			outputs.push_back(output);
+		}
+		return outputs;
+	}
+
 };
 
 class GlobalMessageRule : public Rule{
@@ -237,10 +251,21 @@ private:
 
 public:
     GlobalMessageRule(const nlohmann::json& rule);
+
     // ~GlobalMessageRule() override;
+    std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
+    	std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
+    	for (auto msg : incoming) {
+    		Message output;
+    		output.connection = msg.connection;
+    		output.text = this->getValue();
+    		std::cout << "we are running global-message: " << this->getValue() << std::endl;
+    		outputs.push_back(output);
+    	}
+    	return outputs;
+    }
 
     DataType getValue() const {return value;}
-
     void setValue(const DataType& value) {this->value = value;}
 };
 
