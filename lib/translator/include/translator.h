@@ -12,99 +12,67 @@
 #include <utility>
 #include "common.h"
 
+using DataType = boost::variant<std::string, int, bool, unsigned>;
+
 using networking::Message;
 
-using DataType = boost::variant<std::string, int, bool, unsigned>;
-using Map = std::unordered_map<std::string, DataType>;
+using Variable = boost::make_recursive_variant<
+    bool,
+    int,
+    std::string,
+    std::vector<boost::recursive_variant_>,
+    std::unordered_map<std::string, boost::recursive_variant_ >
+    >::type;
 
 void definingDataType( const nlohmann::basic_json<> &item, DataType& value);
 
-// template<class Key, class Value>
-// class PerPlayer {make
-// public:
-//     PerPlayer(): playerMap(){}
-//     PerPlayer(const std::unordered_map<Key,Value>& playerMap): playerMap(playerMap){}
-//     std::unordered_map<Key,Value> getPerPlayer() const {return this->playerMap;}
-//     void insertToPlayerMap(const Key& k, const Value& v){
-//         this->playerMap.emplace(k,v);
-//     }
-// private:
-//     std::unordered_map<Key,Value> playerMap;
-// };
-class Configuration {
+
+
+
+//-------------------------------------------Configuration class ---------------------------------------//
+std::unordered_map<std::string, std::function<Variable(const nlohmann::json&)>>configurationMap = {
+        // {"configuration"}, [](const nlohmann::json& config) {return std::make_unique<Configuration>(config);},
+        {"name",[](const nlohmann::json& config){
+            std::string value = config["configuration"]["name"];
+            return value;
+        }},
+        // {"player count"}, [](const nlohmann::json& config){config["player count"]["min"];},
+        // {"min"}, [](const nlohmann::json& config){return config["min"];},
+        // {"max"}, [](const nlohmann::json& config){return config["max"];}
+        // {"setup"}, [](const nlohmann::json& config){return map???}
+};
+class Top_levelMap {
 public:
-    Configuration(): ConfigurationMap(){}
-	    Configuration(const nlohmann::json):
-    ConfigurationMap(ConfigurationMap){}
-
-    Map getConfigurationMap() const {
-        return this->ConfigurationMap;
+    Top_levelMap(const nlohmann::json& j){
+        this->setVariables(j);
     }
+    void setVariables(const nlohmann::json& j){
+    	variables.emplace("name", configurationMap["name"](j));
+    	// variables.emplace("min", configurationMap["min"](j));
+    	// variables.emplace("max", configurationMap["max"](j));
 
-    void insertToConfigurationMap(const std::string& name, const DataType& value){
-        this->ConfigurationMap.emplace(name,value);
+    	std::cout << boost::get<std::string>(this->variables["name"]) << "\n";
+     //   	std::cout << boost::get<int>this->variables["min"] << "\n";
+    	// std::cout << boost::get<int>this->variables["max"] << "\n";
+
+        // for(auto& item:this->variables){
+        //     std::cout << item.first << " " << boost::get<std::string>(item.second) << "\n";
+        // }
     }
+    
+
 private:
-    Map ConfigurationMap;
+    std::unordered_map<std::string, Variable > variables;  //predeterminded variable in congiguration 
+    Variable audience;  //map of each audience' name and state
+    Variable players;  //map of each players' name and state
 };
 			
 
-class Constants {
-public:
-    Constants(): ConstantsMap(){}
-    Constants(const Map& ConstantsMap){
-        this->ConstantsMap = ConstantsMap;
-    }
-    // void setWeapons(std::unordered_map<Key, Value> ConstantsMap) {
-    //     this->ConstantsMap = ConstantsMap;
-    // }
-    Map getConstantsMap() const {
-        return this->ConstantsMap;
-    }
-    void insertToConstantsMap(const std::string& name, const DataType& value) {
-        this->ConstantsMap.emplace(name, value);
-    }
-
-private:
-    Map ConstantsMap;
-};
-
-class Variables {
-public:
-	Variables(): winners() {}
-    // reconsider the type
-	Variables(std::vector<std::string> winners) {}
-	std::vector<std::string> getWinners() const {
-        return this->winners;
-    }
-	void setWinners(const std::vector<std::string>& winners) {
-        this->winners = winners;
-    }
-
-private:
-	std::vector<std::string> winners;
-};
 
 
-class PerPlayer {
-public:
-    PerPlayer(): playerMap(){}
-    PerPlayer(const Map& playerMap): playerMap(playerMap){}
-    Map getPerPlayer() const {return this->playerMap;}
-    void insertToPlayerMap(const std::string& name, const DataType& value){
-        this->playerMap.emplace(name,value);
-    }
-private:
-    Map playerMap;
-};
-
-
-
-// maybe we should construct separate class for the different rule classes?
-// ex) OutputRule, InputRule, ArithmeticRule, ListOpsRule, ControlStructRule ...
 
 //-------------------------------------------Rule Class---------------------------------------//
-// enum class DataType { string, list, json };
+
 
 class Rule {
 
@@ -121,10 +89,41 @@ public:
 
 using ruleList = std::vector<std::unique_ptr<Rule>>;
 
+// class Integer
+// {
+//     public:
+//         list upfrom(int a); // add a from current
+//     private:
+//         int a;
+// };
+
+// // class Value
+// // {
+// //     public:
+// //         Value(const std::string& condition ){ }
+    
+// //     operator const std::string (){return "something"};
+// // };
+
+// class List{
+//     public:
+//     std::vector<Variable> list;
+//     List collect();
+
+//     bool contains();
+// };
+
+// class Condition{
+//     public:
+//         Condition(const std::string & condition){}
+
+// };
+
 class Case { 
 	std::string caseString;
 	ruleList rules;
 };
+
 
 //-----------------------PETER'S CODE:---------------------------------
 
