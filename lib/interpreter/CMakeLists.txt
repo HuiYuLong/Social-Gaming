@@ -1,7 +1,8 @@
-project(Gamespec)
-add_executable(Gamespec Gamespec.cpp)
+project(interpreter)
+add_executable(interpreter interpreter.cpp)
+include_directories(../Gamespec/include)
 include_directories(../translator/include)
-target_include_directories(Gamespec
+target_include_directories(interpreter
   PUBLIC
     $<INSTALL_INTERFACE:include>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -10,6 +11,6 @@ target_include_directories(Gamespec
     ${Boost_INCLUDE_DIR}
 )
 
-target_link_libraries(Gamespec
+target_link_libraries(interpreter
   PRIVATE nlohmann_json::nlohmann_json
   PUBLIC common)

@@ -1,7 +1,10 @@
 #include <Gamespec.h>
 
-Gamespec Msg(Configuration &configuration, Constants constants,
-                Variables &variables, PerPlayer &perplayer,
-                PerAudience &peraudience, Rule &rule) {
-                    // ToDo
-                }
+
+
+
+
+int main() {
+    std::cout << "A game has been specified" << std::endl;
+    return 0;
+}

@@ -23,7 +23,24 @@ using Variable = boost::make_recursive_variant<
     std::unordered_map<std::string, boost::recursive_variant_>
     >::type;
 
-void definingDataType( const nlohmann::basic_json<> &item, DataType& value);
+// void definingDataType( const nlohmann::basic_json<> &item, DataType& value);
+void definingDataType( const nlohmann::basic_json<> &item, DataType& value){
+	using type = nlohmann::json::value_t;	
+	if (item.type() == type::number_unsigned){
+		unsigned temp = item;
+		value = temp;
+		
+	} else if (item.type() == type::number_integer){
+		int temp = item;
+		value = temp;
+	} else if (item.type() == type::boolean){
+		bool temp = item;
+		value = temp;
+	} else if (item.type() == type::string){
+		std::string temp = item;
+		value = temp;
+	}
+}
 
 //-------------------------------------------Configuration class ---------------------------------------//
 std::unordered_map<std::string, std::function<Variable(const nlohmann::json&)>> variablesMap = {
