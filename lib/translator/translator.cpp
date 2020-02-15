@@ -57,9 +57,6 @@ int main(int argc, char** argv) {
 	// nlohmann::json ConfigurationConfig = DivideSection(gameConfig,"configuration");
 	// cout<<ConfigurationConfig<<endl;
 
-	
-
-
 	return 0;
 };
 

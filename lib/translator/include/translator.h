@@ -13,7 +13,6 @@
 #include "common.h"
 
 using DataType = boost::variant<std::string, int, bool, unsigned>;
-
 using networking::Message;
 
 using Variable = boost::make_recursive_variant<
@@ -21,50 +20,79 @@ using Variable = boost::make_recursive_variant<
     int,
     std::string,
     std::vector<boost::recursive_variant_>,
-    std::unordered_map<std::string, boost::recursive_variant_ >
+    std::unordered_map<std::string, boost::recursive_variant_>
     >::type;
 
 void definingDataType( const nlohmann::basic_json<> &item, DataType& value);
 
-
-
-
 //-------------------------------------------Configuration class ---------------------------------------//
-std::unordered_map<std::string, std::function<Variable(const nlohmann::json&)>>configurationMap = {
-        // {"configuration"}, [](const nlohmann::json& config) {return std::make_unique<Configuration>(config);},
-        {"name",[](const nlohmann::json& config){
-            std::string value = config["configuration"]["name"];
-            return value;
-        }},
+std::unordered_map<std::string, std::function<Variable(const nlohmann::json&)>> variablesMap = {
+        // {"configuration"}, [](const nlohmann::json& config) {return std::make_unique<Configuration>(config);},  
+        {"configuration",[](const nlohmann::json& config) {
+            std::unordered_map<std::string, Variable> configuration;
+            std::string name = config["configuration"]["name"];
+            configuration.emplace("name", name);
+
+            // std::unordered_map<std::string, Variable> playerCountMap;
+            // playerCountMap.emplace("min", config["configuration"]["player count"]["min"]);
+            // playerCountMap.emplace("max", config["configuration"]["player count"]["max"]);      
+            // configuration.emplace("player count", playerCountMap);
+
+            // configuration.emplace("audience", configuration["audience"]);
+
+            return configuration;
+        }}
+
         // {"player count"}, [](const nlohmann::json& config){config["player count"]["min"];},
         // {"min"}, [](const nlohmann::json& config){return config["min"];},
         // {"max"}, [](const nlohmann::json& config){return config["max"];}
         // {"setup"}, [](const nlohmann::json& config){return map???}
 };
+
+// std::unordered_map<std::string, std::function<Variable(const nlohmann::json&)>> constantsMap = {
+//         {"weapons",[](const nlohmann::json& config) {
+//             std::unordered_map<std::string, Variable> weapons;
+//             weapons.emplace(constants["weapons"][])
+//             std::string value = constants["constants"]["name"];
+//             return value;
+//         }}
+
+//         // {"player count"}, [](const nlohmann::json& config){config["player count"]["min"];},
+//         // {"min"}, [](const nlohmann::json& config){return config["min"];},
+//         // {"max"}, [](const nlohmann::json& config){return config["max"];}
+//         // {"setup"}, [](const nlohmann::json& config){return map???}
+// };
+
+
 class Top_levelMap {
 public:
     Top_levelMap(const nlohmann::json& j){
         this->setVariables(j);
     }
     void setVariables(const nlohmann::json& j){
-    	variables.emplace("name", configurationMap["name"](j));
+        //Variable name = "name";
+    	// variables.emplace("configuration", variablesMap["configuration"](j));
+     //    std::string 
+     //    std::cout << variables["configuration"] << "\n";
+        //std::variables["configuration"]
+        //std::string tempConfig = boost::lexical_cast<std::string>(Va)
     	// variables.emplace("min", configurationMap["min"](j));
     	// variables.emplace("max", configurationMap["max"](j));
 
-    	std::cout << boost::get<std::string>(this->variables["name"]) << "\n";
+    	//std::cout << boost::get<std::string>(this->variables["name"]) << "\n";
      //   	std::cout << boost::get<int>this->variables["min"] << "\n";
     	// std::cout << boost::get<int>this->variables["max"] << "\n";
 
         // for(auto& item:this->variables){
-        //     std::cout << item.first << " " << boost::get<std::string>(item.second) << "\n";
+        //     std::cout << item.first << " " << boost::get<std:a:string>(item.second) << "\n";
         // }
     }
     
 
 private:
-    std::unordered_map<std::string, Variable > variables;  //predeterminded variable in congiguration 
-    Variable audience;  //map of each audience' name and state
-    Variable players;  //map of each players' name and state
+    std::unordered_map<std::string, Variable> variables; //predeterminded variable in congiguration 
+    std::unordered_map<std::string, Variable> audience; // map of each audience' name and state
+    std::unordered_map<std::string, Variable> players; // map of each players' name and state
 };
 			
 
@@ -601,6 +629,7 @@ public:
 
     // ~RuleTree();
 };
+
 
 std::unordered_map<std::string, std::function<std::unique_ptr<Rule>(const nlohmann::json&)>> rulemap = {
 		{"foreach", [](const nlohmann::json& rule) { return std::make_unique<ForEachRule>(rule); }},
