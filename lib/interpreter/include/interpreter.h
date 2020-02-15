@@ -10,9 +10,11 @@
 // containing parsed(json file)
 class interpreter {
 public:
-    Gamespec& Gamespec;
+    Gamespec test;
+    
 
 // public:
 //     interpreter(Gamespec& Gamespec);
 //     void initGameRule(Gamespec& Gamespec) {return this->Gamespec;}
 };
+
