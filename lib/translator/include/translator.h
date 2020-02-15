@@ -20,7 +20,8 @@ using Variable = boost::make_recursive_variant<
     int,
     std::string,
     std::vector<boost::recursive_variant_>,
-    std::unordered_map<std::string, boost::recursive_variant_>
+    std::unordered_map<std::string, boost::recursive_variant_>,
+    std::unordered_map<std::string, std::string>
     >::type;
 
 void definingDataType( const nlohmann::basic_json<> &item, DataType& value);
@@ -29,40 +30,46 @@ void definingDataType( const nlohmann::basic_json<> &item, DataType& value);
 std::unordered_map<std::string, std::function<Variable(const nlohmann::json&)>> variablesMap = {
         // {"configuration"}, [](const nlohmann::json& config) {return std::make_unique<Configuration>(config);},  
         {"configuration",[](const nlohmann::json& config) {
+
             std::unordered_map<std::string, Variable> configuration;
             std::string name = config["configuration"]["name"];
             configuration.emplace("name", name);
 
-            // std::unordered_map<std::string, Variable> playerCountMap;
-            // playerCountMap.emplace("min", config["configuration"]["player count"]["min"]);
-            // playerCountMap.emplace("max", config["configuration"]["player count"]["max"]);      
-            // configuration.emplace("player count", playerCountMap);
+            std::unordered_map<std::string, Variable> playerCountMap;
+            int min = config["configuration"]["player count"]["min"];
+            playerCountMap.emplace("min", min);
+            int max = config["configuration"]["player count"]["max"];
+            playerCountMap.emplace("max", max);      
+            configuration.emplace("player count", playerCountMap);
 
-            // configuration.emplace("audience", configuration["audience"]);
+            configuration.emplace("audience", configuration["audience"]);
 
             return configuration;
+        }},
+
+        {"constants",[](const nlohmann::json& config) {
+            std::unordered_map<std::string, Variable> constants;
+
+            std::vector<Variable> weapons;
+
+            for (auto& item : config["constants"]["weapons"].items()) {
+                std::unordered_map<std::string, Variable> weapon;
+
+                std::string name = item.value()["name"];
+                std::string beats = item.value()["beats"];
+
+                weapon.emplace("name", name);
+                weapon.emplace("beats", beats);
+                
+                weapons.push_back(weapon);
+            }
+
+            constants.emplace("constants", weapons);
+
+            return constants;
         }}
 
-        // {"player count"}, [](const nlohmann::json& config){config["player count"]["min"];},
-        // {"min"}, [](const nlohmann::json& config){return config["min"];},
-        // {"max"}, [](const nlohmann::json& config){return config["max"];}
-        // {"setup"}, [](const nlohmann::json& config){return map???}
 };
-
-// std::unordered_map<std::string, std::function<Variable(const nlohmann::json&)>> constantsMap = {
-//         {"weapons",[](const nlohmann::json& config) {
-//             std::unordered_map<std::string, Variable> weapons;
-//             weapons.emplace(constants["weapons"][])
-//             std::string value = constants["constants"]["name"];
-//             return value;
-//         }}
-
-//         // {"player count"}, [](const nlohmann::json& config){config["player count"]["min"];},
-//         // {"min"}, [](const nlohmann::json& config){return config["min"];},
-//         // {"max"}, [](const nlohmann::json& config){return config["max"];}
-//         // {"setup"}, [](const nlohmann::json& config){return map???}
-// };
-
 
 class Top_levelMap {
 public:
@@ -70,22 +77,9 @@ public:
         this->setVariables(j);
     }
     void setVariables(const nlohmann::json& j){
-        //Variable name = "name";
-    	// variables.emplace("configuration", variablesMap["configuration"](j));
-     //    std::string 
-     //    std::cout << variables["configuration"] << "\n";
-        //std::variables["configuration"]
-        //std::string tempConfig = boost::lexical_cast<std::string>(Va)
-    	// variables.emplace("min", configurationMap["min"](j));
-    	// variables.emplace("max", configurationMap["max"](j));
-
-    	//std::cout << boost::get<std::string>(this->variables["name"]) << "\n";
-     //   	std::cout << boost::get<int>this->variables["min"] << "\n";
-    	// std::cout << boost::get<int>this->variables["max"] << "\n";
-
-        // for(auto& item:this->variables){
-        //     std::cout << item.first << " " << boost::get<std:a:string>(item.second) << "\n";
-        // }
+        Variable name = "name";
+    	variables.emplace("configuration", variablesMap["configuration"](j));
+        variables.emplace("constants", variablesMap["constants"](j));
     }
     
 
