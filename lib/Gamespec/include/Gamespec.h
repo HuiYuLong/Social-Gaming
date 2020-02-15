@@ -3,16 +3,7 @@
 #include <ctime>
 #include <cstdlib>
 #include <limits>
-#include <nlohmann/json.hpp>
-#include "translator.h"
-#include <cmath>
-#include <vector>
-#include <deque>
-#include <fstream>
-#include <sstream>
-#include <memory>
-#include <utility>
-#include <unordered_map>
+#include <translator.h>
 
 class Gamespec {
     private:

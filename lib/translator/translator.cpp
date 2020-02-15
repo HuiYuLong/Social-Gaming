@@ -63,9 +63,9 @@ int main(int argc, char** argv) {
 
 	nlohmann::json variable = CropSection(gameConfig,"variable");
 
-	Top_levelMap topMap(config);
+	Top_levelMap topMap(gameConfig);
 
-	
+
 
 // 	  // print values
 //    13     cout << object << '\n';
@@ -91,9 +91,6 @@ int main(int argc, char** argv) {
 	// nlohmann::json perPlayerConfig = CropSection(gameConfig,"per-player");
 	// nlohmann::json ConfigurationConfig = DivideSection(gameConfig,"configuration");
 	// cout<<ConfigurationConfig<<endl;
-
-	
-
 
 	return 0;
 };
