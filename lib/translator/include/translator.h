@@ -11,11 +11,13 @@
 #include <utility>
 
 #include "common.h"
+using namespace std;
 
 using DataType = boost::variant<std::string, int, bool, unsigned>;
 
 using networking::Message;
 
+using json = nlohmann::json;
 using Variable = boost::make_recursive_variant<
     bool,
     int,
@@ -29,13 +31,15 @@ void definingDataType( const nlohmann::basic_json<> &item, DataType& value);
 
 
 
+
+
 //-------------------------------------------Configuration class ---------------------------------------//
-std::unordered_map<std::string, std::function<Variable>(const nlohmann::json&)>configurationMap = {
-        // {"configuration"}, [](const nlohmann::json& config) {return std::make_unique<Configuration>(config);},
-        {"name",[](const nlohmann::json& config){
-            std::string value = config["configuration"]["name"];
-            return value;
-        }}
+std::unordered_map<std::string, std::function<Variable>(json&)>configurationMap = {
+         {"configuration"}, [](json& config) {return std::make_unique<Configuration>(config);},
+        // {"name",[](const nlohmann::json& config){
+        //     std::string value = config["configuration"]["name"];
+        //     return value;
+        // }}
         // {"player count"}, [](const nlohmann::json& config){config["player count"]["min"];},
         // {"min"}, [](const nlohmann::json& config){return config["min"];},
         // {"max"}, [](const nlohmann::json& config){return config["max"];}
@@ -46,6 +50,7 @@ public:
     Top_levelMap(const nlohmann::json& j){
         this->setVariables(j);
     }
+
     void setVariables(const nlohmann::json& j){
         // for (const auto& it: j["Configuration"].items()){
         //     const nlohmann::json& name = it.value();
@@ -53,17 +58,19 @@ public:
 
         // }
 
-        this->variables.insert(configurationMap["name"](j));
-        for(auto& item:this->variables){
-            std::cout << item.first << " " << item.second;
-        }
+    //    this->variables.insert(configurationMap["name"](j));
+    //     for(auto& item:this->variables){
+    //         std::cout << item.first << " " << item.second;
+    //     }
+
+        cout<<"hello  i am back\n";
     }
     
 
 private:
-    std::unordered_map<std::string, Variable > variables;  //predeterminded variable in congiguration 
-    Variable audience;  //map of each audience' name and state
-    Variable players;  //map of each players' name and state
+    std::unordered_map<std::string, DataType > variables;  //predeterminded variable in congiguration 
+    DataType audience;  //map of each audience' name and state
+    DataType players;  //map of each players' name and state
 };
 			
 
@@ -245,6 +252,7 @@ private:
 // class ScoresRule: public Rule{
 // private:
 //     DataType score;
+
 //     DataType ascending;
 
 // public:

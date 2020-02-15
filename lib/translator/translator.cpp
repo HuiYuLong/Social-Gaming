@@ -4,6 +4,8 @@
 #include <iostream>
 using namespace std;
 
+using json = nlohmann::json;
+
 
 //Helper functions
 //Crop The big JSON file into short target secction with input name
@@ -51,8 +53,41 @@ int main(int argc, char** argv) {
         std::cout << "cannot open file" << std::endl;
         return 0;
     }
+
+
+
+
 	nlohmann::json gameConfig = nlohmann::json::parse(jsonFileStream);
-	Top_levelMap topMap(gameConfig);
+
+	nlohmann::json config = CropSection(gameConfig,"configuration");
+
+	nlohmann::json variable = CropSection(gameConfig,"variable");
+
+	Top_levelMap topMap(config);
+
+	
+
+// 	  // print values
+//    13     cout << object << '\n';
+//    14     cout << null << '\n';
+//    15  
+//    16     // add values
+//    17     object.push_back(json::object_t::value_type("three", 3));
+//    18     object += json::object_t::value_type("four", 4);
+//    19     null += json::object_t::value_type("A", "a");
+//    20     null += json::object_t::value_type("B", "b");
+//    21  
+//    22     // print values
+//    23     std::cout << object << '\n';
+//    24     std::cout << null << '\n';
+//    25 }
+
+
+	//cout<<config.dump(4).push_back(variable)<<endl;
+
+
+
+
 	// nlohmann::json perPlayerConfig = CropSection(gameConfig,"per-player");
 	// nlohmann::json ConfigurationConfig = DivideSection(gameConfig,"configuration");
 	// cout<<ConfigurationConfig<<endl;
