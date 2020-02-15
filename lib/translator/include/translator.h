@@ -77,20 +77,14 @@ public:
         this->setVariables(j);
     }
     void setVariables(const nlohmann::json& j){
-<<<<<<< HEAD
-        Variable name = "name";
     	variables.emplace("configuration", variablesMap["configuration"](j));
         variables.emplace("constants", variablesMap["constants"](j));
-=======
-    	variables.emplace("configuration", variablesMap["configuration"](j));
-
 
         auto name = boost::get<std::unordered_map<std::string, Variable>>(variables["configuration"]);
         std::cout << boost::get<std::string> (name["name"]) << "\n";
         auto playerCount = boost::get<std::unordered_map<std::string, Variable>>(name["player count"]);
         std::cout << boost::get<int> (playerCount["min"]) << "\n";
         std::cout << boost::get<int> (playerCount["max"]) << "\n";        
->>>>>>> bf861f3d2543c96d14c905d227928c6769839fb5
     }
     
 
