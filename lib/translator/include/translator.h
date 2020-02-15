@@ -33,20 +33,18 @@ std::unordered_map<std::string, std::function<Variable(const nlohmann::json&)>> 
             std::string name = config["configuration"]["name"];
             configuration.emplace("name", name);
 
-            // std::unordered_map<std::string, Variable> playerCountMap;
-            // playerCountMap.emplace("min", config["configuration"]["player count"]["min"]);
-            // playerCountMap.emplace("max", config["configuration"]["player count"]["max"]);      
-            // configuration.emplace("player count", playerCountMap);
+            std::unordered_map<std::string, Variable> playerCountMap;
+            int min = config["configuration"]["player count"]["min"];
+            playerCountMap.emplace("min", min);
+            int max = config["configuration"]["player count"]["max"];
+            playerCountMap.emplace("max", max);      
+            configuration.emplace("player count", playerCountMap);
 
-            // configuration.emplace("audience", configuration["audience"]);
+            configuration.emplace("audience", configuration["audience"]);
 
             return configuration;
         }}
 
-        // {"player count"}, [](const nlohmann::json& config){config["player count"]["min"];},
-        // {"min"}, [](const nlohmann::json& config){return config["min"];},
-        // {"max"}, [](const nlohmann::json& config){return config["max"];}
-        // {"setup"}, [](const nlohmann::json& config){return map???}
 };
 
 // std::unordered_map<std::string, std::function<Variable(const nlohmann::json&)>> constantsMap = {
@@ -70,22 +68,14 @@ public:
         this->setVariables(j);
     }
     void setVariables(const nlohmann::json& j){
-        //Variable name = "name";
-    	// variables.emplace("configuration", variablesMap["configuration"](j));
-     //    std::string 
-     //    std::cout << variables["configuration"] << "\n";
-        //std::variables["configuration"]
-        //std::string tempConfig = boost::lexical_cast<std::string>(Va)
-    	// variables.emplace("min", configurationMap["min"](j));
-    	// variables.emplace("max", configurationMap["max"](j));
+    	variables.emplace("configuration", variablesMap["configuration"](j));
 
-    	//std::cout << boost::get<std::string>(this->variables["name"]) << "\n";
-     //   	std::cout << boost::get<int>this->variables["min"] << "\n";
-    	// std::cout << boost::get<int>this->variables["max"] << "\n";
 
-        // for(auto& item:this->variables){
-        //     std::cout << item.first << " " << boost::get<std:a:string>(item.second) << "\n";
-        // }
+        auto name = boost::get<std::unordered_map<std::string, Variable>>(variables["configuration"]);
+        std::cout << boost::get<std::string> (name["name"]) << "\n";
+        auto playerCount = boost::get<std::unordered_map<std::string, Variable>>(name["player count"]);
+        std::cout << boost::get<int> (playerCount["min"]) << "\n";
+        std::cout << boost::get<int> (playerCount["max"]) << "\n";        
     }
     
 
