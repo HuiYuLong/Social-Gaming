@@ -1,93 +1,83 @@
 #include "include/translator.h"
+#include <mutex>
 
 
-
-std::unique_ptr<Constants> parseConstants(const nlohmann::json& j) {
-	std::unique_ptr<Constants> constants = std::make_unique<Constants>();
-	for (auto& item : j.items()) {
-		if (item.key().compare("constants") == 0) {
-			for (auto& item : item.value()["weapons"].items()) {
-				constants->insertToWeapons(item.value()["name"],item.value()["beats"]);
-				//std::cout << item.value()["name"] << std::endl;
-				//std::cout << item.value()["beats"] << std::endl;
-			}
-		}
-	}
-	return constants;
-}
-
-std::unique_ptr<PerPlayer> parsePerPlayer(const nlohmann::json& j) {
-	std::unique_ptr<PerPlayer> perPlayer = std::make_unique<PerPlayer>();
-	for (auto& item: j.items()) {
-		if (item.key().compare("per-player") == 0) {
-			perPlayer->setWins(item.value()["wins"]);
-		}
-	}
-	return perPlayer;
-}
-
-std::unique_ptr<Configuration> parseConfiguration(const nlohmann::json& j) {
-	std::unique_ptr<Configuration> configuration = std::make_unique<Configuration>();
-	for (auto& item : j.items()) {
-		if (item.key().compare("configuration") == 0) {
-			configuration->setName(item.value()["name"]);
-			std::cout << item.value()["name"] << std::endl;
-			configuration->setPlayerCountMin(item.value()["player count"]["min"]);
-			configuration->setPlayerCountMax(item.value()["player count"]["max"]);
-			configuration->setAudience(item.value()["audience"]);
-			configuration->setRound(item.value()["setup"]["Rounds"]);
-		}
+class PseudoServer
+{
+	std::mutex lock;
+public:
+	void send(Message message)
+	{
+		std::lock_guard lg(lock);
+		std::cout << message.text << std::endl;
 	}
 
-	return configuration;
-
-}
-
-std::unique_ptr<Variables> parseVariables(const nlohmann::json& j) {
-	std::unique_ptr<Variables> variables = std::make_unique<Variables>();
-	for (auto& item : j.items()) { 
-		if (item.key().compare("variables") == 0) {
-			variables->setWinners(item.value()[""]);
-		}
+	Message receive(Connection connection)
+	{
+		std::lock_guard lg(lock);
+		std::string input;
+		std::cin >> input;
+		return Message{connection, input};
 	}
-	return variables;
-}
+};
 
-//parseRule function recursively searching for "rule" key and print out the value (name of the rule)
-void parseRule(const nlohmann::json& j){
-	if(j.is_object()){
-		for (const auto& item: j.items()){
-			if (!item.key().compare("rule")){
-				std::cout << item.value() << "\n";
-			} else if(!item.key().compare("rules") || item.value().is_array()){
-				parseRule(item.value());
-			}
-		}
-	} else if (j.is_array()){
-		// std::cout << j.size() << "\n";
-		for (const auto& item: j){
-			parseRule(item);
-		}
-	}
-}
+// class TEST : public boost::static_visitor<>
+// {
+// public:
+// 	void operator()(const bool& boolean) const
+// 	{
+// 		std::cout << (boolean ? "true" : "false") << std::endl;
+// 	}
+
+//     void operator()(const int& integer) const
+//     {
+//         std::cout << integer << std::endl;
+//     }
+// };
 
 int main(int argc, char** argv) {
-	if (argc != 2)
-	{
-		std::cout << "Pass the json file location as the first parameter" << std::endl;
+	if (argc < 2) {
+		std::cerr << "Usage:\n  " << argv[0] << "<server config>\n"
+				<< "  e.g. " << argv[0] << " ../configs/server/congfig1.json\n";
 		return 1;
 	}
-	std::ifstream jsonFileStream(argv[1]); // read file
-	// To make sure you can open the file
-    if (jsonFileStream.fail())
+
+	// boost::variant<bool, int> boolint = 0;
+	// boost::apply_visitor(TEST(), boolint);
+	// boolint = true;
+	// boost::apply_visitor(TEST(), boolint);
+	// return 0;
+
+
+	std::ifstream serverconfig{argv[1]};
+	if (serverconfig.fail())
     {
-        std::cout << "cannot open file" << std::endl;
+        std::cout << "cannot open the congiguration file" << std::endl;
         return 0;
     }
+	nlohmann::json j = nlohmann::json::parse(serverconfig);
 
-	nlohmann::json gameConfig = nlohmann::json::parse(jsonFileStream);
+	std::vector<Configuration> configurations;
+	std::vector<Variable> player_names;
+	for (const std::string& name : {"a", "b", "c"})
+		player_names.push_back(name);
+	configurations.reserve(j["games"].size());
+	for (const auto& [key, gamespecfile]: j["games"].items())
+	{
+		std::ifstream gamespecstream{gamespecfile};
+		if (gamespecstream.fail())
+		{
+			std::cout << "cannot open the game configuration file " << gamespecfile << std::endl;
+			return 0;
+		}
+		nlohmann::json gamespec = nlohmann::json::parse(gamespecstream);
+		configurations.emplace_back(gamespec, player_names);
+    }
 
-	RuleTree ruleTree(gameConfig);
+	// TEST
+	Variable& variables = configurations.front().getVariables();
+	PrintTheThing p;
+	boost::apply_visitor(p, variables);
 
 	return 0;
 }

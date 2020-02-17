@@ -8,91 +8,269 @@
 #include <sstream>
 #include <memory>
 #include <utility>
+#include <boost/variant.hpp>
 
 #include "common.h"
 
 using networking::Message;
+using networking::Connection;
 
+// using String = std::string;
+// using Integer = long;
+// using Boolean = bool;
+// using Key = std::string;
+
+using Variable = boost::make_recursive_variant<
+    bool,   
+    int,
+    std::string,
+    std::vector<boost::recursive_variant_>,
+    std::unordered_map<std::string, boost::recursive_variant_ >
+>::type;
+
+using List = std::vector<Variable>;
+using Map = std::unordered_map<std::string, Variable>;
+
+// Processes the query of the type 'configuration.Rounds.upfrom(1)'
+// query is tokenized by the '.'
+class SuperGetter : public boost::static_visitor<Variable&>
+{
+    thread_local static Variable returned;
+    const std::vector<std::string>& query;
+    size_t current_token;
+public:
+    SuperGetter(const std::vector<std::string>& query, size_t current_token):
+        query(query), current_token(current_token) {}
+
+    Variable& operator()(bool& boolean)
+    {
+        return (Variable&) boolean;
+    }
+
+    Variable& operator()(int& integer)
+    {
+        if (current_token == query.size())
+            return (Variable&) integer;
+        if (current_token == query.size() - 1)
+        {
+            const auto& current_query = query[current_token];
+            if(current_query.compare(0, 6, "upfrom") == 0)
+            {
+                size_t opening_bracket = current_query.rfind('(');
+                size_t closing_bracket = current_query.rfind(')');
+                int from = std::stoi(current_query.substr(opening_bracket + 1, closing_bracket - opening_bracket - 1));
+                returned = List();
+                List& upfrom = boost::get<List>(returned);
+                upfrom.reserve(integer - from + 1);
+                std::iota(upfrom.begin(), upfrom.end(), from);
+                return returned;
+            }
+            else
+            {
+                std::cout << "Unrecognized integer attribute" << std::endl;
+                std::terminate();
+            }
+        }
+        else
+        {
+            std::cout << "Ill-formed variable access" << std::endl;
+            std::terminate();
+        }
+    }
+
+    Variable& operator()(std::string& string)
+    {
+        return (Variable&) string;
+    }
+
+    Variable& operator()(List& list)
+    {
+        if (current_token == query.size())
+            return (Variable&) list;
+        const auto& current_query = query[current_token];
+        if(current_query.compare(0, 4, "size") == 0)
+        {
+            // Ugly, but works
+            // Might separate read-only and writable getters later
+            returned = (int) list.size();
+            return returned;
+        }
+        else if(current_query.compare(0, 8, "contains") == 0)
+        {
+            // TODO
+            return (Variable&) list;
+        }
+        else if(current_query.compare(0, 7, "collect") == 0)
+        {
+            // TODO
+            return (Variable&) list;
+        }
+        else if(current_query.compare(0, 8, "elements") == 0)
+        {
+            // TODO
+            return (Variable&) list;
+        }
+        else
+        {
+            std::cout << "Unrecognized list attribute" << std::endl;
+            std::terminate();
+        }
+    }
+
+    Variable& operator()(Map& map)
+    {
+        return boost::apply_visitor(*this, map[query[current_token++]]);
+    }
+};
+
+class PrintTheThing : public boost::static_visitor<>
+{
+    size_t current_offset = 0u;
+public:
+    //PrintTheThing(): current_offset(0u) {}
+
+    void print_offset() const { for(size_t i = 0; i < current_offset; i++) std::cout << ' '; }
+
+    void operator()(bool boolean) const
+    {
+        print_offset();
+        std::cout << (boolean ? "true" : "false") << std::endl;
+    }
+
+    void operator()(int integer) const
+    {
+        print_offset();
+        std::cout << integer << std::endl;
+    }
+
+    void operator()(const std::string& string) const
+    {
+        print_offset();
+        std::cout << string << std::endl;
+    }
+
+    void operator()(const List& list)
+    {
+        current_offset++;
+        for(const Variable& var : list) {
+            boost::apply_visitor(*this, var);
+        }
+        current_offset--;
+    }
+
+    void operator()(const Map& map)
+    {
+        
+        for(const auto&[key, var] : map) {
+            print_offset();
+            std::cout << key << std::endl;
+            current_offset++;
+            boost::apply_visitor(*this, var);
+            current_offset--;
+        }
+    }
+};
+
+// query is a string like 'configuration.Rounds.upfrom(1)', tokenized by the '.'
+// TODO: input validation is easy to add
+// Variable& superGetter(Variable& variable, const std::vector<std::string>& query, size_t current_token = 0u)
+// {
+//     if (current_token == query.size())
+//         return variable;
+//     switch
+// }
+
+Variable buildVariables(const nlohmann::json& json)
+{
+    if (json.is_boolean()) {
+        //std::cout << json << std::endl;
+        return (Variable) (bool) json;
+    }
+    else if (json.is_number()) {
+        //std::cout << json << std::endl;
+        return (Variable) (int) json;
+    }
+    else if (json.is_string()) {
+        //std::cout << json << std::endl;
+        return (Variable) (std::string) json;
+    }
+    else if (json.is_object()) {
+        Map map;
+        for(const auto&[key, value]: json.items()) {
+            //std::cout << key << std::endl;
+            map[key] = buildVariables(value);
+        }
+        return (Variable) map;
+    }
+    else if (json.is_array()) {
+        List list;
+        for(const auto&[key, value]: json.items()) {
+            //std::cout << key << std::endl;
+            list.push_back(buildVariables(value));
+        }
+        return (Variable) list;
+    }
+    else {
+        std::cout << "Invalid JSON variable type" << std::endl;
+        std::terminate();
+    }
+}
 
 class Configuration {
 public:
-	Configuration():name(""), playerCountMin(0), playerCountMax(0), audience(false), round(0) {}
-	Configuration(std::string name, int playerCountMin, int playerCountMax, bool audience, int round):
-					name(name), playerCountMin(playerCountMin), playerCountMax(playerCountMax),
-					audience(audience), round(round) {}
+	Configuration(const nlohmann::json& gamespec, const std::vector<Variable>& player_names):
+        name(gamespec["configuration"]["name"]),
+        playerCountMin(gamespec["configuration"]["player count"]["min"]),
+        playerCountMax(gamespec["configuration"]["player count"]["max"]),
+        //rules(gamespec["rules"]),
+        variables(Map())
+    {
+        if (player_names.size() < playerCountMin) {
+            std::cout << "Too few players" << std::endl;
+            std::terminate();
+        }
+        if (player_names.size() > playerCountMax) {
+            std::cout << "Too many players" << std::endl;
+            std::terminate();
+        }
+        Map& map = boost::get<Map>(variables);
+        // Put "setup" variables into "configuration" submap
+        map["configuration"] = Map();
+        Map& configuration = boost::get<Map>(map["configuration"]);
+        for(const auto&[key, value]: gamespec["configuration"]["setup"].items()) {
+            configuration[key] = buildVariables(value);
+        }
+        // Put variables into the top-level map
+        for(const auto&[key, value]: gamespec["variables"].items()) {
+            map[key] = buildVariables(value);
+        }
+        // Put constants into the top-level map
+        for(const auto&[key, value]: gamespec["constants"].items()) {
+            map[key] = buildVariables(value);
+        }
+        // Add players
+        map["players"] = List();
+        List& players = boost::get<List>(map["players"]);
+        for(const Variable& name: player_names) {
+            Map player = boost::get<Map>(buildVariables(gamespec["per-player"]));
+            player["name"] = name;
+            players.push_back(player);
+        }
+        // Who cares
+        map["audience"] = List();
+    }
 
-	std::string getName() const {return name;}
-	int getPlayerCountMin() const {return playerCountMin;}
-	int getPlayerCountMax() const {return playerCountMax;}
-	bool getAudience() const {return audience;}
-	int getRound() const {return round;}
+	const std::string& getName() const { return name; }
+	size_t getPlayerCountMin() const { return playerCountMin; }
+	size_t getPlayerCountMax() const { return playerCountMax; }
+    Variable& getVariables() { return variables; }
 
-	void setName(const std::string& name) {this->name = name;}
-	void setPlayerCountMin(const int& playerCountMin) {this->playerCountMin = playerCountMin;}
-	void setPlayerCountMax(const int& playerCountMax) {this->playerCountMax = playerCountMax;}
-	void setAudience(const bool& audience) {this->audience = audience;}
-	void setRound(const int& round) {this->round = round;}
-
-	void print(){
-		std::cout << "Configuration: " << "\n";
-		std::cout << "\tName: " << this->getName() << "\n";
-		std::cout << "\tMin Player: " << this->getPlayerCountMin() << "\n";
-		std::cout << "\tMax Player: " << this->getPlayerCountMax() << "\n";
-		std::cout << "\tAudience: " << this->getAudience() << "\n";
-		std::cout << "\tRound: " << this->getRound() << "\n";
-	}
 private:
 	std::string name;
-	int playerCountMin;
-	int playerCountMax;
-	bool audience;
-	int round;
-};
-
-class Constants {
-public:
-	Constants():weapons() {}
-	Constants(std::map<std::string, std::string> weapons){
-        this->weapons = weapons;
-    }
-	void setWeapons(std::map<std::string, std::string> weapons) {
-        this->weapons = weapons;
-    }
-    std::map<std::string, std::string> getWeapons() const {
-        return this->weapons;
-    }
-    void insertToWeapons(std::string s1, std::string s2) {
-        this->weapons.emplace(s1, s2);
-    }
-
-private:
-	std::map<std::string, std::string> weapons;
-};
-
-class Variables {
-public:
-	Variables(): winners() {}
-    // reconsider the type
-	Variables(std::vector<std::string> winners) {}
-	std::vector<std::string> getWinners() const {
-        return this->winners;
-    }
-	void setWinners(const std::vector<std::string>& winners) {
-        this->winners = winners;
-    }
-
-private:
-	std::vector<std::string> winners;
-};
-
-class PerPlayer{
-public:
-    PerPlayer(): wins(0) {}
-    int getWins() {return this->wins;}
-    void setWins(int wins) {this->wins = wins;}
-
-private:
-    int wins;
+	size_t playerCountMin;
+	size_t playerCountMax;
+    Variable variables;
+    //RuleTree rules;
 };
 
 
@@ -507,27 +685,4 @@ RuleTree::RuleTree(const nlohmann::json& gameConfig)
         ruleTree.push_back(rulemap[rulename](rule));
     }
 }
-
-//-----------------------------------End of constructor implementation-----------------------------
-
-// ForEachRule::~ForEachRule()
-// {
-//     for (auto ruleptr : subrules)
-//         delete ruleptr;
-// }
-
-// GlobalMessageRule::~GlobalMessageRule() {}
-
-// RuleTree::~RuleTree()
-// {
-//     for (auto ruleptr : ruleTree)
-// 		delete ruleptr;
-// }
-
-//----------------------------------------End Of Rule Class---------------------------------------//
-// Not completed
-class Player {
-
-};
-
 
