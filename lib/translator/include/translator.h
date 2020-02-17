@@ -9,6 +9,7 @@
 #include <memory>
 #include <utility>
 #include <boost/variant.hpp>
+#include<boost/tokenizer.hpp>
 
 #include "common.h"
 
@@ -216,14 +217,34 @@ Variable buildVariables(const nlohmann::json& json)
     }
 }
 
-class Configuration {
+
+using ruleType = std::string;
+
+class Rule {
+    ruleType rule;
 public:
-	Configuration(const nlohmann::json& gamespec, const std::vector<Variable>& player_names):
+    Rule(const ruleType& rule): rule(rule){}
+    ruleType getRule() const {return rule;}
+    void setRule(const ruleType& rule) {this->rule = rule;}
+    virtual ~Rule() {};
+};
+
+using ruleList = std::vector<std::unique_ptr<Rule>>;
+
+class RuleTree {
+    ruleList ruleTree;
+public:
+    RuleTree(const nlohmann::json& gameConfig);
+};
+
+class GameSpec {
+public:
+	GameSpec(const nlohmann::json& gamespec, const std::vector<Variable>& player_names):
         name(gamespec["configuration"]["name"]),
         playerCountMin(gamespec["configuration"]["player count"]["min"]),
         playerCountMax(gamespec["configuration"]["player count"]["max"]),
-        //rules(gamespec["rules"]),
         variables(Map())
+        // rules(gamespec["rules"])
     {
         if (player_names.size() < playerCountMin) {
             std::cout << "Too few players" << std::endl;
@@ -270,35 +291,51 @@ private:
 	size_t playerCountMin;
 	size_t playerCountMax;
     Variable variables;
-    //RuleTree rules;
+    // RuleTree rules;
 };
 
+// using tokenizer = boost::tokenizer<boost::char_separator<char> >;
+// boost::char_separator<char> dot(".");
 
-
-// maybe we should construct separate class for the different rule classes?
-// ex) OutputRule, InputRule, ArithmeticRule, ListOpsRule, ControlStructRule ...
-
-//-------------------------------------------Rule Class---------------------------------------//
-// enum class ruleType { string, list, json };
-using ruleType = std::string;
-class Rule {
-
-private:
-    ruleType rule;
+class Condition 
+{
+    // The clause will take in a top-level variable map and return a boolean value
+    // Indicating whether the variables satisfy the clause
+    std::function<bool(const Variable&)> clause;
 public:
-    
-    Rule(const ruleType& rule): rule(rule){}
-    ruleType getRule() const {return rule;}
-    void setRule(const ruleType& rule) {this->rule = rule;}
-    virtual ~Rule() {};
+    Condition(const nlohmann::json& condition)
+    {
+        if (condition.is_boolean())
+        {
+            if (condition)
+                clause = [](const Variable&) { return true; };
+            else
+                clause = [](const Variable&) { return false; };
+        }
+        else
+        {
+            // Use ANTLR here
+            // Instead of this
+            // bool negated;
+            // std::string_view condition_view = (std::string) condition;
+            // if (condition_view[0] == '!')
+            //     negated = true;
+            // condition_view.
+        }
+        
+    }
+
+    // evaluate condition
+    bool evaluate(const Variable& toplevel) { return clause(toplevel); }
 };
 
-using ruleList = std::vector<std::unique_ptr<Rule>>;
+struct Case { 
+    Case(const nlohmann::json& condition): condition(condition) {}
 
-class Case { 
-	std::string caseString;
-	ruleList rules;
+	Condition condition;
+	ruleList subrules;
 };
+
 
 //-----------------------PETER'S CODE:---------------------------------
 
@@ -339,7 +376,8 @@ private:
     ruleType to;
     ruleType prompt;
     ruleType choices; 
-    ruleType result; 
+    ruleType result;
+public:
     InputChoiceRule(const nlohmann::json& rule);
 
     ruleType getTo() const {return to;}
@@ -649,17 +687,19 @@ public:
     void setCases(std::vector<Case> cases) {this->cases=std::move(cases);}
 };
 
-class RuleTree {
-    ruleList ruleTree;
-public:
-    RuleTree(const nlohmann::json& gameConfig);
-
-    // ~RuleTree();
-};
-
 std::unordered_map<std::string, std::function<std::unique_ptr<Rule>(const nlohmann::json&)>> rulemap = {
 		{"foreach", [](const nlohmann::json& rule) { return std::make_unique<ForEachRule>(rule); }},
-        {"global-message", [](const nlohmann::json& rule) { return std::make_unique<GlobalMessageRule>(rule); }}
+        {"global-message", [](const nlohmann::json& rule) { return std::make_unique<GlobalMessageRule>(rule); }},
+        {"when", [](const nlohmann::json& rule) { return std::make_unique<GlobalMessageRule>(rule); }},
+        // {"loop", [](const nlohmann::json&rule) {return std::make_unique<LoopRule>(rule);}},
+        // {"inparallel", [](const nlohmann::json&rule) {return std::make_unique<InParallelRule>(rule);}},
+        // {"parallelfor", [](const nlohmann::json&rule) {return std::make_unique<ParallelForRule>(rule);}},
+        // {"extend", [](const nlohmann::json& rule) {return std::make_unique<ExtendRule>(rule); }}, 
+        // {"reverse", [](const nlohmann::json& rule) {return std::make_unique<ReverseRule>(rule); }},
+        // {"discard", [](const nlohmann::json& rule) {return std::make_unique<DiscardRule>(rule); }}, 
+        // {"input-choice", [](const nlohmann::json& rule) {return std::make_unique<InputChoiceRule>(rule); }},
+        // {"add", [](const nlohmann::json& rule) {return std::make_unique<AddRule>(rule); }},
+        // {"scores", [](const nlohmann::json& rule) {return std::make_unique<ScoresRule>(rule); }}
 };
 
 //----------------------------------------Constructor implementation-------------------------------------------------------------------------------------------------
@@ -674,7 +714,15 @@ ForEachRule::ForEachRule(const nlohmann::json& rule): Rule(rule["rule"]), list(r
     }
 }
 
-//TODO:Implement constructor of LoopRule,ParallelForRule,etc classes
+WhenRule::WhenRule(const nlohmann::json& rule): Rule(rule["rule"]) {
+    std::cout << "When" << std::endl;
+    for(const auto& it : rule["cases"].items()) {
+        cases.emplace_back(it.value()["condition"]);
+        for (const auto& subrule : it.value()["rules"].items()) {
+            cases.front().subrules.push_back(rulemap[subrule.value()["rule"]](subrule.value()));
+        }
+    }
+}
 
 RuleTree::RuleTree(const nlohmann::json& gameConfig)
 {

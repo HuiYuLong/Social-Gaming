@@ -57,7 +57,7 @@ int main(int argc, char** argv) {
     }
 	nlohmann::json j = nlohmann::json::parse(serverconfig);
 
-	std::vector<Configuration> configurations;
+	std::vector<GameSpec> configurations;
 	std::vector<Variable> player_names;
 	for (const std::string& name : {"a", "b", "c"})
 		player_names.push_back(name);
