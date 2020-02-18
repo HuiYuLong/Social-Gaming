@@ -32,7 +32,9 @@ target_include_directories(antlr4_static
 add_executable(evaluator evaluator.cpp)
 
 target_link_libraries(evaluator
-    PRIVATE antlr4_static)
+    PRIVATE antlr4_static
+    PUBLIC variables
+    PUBLIC nlohmann_json::nlohmann_json)
 
 
 

@@ -8,178 +8,13 @@
 #include <sstream>
 #include <memory>
 #include <utility>
-#include <boost/variant.hpp>
-#include<boost/tokenizer.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include "common.h"
+#include "variables.h"
 
 using networking::Message;
 using networking::Connection;
-
-// using String = std::string;
-// using Integer = long;
-// using Boolean = bool;
-// using Key = std::string;
-
-using Variable = boost::make_recursive_variant<
-    bool,   
-    int,
-    std::string,
-    std::vector<boost::recursive_variant_>,
-    std::unordered_map<std::string, boost::recursive_variant_ >
->::type;
-
-using List = std::vector<Variable>;
-using Map = std::unordered_map<std::string, Variable>;
-
-// Processes the query of the type 'configuration.Rounds.upfrom(1)'
-// query is tokenized by the '.'
-class SuperGetter : public boost::static_visitor<Variable&>
-{
-    thread_local static Variable returned;
-    const std::vector<std::string>& query;
-    size_t current_token;
-public:
-    SuperGetter(const std::vector<std::string>& query, size_t current_token):
-        query(query), current_token(current_token) {}
-
-    Variable& operator()(bool& boolean)
-    {
-        return (Variable&) boolean;
-    }
-
-    Variable& operator()(int& integer)
-    {
-        if (current_token == query.size())
-            return (Variable&) integer;
-        if (current_token == query.size() - 1)
-        {
-            const auto& current_query = query[current_token];
-            if(current_query.compare(0, 6, "upfrom") == 0)
-            {
-                size_t opening_bracket = current_query.rfind('(');
-                size_t closing_bracket = current_query.rfind(')');
-                int from = std::stoi(current_query.substr(opening_bracket + 1, closing_bracket - opening_bracket - 1));
-                returned = List();
-                List& upfrom = boost::get<List>(returned);
-                upfrom.reserve(integer - from + 1);
-                std::iota(upfrom.begin(), upfrom.end(), from);
-                return returned;
-            }
-            else
-            {
-                std::cout << "Unrecognized integer attribute" << std::endl;
-                std::terminate();
-            }
-        }
-        else
-        {
-            std::cout << "Ill-formed variable access" << std::endl;
-            std::terminate();
-        }
-    }
-
-    Variable& operator()(std::string& string)
-    {
-        return (Variable&) string;
-    }
-
-    Variable& operator()(List& list)
-    {
-        if (current_token == query.size())
-            return (Variable&) list;
-        const auto& current_query = query[current_token];
-        if(current_query.compare(0, 4, "size") == 0)
-        {
-            // Ugly, but works
-            // Might separate read-only and writable getters later
-            returned = (int) list.size();
-            return returned;
-        }
-        else if(current_query.compare(0, 8, "contains") == 0)
-        {
-            // TODO
-            return (Variable&) list;
-        }
-        else if(current_query.compare(0, 7, "collect") == 0)
-        {
-            // TODO
-            return (Variable&) list;
-        }
-        else if(current_query.compare(0, 8, "elements") == 0)
-        {
-            // TODO
-            return (Variable&) list;
-        }
-        else
-        {
-            std::cout << "Unrecognized list attribute" << std::endl;
-            std::terminate();
-        }
-    }
-
-    Variable& operator()(Map& map)
-    {
-        return boost::apply_visitor(*this, map[query[current_token++]]);
-    }
-};
-
-class PrintTheThing : public boost::static_visitor<>
-{
-    size_t current_offset = 0u;
-public:
-    //PrintTheThing(): current_offset(0u) {}
-
-    void print_offset() const { for(size_t i = 0; i < current_offset; i++) std::cout << ' '; }
-
-    void operator()(bool boolean) const
-    {
-        print_offset();
-        std::cout << (boolean ? "true" : "false") << std::endl;
-    }
-
-    void operator()(int integer) const
-    {
-        print_offset();
-        std::cout << integer << std::endl;
-    }
-
-    void operator()(const std::string& string) const
-    {
-        print_offset();
-        std::cout << string << std::endl;
-    }
-
-    void operator()(const List& list)
-    {
-        current_offset++;
-        for(const Variable& var : list) {
-            boost::apply_visitor(*this, var);
-        }
-        current_offset--;
-    }
-
-    void operator()(const Map& map)
-    {
-        
-        for(const auto&[key, var] : map) {
-            print_offset();
-            std::cout << key << std::endl;
-            current_offset++;
-            boost::apply_visitor(*this, var);
-            current_offset--;
-        }
-    }
-};
-
-// query is a string like 'configuration.Rounds.upfrom(1)', tokenized by the '.'
-// TODO: input validation is easy to add
-// Variable& superGetter(Variable& variable, const std::vector<std::string>& query, size_t current_token = 0u)
-// {
-//     if (current_token == query.size())
-//         return variable;
-//     switch
-// }
 
 Variable buildVariables(const nlohmann::json& json)
 {
@@ -221,11 +56,7 @@ Variable buildVariables(const nlohmann::json& json)
 using ruleType = std::string;
 
 class Rule {
-    ruleType rule;
 public:
-    Rule(const ruleType& rule): rule(rule){}
-    ruleType getRule() const {return rule;}
-    void setRule(const ruleType& rule) {this->rule = rule;}
     virtual ~Rule() {};
 };
 
@@ -234,7 +65,10 @@ using ruleList = std::vector<std::unique_ptr<Rule>>;
 class RuleTree {
     ruleList ruleTree;
 public:
+    RuleTree(RuleTree&&);
+    RuleTree& operator=(RuleTree&&);
     RuleTree(const nlohmann::json& gameConfig);
+    ruleList& getRules();
 };
 
 class GameSpec {
@@ -243,8 +77,8 @@ public:
         name(gamespec["configuration"]["name"]),
         playerCountMin(gamespec["configuration"]["player count"]["min"]),
         playerCountMax(gamespec["configuration"]["player count"]["max"]),
-        variables(Map())
-        // rules(gamespec["rules"])
+        variables(Map()),
+        rules(gamespec["rules"])
     {
         if (player_names.size() < playerCountMin) {
             std::cout << "Too few players" << std::endl;
@@ -291,42 +125,62 @@ private:
 	size_t playerCountMin;
 	size_t playerCountMax;
     Variable variables;
-    // RuleTree rules;
+    RuleTree rules;
 };
-
-// using tokenizer = boost::tokenizer<boost::char_separator<char> >;
-// boost::char_separator<char> dot(".");
 
 class Condition 
 {
     // The clause will take in a top-level variable map and return a boolean value
     // Indicating whether the variables satisfy the clause
-    std::function<bool(const Variable&)> clause;
+    std::function<bool(Variable&)> clause;
 public:
     Condition(const nlohmann::json& condition)
     {
         if (condition.is_boolean())
         {
             if (condition)
-                clause = [](const Variable&) { return true; };
+                clause = [](Variable&) { return true; };
             else
-                clause = [](const Variable&) { return false; };
+                clause = [](Variable&) { return false; };
         }
         else
         {
-            // Use ANTLR here
-            // Instead of this
-            // bool negated;
-            // std::string_view condition_view = (std::string) condition;
-            // if (condition_view[0] == '!')
-            //     negated = true;
-            // condition_view.
+            // Condition is given as string
+            size_t pos;
+            bool negated;
+            std::string condition_str = condition;
+            if (condition_str.at(0) == '!') {
+                negated = true;
+                condition_str = condition_str.substr(1);
+            }
+            if ((pos = condition_str.find("==")) != std::string::npos) {
+                // Interpret as a comparison of two variables
+                std::string first = (std::string) condition_str.substr(0, pos);
+                boost::trim_right(first);
+                std::string second = (std::string) condition_str.substr(pos+2);
+                boost::trim_left(second);
+                clause = [first, second, negated] (Variable& toplevel) {
+                    SuperGetter getter(first);
+                    Variable result1 = boost::apply_visitor(getter, toplevel);
+                    getter = SuperGetter(second);
+                    Variable result2 = boost::apply_visitor(getter, toplevel);
+                    return negated ^ boost::apply_visitor(Equal(), result1, result2);
+                };
+            }
+            else {
+                // Interpret as a boolean variable
+                clause = [condition_str, negated] (Variable& toplevel) {
+                    SuperGetter getter(condition_str);
+                    Variable result = boost::apply_visitor(getter, toplevel);
+                    return negated ^ boost::get<bool>(result);
+                };
+            }
         }
         
     }
 
     // evaluate condition
-    bool evaluate(const Variable& toplevel) { return clause(toplevel); }
+    bool evaluate(Variable& toplevel) { return clause(toplevel); }
 };
 
 struct Case { 
@@ -341,16 +195,16 @@ struct Case {
 
 class AddRule : public Rule{
 private:
-    ruleType to;
-    ruleType value;
+    std::string to;
+    int value;
 public:
     AddRule(const nlohmann::json& rule);
 
     ruleType getTo() const {return to;}
-    ruleType getValue() const {return value;}
+    int getValue() const {return value;}
 
     void setTo(const ruleType& to) {this->to = to;}
-    void setValue(const ruleType& value) {this->value = value;}
+    void setValue(int value) {this->value = value;}
 };
 
 class TimerRule : public Rule{
@@ -690,7 +544,8 @@ public:
 std::unordered_map<std::string, std::function<std::unique_ptr<Rule>(const nlohmann::json&)>> rulemap = {
 		{"foreach", [](const nlohmann::json& rule) { return std::make_unique<ForEachRule>(rule); }},
         {"global-message", [](const nlohmann::json& rule) { return std::make_unique<GlobalMessageRule>(rule); }},
-        {"when", [](const nlohmann::json& rule) { return std::make_unique<GlobalMessageRule>(rule); }},
+        {"when", [](const nlohmann::json& rule) { return std::make_unique<WhenRule>(rule); }},
+        {"add", [](const nlohmann::json& rule) {return std::make_unique<AddRule>(rule); }}
         // {"loop", [](const nlohmann::json&rule) {return std::make_unique<LoopRule>(rule);}},
         // {"inparallel", [](const nlohmann::json&rule) {return std::make_unique<InParallelRule>(rule);}},
         // {"parallelfor", [](const nlohmann::json&rule) {return std::make_unique<ParallelForRule>(rule);}},
@@ -698,14 +553,14 @@ std::unordered_map<std::string, std::function<std::unique_ptr<Rule>(const nlohma
         // {"reverse", [](const nlohmann::json& rule) {return std::make_unique<ReverseRule>(rule); }},
         // {"discard", [](const nlohmann::json& rule) {return std::make_unique<DiscardRule>(rule); }}, 
         // {"input-choice", [](const nlohmann::json& rule) {return std::make_unique<InputChoiceRule>(rule); }},
-        // {"add", [](const nlohmann::json& rule) {return std::make_unique<AddRule>(rule); }},
         // {"scores", [](const nlohmann::json& rule) {return std::make_unique<ScoresRule>(rule); }}
 };
 
 //----------------------------------------Constructor implementation-------------------------------------------------------------------------------------------------
-GlobalMessageRule::GlobalMessageRule(const nlohmann::json& rule): Rule{rule["rule"]}, value(rule["value"]) { std::cout << "Global message: " << value << std::endl; }
 
-ForEachRule::ForEachRule(const nlohmann::json& rule): Rule(rule["rule"]), list(rule["list"]), element(rule["element"])
+GlobalMessageRule::GlobalMessageRule(const nlohmann::json& rule): value(rule["value"]) { std::cout << "Global message: " << value << std::endl; }
+
+ForEachRule::ForEachRule(const nlohmann::json& rule): list(rule["list"]), element(rule["element"])
 {
     std::cout << "For each: " << element << std::endl;
     for (const auto& it : rule["rules"].items())
@@ -714,9 +569,11 @@ ForEachRule::ForEachRule(const nlohmann::json& rule): Rule(rule["rule"]), list(r
     }
 }
 
-WhenRule::WhenRule(const nlohmann::json& rule): Rule(rule["rule"]) {
+WhenRule::WhenRule(const nlohmann::json& rule)
+{
     std::cout << "When" << std::endl;
     for(const auto& it : rule["cases"].items()) {
+        std::cout << it.value()["condition"] << std::endl;
         cases.emplace_back(it.value()["condition"]);
         for (const auto& subrule : it.value()["rules"].items()) {
             cases.front().subrules.push_back(rulemap[subrule.value()["rule"]](subrule.value()));
@@ -724,9 +581,11 @@ WhenRule::WhenRule(const nlohmann::json& rule): Rule(rule["rule"]) {
     }
 }
 
+AddRule::AddRule(const nlohmann::json& rule): to(rule["to"]), value(rule["value"]) { std::cout << "Add " << value << std::endl; }
+
 RuleTree::RuleTree(const nlohmann::json& gameConfig)
 {
-    for (const auto& it: gameConfig["rules"].items())
+    for (const auto& it: gameConfig.items())
     {
         const nlohmann::json& rule = it.value();
         const std::string& rulename = rule["rule"];
@@ -734,3 +593,20 @@ RuleTree::RuleTree(const nlohmann::json& gameConfig)
     }
 }
 
+RuleTree::RuleTree(RuleTree&& oldTree)
+{
+    for (std::unique_ptr<Rule>& ptr : oldTree.getRules()) {
+        ruleTree.push_back(std::move(ptr));
+    }
+}
+
+RuleTree& RuleTree::operator=(RuleTree&& oldTree)
+{
+    ruleTree.clear();
+    for (std::unique_ptr<Rule>& ptr : oldTree.getRules()) {
+        ruleTree.push_back(std::move(ptr));
+    }
+    return *this;
+}
+
+ruleList& RuleTree::getRules() { return ruleTree; }

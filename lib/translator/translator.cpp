@@ -72,6 +72,7 @@ int main(int argc, char** argv) {
 		}
 		nlohmann::json gamespec = nlohmann::json::parse(gamespecstream);
 		configurations.emplace_back(gamespec, player_names);
+		std::cout << "\nTranslated game " << key << "\n\n";
     }
 
 	// TEST

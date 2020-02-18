@@ -73,7 +73,7 @@
                           "rules": [
                             { "rule": "add",
                               "to": "winner.wins",
-                              "value": "1"
+                              "value": 1
                             }
                           ]
                         }
