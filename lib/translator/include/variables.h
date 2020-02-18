@@ -13,11 +13,13 @@ using Variable = boost::make_recursive_variant<
     int,
     std::string,
     std::vector<boost::recursive_variant_>,
-    std::unordered_map<std::string, boost::recursive_variant_ >
+    std::unordered_map<std::string, boost::recursive_variant_ >,
+    boost::recursive_variant_*
 >::type;
 
 using List = std::vector<Variable>;
 using Map = std::unordered_map<std::string, Variable>;
+using Pointer = Variable*;
 
 class Equal
     : public boost::static_visitor<bool>
@@ -136,7 +138,7 @@ using tokenizer = boost::tokenizer<boost::char_separator<char> >;
 // query is tokenized by the '.'
 class SuperGetter : public boost::static_visitor<Variable&>
 {
-    Variable returned;
+    thread_local static Variable returned;
     static boost::char_separator<char> dot;
     tokenizer tokens;
     tokenizer::iterator it;
@@ -228,9 +230,14 @@ public:
     {
         return boost::apply_visitor(*this, map[*(it++)]);
     }
+
+    Variable& operator()(Pointer& ptr)
+    {
+        return boost::apply_visitor(*this, *ptr);
+    }
 };
 
-//Variable SuperGetter::returned = List();
+thread_local Variable SuperGetter::returned;
 
 boost::char_separator<char> SuperGetter::dot(".");
 
@@ -279,6 +286,11 @@ public:
             boost::apply_visitor(*this, var);
             current_offset--;
         }
+    }
+
+    void operator()(const Pointer& ptr)
+    {
+        boost::apply_visitor(*this, *ptr);
     }
 };
 

@@ -163,7 +163,7 @@ public:
             player_list.push_back(player_map);
         }
         // Who cares
-        map["audience"] = List();
+        map["audience"] = &map["players"];
     }
 
 	const std::string& getName() const { return name; }

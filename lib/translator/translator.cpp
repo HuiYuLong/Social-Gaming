@@ -138,6 +138,19 @@ int main(int argc, char** argv) {
 	// return 0;
 
 
+	// Variable l = List();
+	// const List& ref = boost::get<List>(l);
+	// const Variable& cvref = ref;
+	// std::cout << cvref.which() << std::endl;
+	// Variable& vref = const_cast<Variable&>(cvref);
+	// std::cout << vref.which() << std::endl;
+	// List& newlist = boost::get<List>(vref);
+	// newlist.push_back(5);
+	// std::cout << newlist.size() << std::endl;
+	// std::cout << ref.size() << std::endl;
+	// return 0;
+
+
 	std::ifstream serverconfig{argv[1]};
 	if (serverconfig.fail())
     {
@@ -168,6 +181,8 @@ int main(int argc, char** argv) {
 	Variable& variables = configurations.front().getVariables();
 	PrintTheThing p;
 	boost::apply_visitor(p, variables);
+
+	return 0;
 
 	std::cout << "\nStarting a test\n\n";
 	// PseudoServer server;
