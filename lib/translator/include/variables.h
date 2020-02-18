@@ -136,7 +136,7 @@ using tokenizer = boost::tokenizer<boost::char_separator<char> >;
 // query is tokenized by the '.'
 class SuperGetter : public boost::static_visitor<Variable&>
 {
-    thread_local static Variable returned;
+    Variable returned;
     static boost::char_separator<char> dot;
     tokenizer tokens;
     tokenizer::iterator it;
@@ -156,7 +156,9 @@ public:
     {
         if (it == tokens.end())
             return (Variable&) integer;
-        if (++it == tokens.end())
+        auto next = it;
+        ++next;
+        if (next == tokens.end())
         {
             const std::string& current_query = *it;
             if(current_query.compare(0, 6, "upfrom") == 0)
@@ -164,9 +166,9 @@ public:
                 size_t opening_bracket = current_query.rfind('(');
                 size_t closing_bracket = current_query.rfind(')');
                 int from = std::stoi(current_query.substr(opening_bracket + 1, closing_bracket - opening_bracket - 1));
-                returned = List();
+                returned = List(integer - from + 1, 0);
                 List& upfrom = boost::get<List>(returned);
-                upfrom.reserve(integer - from + 1);
+                //upfrom.reserve(integer - from + 1);
                 std::iota(upfrom.begin(), upfrom.end(), from);
                 return returned;
             }
@@ -228,7 +230,7 @@ public:
     }
 };
 
-thread_local Variable SuperGetter::returned;
+//Variable SuperGetter::returned = List();
 
 boost::char_separator<char> SuperGetter::dot(".");
 
