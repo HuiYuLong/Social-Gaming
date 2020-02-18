@@ -10,6 +10,7 @@
 #include <utility>
 #include <boost/algorithm/string.hpp>
 #include <thread>
+#include <regex>
 
 #include "common.h"
 #include "variables.h"
@@ -215,18 +216,18 @@ public:
                 std::string second = (std::string) condition_str.substr(pos+2);
                 boost::trim_left(second);
                 clause = [first, second, negated] (Variable& toplevel) {
-                    SuperGetter getter(first);
-                    Variable result1 = boost::apply_visitor(getter, toplevel);
-                    getter = SuperGetter(second);
-                    Variable result2 = boost::apply_visitor(getter, toplevel);
+                    Getter getter(first);
+                    Variable result1 = getter.get_from(toplevel).result;
+                    getter = Getter(second);
+                    Variable result2 = getter.get_from(toplevel).result;
                     return negated ^ boost::apply_visitor(Equal(), result1, result2);
                 };
             }
             else {
                 // Interpret as a boolean variable
                 clause = [condition_str, negated] (Variable& toplevel) {
-                    SuperGetter getter(condition_str);
-                    Variable result = boost::apply_visitor(getter, toplevel);
+                    Getter getter(condition_str);
+                    Variable result = getter.get_from(toplevel).result;
                     return negated ^ boost::get<bool>(result);
                 };
             }
@@ -238,11 +239,56 @@ public:
     bool evaluate(Variable& toplevel) { return clause(toplevel); }
 };
 
-struct Case { 
+struct Case
+{ 
     Case(const nlohmann::json& condition): condition(condition) {}
 
 	Condition condition;
 	ruleList subrules;
+};
+
+class Text
+{
+    struct Value
+    {
+        std::string text;
+        bool needs_to_be_replaced;
+
+        Value(const std::string text, bool replace): text(text), needs_to_be_replaced(replace) {}
+    };
+    std::vector<Value> values;
+public:
+    Text(const std::string& value)
+    {
+        size_t previous_match = 0u;
+        std::regex r("\\{([a-z.]+)\\}");
+        for(std::sregex_iterator i = std::sregex_iterator(value.begin(), value.end(), r);
+            i != std::sregex_iterator();
+            ++i)
+        {
+            std::smatch m = *i;
+            values.emplace_back(value.substr(previous_match, m.position() - previous_match), false);
+            values.emplace_back(m[1], true);
+            previous_match = m.position() + m.length();
+        }
+        values.emplace_back(value.substr(previous_match), false);
+    }
+
+    std::string fill_with(Variable& toplevel)
+    {
+        std::ostringstream out;
+        for (const Value& value : values) {
+            if (value.needs_to_be_replaced) {
+                Getter getter(value.text);
+                Variable& result = getter.get_from(toplevel).result;
+                out << boost::apply_visitor(StringConverter(), result);
+            }
+            else {
+                out << value.text;
+            }
+        }
+        return out.str();
+    }
 };
 
 
@@ -356,17 +402,13 @@ public:
 
 class GlobalMessageRule : public Rule{
 private:
-    ruleType value;
+    Text value;
 
 public:
     GlobalMessageRule(const nlohmann::json& rule);
     // ~GlobalMessageRule() override;
 
     void run(PseudoServer& server, GameSpec& spec) override;
-
-    ruleType getValue() const {return value;}
-
-    void setValue(const ruleType& value) {this->value = value;}
 };
 
 class ScoresRule: public Rule{

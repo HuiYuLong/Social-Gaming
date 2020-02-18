@@ -1,6 +1,6 @@
 #include "include/translator.h"
 
-GlobalMessageRule::GlobalMessageRule(const nlohmann::json& rule): value(rule["value"]) { std::cout << "Global message: " << value << std::endl; }
+GlobalMessageRule::GlobalMessageRule(const nlohmann::json& rule): value(rule["value"]) { std::cout << "Global message: " << rule["value"] << std::endl; }
 
 ForEachRule::ForEachRule(const nlohmann::json& rule): list(rule["list"]), element_name(rule["element"])
 {
@@ -60,17 +60,21 @@ void GlobalMessageRule::run(PseudoServer& server, GameSpec& spec)
 	List& players = boost::get<List>(boost::get<Map>(spec.getVariables())["players"]);
 	for (Variable& player : players) {
 		const std::string& name = boost::get<std::string>(boost::get<Map>(player)["name"]);
-		server.send({spec.getConnectionByName(name), value});
+		server.send({spec.getConnectionByName(name), value.fill_with(spec.getVariables())});
 	}
 }
 
 void ForEachRule::run(PseudoServer& server, GameSpec& spec)
 {
-	SuperGetter getter(list);
-	List& elements = boost::get<List>(boost::apply_visitor(getter, spec.getVariables()));
+	Getter getter(list);
+	GetterResult result = getter.get_from(spec.getVariables());
+	Variable temp;
+	List& elements = boost::get<List>(result.needs_to_be_saved ? temp = result.result, temp : result.result);
 	Map& toplevel = boost::get<Map>(spec.getVariables());
 	for (Variable& element : elements) {
-		toplevel[element_name] = element;
+		toplevel[element_name] = &element;
+		//PrintTheThing p;
+		//boost::apply_visitor(p, spec.getVariables());
 		for (const auto& ptr : subrules) {
 			ptr->run(server, spec);
 		}
@@ -161,7 +165,7 @@ int main(int argc, char** argv) {
 
 	std::vector<GameSpec> configurations;
 	std::vector<Player> players;
-	for (const std::string& name : {"a", "b", "c"})
+	for (const std::string& name : {"username"})
 		players.emplace_back(name, Connection());
 	configurations.reserve(j["games"].size());
 	for (const auto& [key, gamespecfile]: j["games"].items())
@@ -181,8 +185,6 @@ int main(int argc, char** argv) {
 	Variable& variables = configurations.front().getVariables();
 	PrintTheThing p;
 	boost::apply_visitor(p, variables);
-
-	return 0;
 
 	std::cout << "\nStarting a test\n\n";
 	// PseudoServer server;

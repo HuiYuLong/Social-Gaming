@@ -1,18 +1,17 @@
 {
     "configuration": {
       "name": "Simple",
-      "player count": {"min": 2, "max": 4},
+      "player count": {"min": 1, "max": 4},
       "audience": false,
       "setup": {
-        "Rounds": 10
+        "Rounds": 2
       }
     },
   
     "constants": {
       "weapons": [
         { "name": "Rock",     "beats": "Scissors"},
-        { "name": "Paper",    "beats": "Rock"},
-        { "name": "Scissors", "beats": "Paper"}
+        { "name": "Paper",    "beats": "Rock"}
       ]
     },
   
@@ -43,7 +42,7 @@
             "rules": [
 
                 { "rule": "global-message",
-                    "value": "Round {round}. Choose your weapon!"
+                    "value": "\tRound {round}: Weapon {weapon}"
                 }
   
             ]
