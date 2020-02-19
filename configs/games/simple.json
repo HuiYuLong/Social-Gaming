@@ -1,7 +1,7 @@
 {
     "configuration": {
-      "name": "Rock, Paper, Scissors",
-      "player count": {"min": 2, "max": 4},
+      "name": "Simple",
+      "player count": {"min": 1, "max": 4},
       "audience": false,
       "setup": {
         "Rounds": 10
@@ -44,7 +44,7 @@
             "rules": [
 
                 { "rule": "global-message",
-                    "value": "Round {round}. Choose your weapon!"
+                    "value": "\tRound {round}: Weapon: {weapon.name}"
                 }
   
             ]

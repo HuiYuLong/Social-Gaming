@@ -1,0 +1,2 @@
+Generate the parser directory with command:
+java -jar antlr-4.8-complete.jar -Dlanguage=Cpp -listener -visitor -package antlrcpp -o parser SimpleBoolean.g4
