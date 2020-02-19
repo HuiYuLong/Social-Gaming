@@ -99,14 +99,14 @@ public:
     RuleTree(const nlohmann::json& gameConfig);
     ruleList& getRules();
 
-    // std::thread spawn(PseudoServer& server, GameSpec& spec)
-    // {
-    //     return std::thread([this, &server, &spec] {
-    //         for (const auto& ptr : rules) {
-    //             ptr->run(server, spec);
-    //         }
-    //     });
-    // }
+    std::thread spawn_detached(PseudoServer& server, GameSpec& spec)
+    {
+        return std::thread([this, &server, &spec] {
+            for (const auto& ptr : rules) {
+                ptr->run(server, spec);
+            }
+        });
+    }
 
     void spawn(PseudoServer& server, GameSpec& spec)
     {
@@ -175,6 +175,7 @@ public:
     Variable& getVariables() { return variables; }
     Connection getConnectionByName(const std::string& name) { return playersMap[name]; }
     void launchGame(PseudoServer& server) { rules.spawn(server, *this); }
+    std::thread launchGameDetached(PseudoServer& server) { return rules.spawn_detached(server, *this); }
 
 private:
 	std::string name;

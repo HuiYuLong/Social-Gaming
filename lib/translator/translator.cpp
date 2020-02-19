@@ -202,11 +202,13 @@ int main(int argc, char** argv) {
 	boost::apply_visitor(p, variables);
 
 	std::cout << "\nStarting a test\n\n";
-	// PseudoServer server;
-	// std::thread t = configurations.front().launchGame(server);
-	// t.join();
 	PseudoServer server;
-	configurations.back().launchGame(server);
+	std::thread t1 = configurations.front().launchGameDetached(server);
+	std::thread t2 = configurations.back().launchGameDetached(server);
+	t1.join();
+	t2.join();
+	//PseudoServer server;
+	//configurations.back().launchGame(server);
 	// for(GameSpec& c : configurations) {
 	// 	std::cout << "\nGame " << c.getName() << "\n\n";
 	// 	c.launchGame(server);
