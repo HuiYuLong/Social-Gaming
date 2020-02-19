@@ -22,7 +22,7 @@ using networking::Connection;
 #include <mutex>
 class PseudoServer
 {
-	std::mutex lock;
+	static std::mutex lock;
 public:
 	void send(Message message)
 	{
@@ -38,6 +38,8 @@ public:
 		return Message{connection, input};
 	}
 };
+
+std::mutex PseudoServer::lock;
 
 Variable buildVariables(const nlohmann::json& json)
 {
@@ -189,6 +191,38 @@ class Condition
     // The clause will take in a top-level variable map and return a boolean value
     // Indicating whether the variables satisfy the clause
     std::function<bool(Variable&)> clause;
+    static std::regex equality_regex;
+    static std::regex decimal_regex;
+    struct Operand
+    {
+        Variable variable;
+        bool is_constant;
+
+        Operand(const std::string& str)
+        {
+            if (std::regex_match(str, decimal_regex)) {
+                variable = std::stoi(str);
+                is_constant = true;
+            }
+            else if (str == "true") {
+                variable = true;
+                is_constant = true;
+            }
+            else if (str == "false") {
+                variable = false;
+                is_constant = true;
+            }
+            else {
+                variable = str;
+                is_constant = false;
+            }
+        }
+
+        Variable get_from(Variable& toplevel) const
+        {
+            return is_constant ? variable : Getter(boost::get<std::string>(variable)).get_from(toplevel).result;
+        }
+    };
 public:
     Condition(const nlohmann::json& condition)
     {
@@ -202,24 +236,25 @@ public:
         else
         {
             // Condition is given as string
-            size_t pos;
             bool negated;
             std::string condition_str = condition;
             if (condition_str.at(0) == '!') {
                 negated = true;
                 condition_str = condition_str.substr(1);
             }
-            if ((pos = condition_str.find("==")) != std::string::npos) {
+            std::smatch match;
+            if (std::regex_match(condition_str, match, equality_regex)) {
                 // Interpret as a comparison of two variables
-                std::string first = (std::string) condition_str.substr(0, pos);
-                boost::trim_right(first);
-                std::string second = (std::string) condition_str.substr(pos+2);
-                boost::trim_left(second);
+                Operand first(match.str(1));
+                Operand second(match.str(2));
                 clause = [first, second, negated] (Variable& toplevel) {
-                    Getter getter(first);
-                    Variable result1 = getter.get_from(toplevel).result;
-                    getter = Getter(second);
-                    Variable result2 = getter.get_from(toplevel).result;
+                    
+                    // Getter getter(first.variable);
+                    // Variable result1 = getter.get_from(toplevel).result;
+                    // getter = Getter(second);
+                    // Variable result2 = getter.get_from(toplevel).result;
+                    Variable result1 = first.get_from(toplevel);
+                    Variable result2 = second.get_from(toplevel);
                     return negated ^ boost::apply_visitor(Equal(), result1, result2);
                 };
             }
@@ -235,13 +270,18 @@ public:
         
     }
 
+    
+
     // evaluate condition
     bool evaluate(Variable& toplevel) { return clause(toplevel); }
 };
 
+std::regex Condition::equality_regex("\\s*(\\S+)\\s*==\\s*(\\S+)\\s*");
+std::regex Condition::decimal_regex("\\d+");
+
 struct Case
 { 
-    Case(const nlohmann::json& condition): condition(condition) {}
+    Case(const nlohmann::json& case_);
 
 	Condition condition;
 	ruleList subrules;
@@ -632,15 +672,11 @@ public:
 
 class WhenRule : public Rule {
 private:
-    ruleType count;
     std::vector<Case> cases;
 public:
     WhenRule(const nlohmann::json& rule);
 
     void run(PseudoServer& server, GameSpec& spec) override;
-
-    void setCount(const ruleType& list) {this->count = count;}
-    ruleType getCount() const {return count;}
 
     std::vector<Case> const& getCases() const {return this->cases;}
     void setCases(std::vector<Case> cases) {this->cases=std::move(cases);}

@@ -17,7 +17,9 @@
   },
 
   "variables": {
-    "winners": []
+    "winners": [
+      {"name": "a", "wins" : 0}
+    ]
   },
 
   "per-player": {
@@ -43,7 +45,7 @@
           "rules": [
 
               { "rule": "global-message",
-                  "value": "Round {round}. Choose your weapon!"
+                  "value": "\tWeapon: {weapon.name}"
               },
 
               { "rule": "when",
@@ -62,10 +64,10 @@
                         }
                       ]
                     },
-                    { "condition": "true",
+                    { "condition": true,
                       "rules": [
                         { "rule": "global-message",
-                          "value": "Winners: {winners.elements.name}"
+                          "value": "Winners: {winners}"
                         },
                         { "rule": "foreach",
                           "list": "winners",

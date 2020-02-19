@@ -14,13 +14,17 @@ ForEachRule::ForEachRule(const nlohmann::json& rule): list(rule["list"]), elemen
 WhenRule::WhenRule(const nlohmann::json& rule)
 {
     std::cout << "When" << std::endl;
-    for(const auto& it : rule["cases"].items()) {
-        std::cout << it.value()["condition"] << std::endl;
-        cases.emplace_back(it.value()["condition"]);
-        for (const auto& subrule : it.value()["rules"].items()) {
-            cases.front().subrules.push_back(rulemap[subrule.value()["rule"]](subrule.value()));
-        }
+	cases.reserve(rule["cases"].size());
+    for(const auto& case_ : rule["cases"].items()) {
+        std::cout << case_.value()["condition"] << std::endl;
+        cases.emplace_back(case_.value());
     }
+}
+
+Case::Case(const nlohmann::json& case_): condition(case_["condition"]) {
+	for (const auto& subrule : case_["rules"].items()) {
+		subrules.push_back(rulemap[subrule.value()["rule"]](subrule.value()));
+	}
 }
 
 AddRule::AddRule(const nlohmann::json& rule): to(rule["to"]), value(rule["value"]) { std::cout << "Add " << value << std::endl; }
@@ -83,12 +87,23 @@ void ForEachRule::run(PseudoServer& server, GameSpec& spec)
 
 void WhenRule::run(PseudoServer& server, GameSpec& spec)
 {
-	return;
+	for(Case& current_case : cases) {
+		if (current_case.condition.evaluate(spec.getVariables())) {
+			for (const auto& ptr : current_case.subrules) {
+				ptr->run(server, spec);
+			}
+			break;
+		}
+	}
 }
 
 void AddRule::run(PseudoServer& server, GameSpec& spec)
 {
-	return;
+	Getter getter(to);
+	GetterResult result = getter.get_from(spec.getVariables());
+	assert(!result.needs_to_be_saved);
+	int& integer = boost::get<int>(result.result);
+	integer += value;
 }
 
 // class TEST : public boost::static_visitor<>
@@ -165,7 +180,7 @@ int main(int argc, char** argv) {
 
 	std::vector<GameSpec> configurations;
 	std::vector<Player> players;
-	for (const std::string& name : {"username"})
+	for (const std::string& name : {"a", "b"})
 		players.emplace_back(name, Connection());
 	configurations.reserve(j["games"].size());
 	for (const auto& [key, gamespecfile]: j["games"].items())
@@ -182,7 +197,7 @@ int main(int argc, char** argv) {
     }
 
 	// TEST
-	Variable& variables = configurations.front().getVariables();
+	Variable& variables = configurations.back().getVariables();
 	PrintTheThing p;
 	boost::apply_visitor(p, variables);
 
@@ -191,7 +206,11 @@ int main(int argc, char** argv) {
 	// std::thread t = configurations.front().launchGame(server);
 	// t.join();
 	PseudoServer server;
-	configurations.front().launchGame(server);
+	configurations.back().launchGame(server);
+	// for(GameSpec& c : configurations) {
+	// 	std::cout << "\nGame " << c.getName() << "\n\n";
+	// 	c.launchGame(server);
+	// }
 	std::cout << "\nFinished\n";
 
 	return 0;

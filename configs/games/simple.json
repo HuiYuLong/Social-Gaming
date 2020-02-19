@@ -4,14 +4,15 @@
       "player count": {"min": 1, "max": 4},
       "audience": false,
       "setup": {
-        "Rounds": 2
+        "Rounds": 10
       }
     },
   
     "constants": {
       "weapons": [
         { "name": "Rock",     "beats": "Scissors"},
-        { "name": "Paper",    "beats": "Rock"}
+        { "name": "Paper",    "beats": "Rock"},
+        { "name": "Scissors", "beats": "Paper"}
       ]
     },
   
@@ -42,7 +43,7 @@
             "rules": [
 
                 { "rule": "global-message",
-                    "value": "\tRound {round}: Weapon {weapon}"
+                    "value": "\tRound {round}: Weapon: {weapon.name}"
                 }
   
             ]

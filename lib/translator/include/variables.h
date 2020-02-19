@@ -328,7 +328,7 @@ GetterResult Getter::processString(Variable* string)
 GetterResult Getter::processList(Variable* varlist)
 {
     if (it == tokens.end())
-        return {*varlist, true};
+        return {*varlist, false};
     const auto& current_query = *it;
     List& list = boost::get<List>(*varlist);
     if(current_query.compare(0, 4, "size") == 0)
