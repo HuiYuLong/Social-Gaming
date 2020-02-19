@@ -7,6 +7,8 @@
 #include <fstream>
 #include <sstream>
 #include <memory>
+#include <boost/variant.hpp>
+#include <boost/lexical_cast.hpp>
 #include <utility>
 #include <boost/algorithm/string.hpp>
 #include <thread>
@@ -15,6 +17,7 @@
 #include "common.h"
 #include "variables.h"
 
+using DataType = boost::variant<std::string, int, bool, unsigned>;
 using networking::Message;
 using networking::Connection;
 
@@ -186,6 +189,7 @@ private:
     using PlayerMap = std::unordered_map<std::string, Connection>;
     PlayerMap playersMap;
 };
+			
 
 class Condition 
 {
@@ -353,20 +357,25 @@ public:
 
 class TimerRule : public Rule{
 private:
-    ruleType duration;
-    ruleType mode;
+    DataType duration;
+    DataType mode;
     ruleList subrules;
 public:
     TimerRule(const nlohmann::json& rule);
 
-    ruleType getDuration() const {return duration;}
-    ruleType getMode() const {return mode;}
+    DataType getDuration() const {return duration;}
+    DataType getMode() const {return mode;}
 
-    void setDuration(const ruleType& duration) {this->duration = duration;}
-    void setMode(const ruleType& mode) {this->mode = mode;}
+    void setDuration(const DataType& duration) {this->duration = duration;}
+    void setMode(const DataType& mode) {this->mode = mode;}
 
     ruleList const& getSubrules() const {return this->subrules;}
     void setSubrules(ruleList subrules) {this->subrules=std::move(subrules);}
+
+    std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
+        std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
+        return outputs;
+    }
 };
 
 class InputChoiceRule : public Rule{
@@ -378,67 +387,100 @@ private:
 public:
     InputChoiceRule(const nlohmann::json& rule);
 
-    ruleType getTo() const {return to;}
-    ruleType getChoices() const {return choices;}
-    ruleType getPrompt () const {return prompt;}
-    ruleType getResult() const {return result;}
+    DataType getTo() const {return to;}
+    DataType getChoices() const {return choices;}
+    DataType getPrompt () const {return prompt;}
+    DataType getResult() const {return result;}
 
-    void setTo(const ruleType& to) {this->to = to;}
-    void setChoices(const ruleType& choices) {this->choices = choices;}
-    void setPrompt(const ruleType& prompt) {this->prompt = prompt;}
-    void setResult(const ruleType& result) {this->result = result;}
+    // void setTo(const DataType& to) {this->to = to;}
+    // void setChoices(const DataType& choices) {this->choices = choices;}
+    // void setPrompt(const DataType& prompt) {this->prompt = prompt;}
+    // void setResult(const DataType& result) {this->result = result;}
+    
+    // std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
+    //     std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
+    //     return outputs;
+    // }
 };
 
 class InputTextRule : public Rule{
 private:
-    ruleType to; 
-    ruleType prompt;
-    ruleType result; 
+    DataType to; 
+    DataType prompt;
+    DataType result; 
 public:
     InputTextRule(const nlohmann::json& rule);
 
-    ruleType getTo() const {return to;}
-    ruleType getPrompt () const {return prompt;}
-    ruleType getResult() const {return result;}
+    DataType getTo() const {return to;}
+    DataType getPrompt () const {return prompt;}
+    DataType getResult() const {return result;}
 
-    void setTo(const ruleType& to) {this->to = to;}
-    void setPrompt(const ruleType& prompt) {this->prompt = prompt;}
-    void setResult(const ruleType& result) {this->result = result;}
+    void setTo(const DataType& to) {this->to = to;}
+    void setPrompt(const DataType& prompt) {this->prompt = prompt;}
+    void setResult(const DataType& result) {this->result = result;}
+
+    std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
+        std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
+        return outputs;
+    }
 };
 
 class InputVoteRule : public Rule{
 private:
-    ruleType to; 
-    ruleType prompt; 
-    ruleType choices;
-    ruleType result;
+    DataType to; 
+    DataType prompt; 
+    DataType choices;
+    DataType result;
 public:
     InputVoteRule(const nlohmann::json& rule);
 
-    ruleType getTo() const {return to;}
-    ruleType getChoices() const {return choices;}
-    ruleType getPrompt () const {return prompt;}
-    ruleType getResult() const {return result;}
+    DataType getTo() const {return to;}
+    DataType getChoices() const {return choices;}
+    DataType getPrompt () const {return prompt;}
+    DataType getResult() const {return result;}
 
-    void setTo(const ruleType& to) {this->to = to;}
-    void setChoices(const ruleType& choices) {this->choices = choices;}
-    void setPrompt(const ruleType& prompt) {this->prompt = prompt;}
-    void setResult(const ruleType& result) {this->result = result;}
+    void setTo(const DataType& to) {this->to = to;}
+    void setChoices(const DataType& choices) {this->choices = choices;}
+    void setPrompt(const DataType& prompt) {this->prompt = prompt;}
+    void setResult(const DataType& result) {this->result = result;}
+
+    std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
+        std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
+        return outputs;
+    }
 };
 
 class MessageRule : public Rule{
 private:
-    ruleType to; 
-    ruleType value;
+    DataType to; 
+    DataType value;
 
 public:
     MessageRule(const nlohmann::json& rule);
 
-    ruleType getTo() const {return to;}
-    ruleType getValue() const {return value;}
+    DataType getTo() const {return to;}
+    DataType getValue() const {return value;}
 
-    void setTo(const ruleType& to) {this->to = to;}
-    void setValue(const ruleType& value) {this->value = value;}
+    void setTo(const DataType& to) {this->to = to;}
+    void setValue(const DataType& value) {this->value = value;}
+
+    // std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
+	// 	std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
+	// 	for (auto msg : incoming) {
+	// 		Message output;
+	// 		output.connection = msg.connection;
+	// 		output.text = this->getValue();
+	// 		std::cout << "we are running global-message: " << this->getValue() << std::endl;
+	// 		outputs->push_back(output);
+	// 	}
+	// 	return outputs;
+	// }
+
+    std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
+        std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
+        return outputs;
+    }
+
 };
 
 class GlobalMessageRule : public Rule{
@@ -447,138 +489,190 @@ private:
 
 public:
     GlobalMessageRule(const nlohmann::json& rule);
+
     // ~GlobalMessageRule() override;
+    // std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
+    // 	std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
+    // 	for (auto msg : incoming) {
+    // 		Message output;
+    // 		output.connection = msg.connection;
+    // 		output.text = boost::lexical_cast<std::string>(this->getValue());
+    // 		std::cout << "we are running global-message: " << this->getValue() << std::endl;
+    // 		outputs->push_back(output);
+    // 	}
+    // 	return outputs;
+    // }
 
     void run(PseudoServer& server, GameSpec& spec) override;
 };
 
 class ScoresRule: public Rule{
 private:
-    ruleType score;
-    ruleType ascending;
+    DataType score;
+    DataType ascending;
 
 public:
     ScoresRule(const nlohmann::json& rule);
 
-    ruleType getScore() const {return score;}
-    ruleType getAscending() const {return ascending;}
+    DataType getScore() const {return score;}
+    DataType getAscending() const {return ascending;}
 
-    void setScore(const ruleType& score) {this->score = score;}
-    void setAscending(const ruleType& ascending) {this->ascending = ascending;}
+    void setScore(const bool& score) {this->score = score;}
+    void setAscending(const bool& ascending) {this->ascending = ascending;}
+
+    std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
+        std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
+        return outputs;
+    }
 };
 
 //-------------------------------Sophia's Code------------------------------//
 
 class ExtendRule : public Rule {
 private:
-    ruleType target;
-    ruleType list;
+    DataType target;
+    DataType list;
     ruleList subrules;
 public:
     ExtendRule(const nlohmann::json& rule);
-    ruleType getTarget() const{return target;}
-    ruleType getList() const{return list;}
+    DataType getTarget() const{return target;}
+    DataType getList() const{return list;}
     
-    void setTarget(const ruleType& target){this->target=target;}
-    void setList(const ruleType & list){this->list=list;}
+    void setTarget(const DataType& target){this->target=target;}
+    void setList(const DataType & list){this->list=list;}
 
     ruleList const& getSubrules() const {return this->subrules;}
     void setSubrules(ruleList subrules) {this->subrules=std::move(subrules);}
+
+    std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
+        std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
+        return outputs;
+    }
 };
 
   
 class ReverseRule : public Rule{
 private:
-    ruleType list;
+    DataType list;
     ruleList subrules;
 public:
     ReverseRule(const nlohmann::json& rule);
-    ruleType getList() const{return list;}
-    void setList(const ruleType & list){this->list=list;}
+    DataType getList() const{return list;}
+    void setList(const DataType & list){this->list=list;}
 
     ruleList const& getSubrules() const {return this->subrules;}
     void setSubrules(ruleList subrules) {this->subrules=std::move(subrules);}
+
+    std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
+        std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
+        return outputs;
+    }
 };
 
 class ShuffleRule : public Rule{
 private:
-    ruleType list;
+    DataType list;
     ruleList subrules;
 public:
     ShuffleRule(const nlohmann::json& rule);
-    ruleType getList() const{return list;}    
-    void setList(const ruleType & list){this->list=list;}
+    DataType getList() const{return list;}    
+    void setList(const DataType & list){this->list=list;}
 
     ruleList const& getSubrules() const {return this->subrules;}
     void setSubrules(ruleList subrules) {this->subrules=std::move(subrules);}
+
+    std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
+        std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
+        return outputs;
+    }
 };
 
 // Sorts a list in ascending order
 class SortRule : public Rule {
 private:
-    ruleType list;
-    ruleType key;
+    DataType list;
+    DataType key;
     ruleList subrules;
 public:
     SortRule(const nlohmann::json& rule);
-    ruleType getList() const{return list;}
-    ruleType getKey() const{return key;}
+    DataType getList() const{return list;}
+    DataType getKey() const{return key;}
     
-    void setList(const ruleType & list){this->list=list;}
-    void setKey(const ruleType & key){this->key=key;}
+    void setList(const DataType & list){this->list=list;}
+    void setKey(const DataType & key){this->key=key;}
 
     ruleList const& getSubrules() const {return this->subrules;}
     void setSubrules(ruleList subrules) {this->subrules=std::move(subrules);}
+
+    std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
+        std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
+        return outputs;
+    }
 };
 
 class DealRule : public Rule {
 private:
-    ruleType from;
-    ruleType to;
-    ruleType count;
+    DataType from;
+    DataType to;
+    DataType count;
     ruleList subrules;
 public:
     DealRule(const nlohmann::json& rule);
 
-    ruleType getFrom() const{return from;}
-    ruleType getTo() const{return to;}
-    ruleType getCount() const{return count;}
+    DataType getFrom() const{return from;}
+    DataType getTo() const{return to;}
+    DataType getCount() const{return count;}
     
-    void setFrom(const ruleType & from){this->from=from;}
-    void setTo(const ruleType & to){this->from=from;}
-    void setCount(const ruleType& count){this->count=count;}
+    void setFrom(const DataType & from){this->from=from;}
+    void setTo(const DataType & to){this->to=to;}
+    void setCount(const DataType& count){this->count=count;}
 
     ruleList const& getSubrules() const {return this->subrules;}
     void setSubrules(ruleList subrules) {this->subrules=std::move(subrules);}
+
+    std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
+        std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
+        return outputs;
+    }
 };
 
 class DiscardRule : public Rule {
 private:
-    ruleType from;
-    ruleType count;
+    DataType from;
+    DataType count;
     ruleList subrules;
 public:
     DiscardRule(const nlohmann::json& rule);
 
-    ruleType getFrom() const{return from;}
-    ruleType getCount() const{return count;}
+    DataType getFrom() const{return from;}
+    DataType getCount() const{return count;}
 
-    void setFrom(const ruleType & from){this->from=from;}
-    void setCount(const ruleType& count){this->count=count;}
+    void setFrom(const DataType & from){this->from=from;}
+    void setCount(const DataType& count){this->count=count;}
 
     ruleList const& getSubrules() const {return this->subrules;}
     void setSubrules(ruleList subrules) {this->subrules=std::move(subrules);}
+
+    std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
+        std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
+        return outputs;
+    }
 };
 
 class ListAttributesRule : public Rule {
 private:
-    ruleType roles;
+    DataType roles;
 public:
     ListAttributesRule(const nlohmann::json& rule);
     
-    ruleType getRoles() const{return roles;}
+    DataType getRoles() const{return roles;}
 
-    void setRoles(const ruleType& roles) {this->roles=roles;}
+    void setRoles(const DataType& roles) {this->roles=roles;}
+
+    std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
+        std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
+        return outputs;
+    }
 
 };
 
@@ -603,26 +697,33 @@ public:
     ruleList const& getSubrules() const {return this->subrules;}
     void setSubrules(ruleList subrules) {this->subrules=std::move(subrules);}
 
+    std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
+        std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
+        return outputs;
+    }
+
 };
 
 class LoopRule : public Rule {
 private:
-    ruleType target;
-    ruleType until;
-    ruleType whileCondition;
+    DataType until;
+    DataType whileCondition;
     ruleList subrules;
 public:
     LoopRule(const nlohmann::json& rule);
 
-    ruleType getTarget() const {return this->target;}
-    void setTarget(const ruleType& target) {this->target = target;}
-    ruleType getUntil() const {return this->until;}
-    void setUntil(const ruleType& until) {this->until = until;}
-    ruleType getWhile() const {return this->whileCondition;}
-    void setWhile(const ruleType& whileCondition) {this->whileCondition = whileCondition;}
+    DataType getUntil() const {return this->until;}
+    void setUntil(const DataType& until) {this->until = until;}
+    DataType getWhile() const {return this->whileCondition;}
+    void setWhile(const DataType& whileCondition) {this->whileCondition = whileCondition;}
 
     ruleList const& getSubrules() const {return this->subrules;}
     void setSubrules(ruleList subrules) {this->subrules=std::move(subrules);}
+
+    std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
+        std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
+        return outputs;
+    }
 };
   
 class InParallelRule : public Rule {
@@ -633,42 +734,57 @@ public:
 
     ruleList const& getSubrules() const {return this->subrules;}
     void setSubrules(ruleList subrules) {this->subrules=std::move(subrules);}
+
+    std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
+        std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
+        return outputs;
+    }
 };
 
 class ParallelForRule : public Rule {
 private:
-    ruleType list;
-    ruleType element;
+    DataType list;
+    DataType element;
     ruleList subrules;
 public:
     ParallelForRule(const nlohmann::json& rule);
 
-    ruleType getList() const {return list;}
-    void setList(const ruleType& list) {this->list = list;}
-    ruleType getElement() const {return element;}
-    void setElement(const ruleType& element) {this->element = element;}
+    DataType getList() const {return list;}
+    void setList(const DataType& list) {this->list = list;}
+    DataType getElement() const {return element;}
+    void setElement(const DataType& element) {this->element = element;}
 
     ruleList const& getSubrules() const {return this->subrules;}
     void setSubrules(ruleList subrules) {this->subrules=std::move(subrules);}
+
+    std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
+        std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
+        return outputs;
+    }
 
 };
 
 // Sorts a list in ascending order
 class SwitchRule : public Rule {
 private:
-    ruleType list;
-    ruleType value;
+    DataType list;
+    DataType value;
     std::vector<Case> cases;
 public:
     SwitchRule(const nlohmann::json& rule);
 
-    ruleType getList() const {return list;}
-    void setList(const ruleType& list) {this->list = list;}
-    ruleType getValue() const {return this->value;}
-    void setValue(const ruleType& value) {this->value = value;}
+    DataType getList() const {return list;}
+    void setList(const DataType& list) {this->list = list;}
+    DataType getValue() const {return this->value;}
+    void setValue(const DataType& value) {this->value = value;}
 
     std::vector<Case> const& getCases() const {return this->cases;}
     void setCases(std::vector<Case> cases) {this->cases=std::move(cases);}
+
+    std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
+        std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
+        return outputs;
+    }
 };
 
 class WhenRule : public Rule {
@@ -681,6 +797,11 @@ public:
 
     std::vector<Case> const& getCases() const {return this->cases;}
     void setCases(std::vector<Case> cases) {this->cases=std::move(cases);}
+
+    std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
+        std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
+        return outputs;
+    }
 };
 
 std::unordered_map<std::string, std::function<std::unique_ptr<Rule>(const nlohmann::json&)>> rulemap = {
