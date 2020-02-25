@@ -92,15 +92,15 @@ public:
     virtual void run(PseudoServer& server, GameSpec& spec) = 0;
 };
 
-using ruleList = std::vector<std::unique_ptr<Rule>>;
+using RuleList = std::vector<std::unique_ptr<Rule>>;
 
 class RuleTree {
-    ruleList rules;
+    RuleList rules;
 public:
     RuleTree(RuleTree&&);
     RuleTree& operator=(RuleTree&&);
     RuleTree(const nlohmann::json& gameConfig);
-    ruleList& getRules();
+    RuleList& getRules();
 
     std::thread spawn_detached(PseudoServer& server, GameSpec& spec)
     {
@@ -289,7 +289,7 @@ struct Case
     Case(const nlohmann::json& case_);
 
 	Condition condition;
-	ruleList subrules;
+	RuleList subrules;
 };
 
 class Text
@@ -359,7 +359,7 @@ class TimerRule : public Rule{
 private:
     DataType duration;
     DataType mode;
-    ruleList subrules;
+    RuleList subrules;
 public:
     TimerRule(const nlohmann::json& rule);
 
@@ -369,8 +369,8 @@ public:
     void setDuration(const DataType& duration) {this->duration = duration;}
     void setMode(const DataType& mode) {this->mode = mode;}
 
-    ruleList const& getSubrules() const {return this->subrules;}
-    void setSubrules(ruleList subrules) {this->subrules=std::move(subrules);}
+    RuleList const& getSubrules() const {return this->subrules;}
+    void setSubrules(RuleList subrules) {this->subrules=std::move(subrules);}
 
     std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
         std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
@@ -532,7 +532,7 @@ class ExtendRule : public Rule {
 private:
     DataType target;
     DataType list;
-    ruleList subrules;
+    RuleList subrules;
 public:
     ExtendRule(const nlohmann::json& rule);
     DataType getTarget() const{return target;}
@@ -541,8 +541,8 @@ public:
     void setTarget(const DataType& target){this->target=target;}
     void setList(const DataType & list){this->list=list;}
 
-    ruleList const& getSubrules() const {return this->subrules;}
-    void setSubrules(ruleList subrules) {this->subrules=std::move(subrules);}
+    RuleList const& getSubrules() const {return this->subrules;}
+    void setSubrules(RuleList subrules) {this->subrules=std::move(subrules);}
 
     std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
         std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
@@ -554,14 +554,14 @@ public:
 class ReverseRule : public Rule{
 private:
     DataType list;
-    ruleList subrules;
+    RuleList subrules;
 public:
     ReverseRule(const nlohmann::json& rule);
     DataType getList() const{return list;}
     void setList(const DataType & list){this->list=list;}
 
-    ruleList const& getSubrules() const {return this->subrules;}
-    void setSubrules(ruleList subrules) {this->subrules=std::move(subrules);}
+    RuleList const& getSubrules() const {return this->subrules;}
+    void setSubrules(RuleList subrules) {this->subrules=std::move(subrules);}
 
     std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
         std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
@@ -572,14 +572,14 @@ public:
 class ShuffleRule : public Rule{
 private:
     DataType list;
-    ruleList subrules;
+    RuleList subrules;
 public:
     ShuffleRule(const nlohmann::json& rule);
     DataType getList() const{return list;}    
     void setList(const DataType & list){this->list=list;}
 
-    ruleList const& getSubrules() const {return this->subrules;}
-    void setSubrules(ruleList subrules) {this->subrules=std::move(subrules);}
+    RuleList const& getSubrules() const {return this->subrules;}
+    void setSubrules(RuleList subrules) {this->subrules=std::move(subrules);}
 
     std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
         std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
@@ -592,7 +592,7 @@ class SortRule : public Rule {
 private:
     DataType list;
     DataType key;
-    ruleList subrules;
+    RuleList subrules;
 public:
     SortRule(const nlohmann::json& rule);
     DataType getList() const{return list;}
@@ -601,8 +601,8 @@ public:
     void setList(const DataType & list){this->list=list;}
     void setKey(const DataType & key){this->key=key;}
 
-    ruleList const& getSubrules() const {return this->subrules;}
-    void setSubrules(ruleList subrules) {this->subrules=std::move(subrules);}
+    RuleList const& getSubrules() const {return this->subrules;}
+    void setSubrules(RuleList subrules) {this->subrules=std::move(subrules);}
 
     std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
         std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
@@ -615,7 +615,7 @@ private:
     DataType from;
     DataType to;
     DataType count;
-    ruleList subrules;
+    RuleList subrules;
 public:
     DealRule(const nlohmann::json& rule);
 
@@ -627,8 +627,8 @@ public:
     void setTo(const DataType & to){this->to=to;}
     void setCount(const DataType& count){this->count=count;}
 
-    ruleList const& getSubrules() const {return this->subrules;}
-    void setSubrules(ruleList subrules) {this->subrules=std::move(subrules);}
+    RuleList const& getSubrules() const {return this->subrules;}
+    void setSubrules(RuleList subrules) {this->subrules=std::move(subrules);}
 
     std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
         std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
@@ -640,7 +640,7 @@ class DiscardRule : public Rule {
 private:
     DataType from;
     DataType count;
-    ruleList subrules;
+    RuleList subrules;
 public:
     DiscardRule(const nlohmann::json& rule);
 
@@ -650,8 +650,8 @@ public:
     void setFrom(const DataType & from){this->from=from;}
     void setCount(const DataType& count){this->count=count;}
 
-    ruleList const& getSubrules() const {return this->subrules;}
-    void setSubrules(ruleList subrules) {this->subrules=std::move(subrules);}
+    RuleList const& getSubrules() const {return this->subrules;}
+    void setSubrules(RuleList subrules) {this->subrules=std::move(subrules);}
 
     std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
         std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
@@ -682,7 +682,7 @@ class ForEachRule : public Rule {
 private:
     ruleType list;
     ruleType element_name;
-    ruleList subrules;
+    RuleList subrules;
 
 public:
     ForEachRule(const nlohmann::json& rule);
@@ -694,8 +694,8 @@ public:
     void setList(const ruleType& list) {this->list = list;}
     ruleType getElement() const {return element_name;}
     void setElement(const ruleType& element_name) {this->element_name = element_name;}
-    ruleList const& getSubrules() const {return this->subrules;}
-    void setSubrules(ruleList subrules) {this->subrules=std::move(subrules);}
+    RuleList const& getSubrules() const {return this->subrules;}
+    void setSubrules(RuleList subrules) {this->subrules=std::move(subrules);}
 
     std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
         std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
@@ -708,7 +708,7 @@ class LoopRule : public Rule {
 private:
     DataType until;
     DataType whileCondition;
-    ruleList subrules;
+    RuleList subrules;
 public:
     LoopRule(const nlohmann::json& rule);
 
@@ -717,8 +717,8 @@ public:
     DataType getWhile() const {return this->whileCondition;}
     void setWhile(const DataType& whileCondition) {this->whileCondition = whileCondition;}
 
-    ruleList const& getSubrules() const {return this->subrules;}
-    void setSubrules(ruleList subrules) {this->subrules=std::move(subrules);}
+    RuleList const& getSubrules() const {return this->subrules;}
+    void setSubrules(RuleList subrules) {this->subrules=std::move(subrules);}
 
     std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
         std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
@@ -728,12 +728,12 @@ public:
   
 class InParallelRule : public Rule {
 private:
-    ruleList subrules;
+    RuleList subrules;
 public:
     InParallelRule(const nlohmann::json& rule);
 
-    ruleList const& getSubrules() const {return this->subrules;}
-    void setSubrules(ruleList subrules) {this->subrules=std::move(subrules);}
+    RuleList const& getSubrules() const {return this->subrules;}
+    void setSubrules(RuleList subrules) {this->subrules=std::move(subrules);}
 
     std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
         std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
@@ -745,7 +745,7 @@ class ParallelForRule : public Rule {
 private:
     DataType list;
     DataType element;
-    ruleList subrules;
+    RuleList subrules;
 public:
     ParallelForRule(const nlohmann::json& rule);
 
@@ -754,8 +754,8 @@ public:
     DataType getElement() const {return element;}
     void setElement(const DataType& element) {this->element = element;}
 
-    ruleList const& getSubrules() const {return this->subrules;}
-    void setSubrules(ruleList subrules) {this->subrules=std::move(subrules);}
+    RuleList const& getSubrules() const {return this->subrules;}
+    void setSubrules(RuleList subrules) {this->subrules=std::move(subrules);}
 
     std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
         std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 

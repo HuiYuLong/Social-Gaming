@@ -59,7 +59,7 @@ RuleTree& RuleTree::operator=(RuleTree&& oldTree)
     return *this;
 }
 
-ruleList& RuleTree::getRules() { return rules; }
+RuleList& RuleTree::getRules() { return rules; }
 
 
 
@@ -141,35 +141,40 @@ void AddRule::run(PseudoServer& server, GameSpec& spec)
 	integer += value;
 }
 
-// class TEST : public boost::static_visitor<>
-// {
-// public:
+class TEST : public boost::static_visitor<>
+{
+public:
 
-//     void operator()(bool boolean) const
-//     {
-//         std::cout << (boolean ? "true" : "false") << std::endl;
-//     }
+    void operator()(bool boolean) const
+    {
+        std::cout << (boolean ? "true" : "false") << std::endl;
+    }
 
-//     void operator()(int integer) const
-//     {
-//         std::cout << integer << std::endl;
-//     }
+    void operator()(int integer) const
+    {
+        std::cout << integer << std::endl;
+    }
 
-//     void operator()(const std::string& string) const
-//     {
-//         std::cout << string << std::endl;
-//     }
+    void operator()(const std::string& string) const
+    {
+        std::cout << string << std::endl;
+    }
 
-//     void operator()(const List& list) const
-//     {
-//         std::cout << "Size: " << list.size() << std::endl;
-//     }
+	void operator()(const Query& query) const
+    {
+        std::cout << "Query: " << query.query << std::endl;
+    }
 
-//     void operator()(const Map& map) const
-//     {
-// 		std::cout << "Map: " << map.size() << std::endl;
-//     }
-// };
+    void operator()(const List& list) const
+    {
+        std::cout << "Size: " << list.size() << std::endl;
+    }
+
+    void operator()(const Map& map) const
+    {
+		std::cout << "Map: " << map.size() << std::endl;
+    }
+};
 
 int main(int argc, char** argv) {
 	if (argc < 2) {
@@ -178,32 +183,11 @@ int main(int argc, char** argv) {
 		return 1;
 	}
 
-	// Variable boovec = true;
-	// boost::apply_visitor(TEST(), boovec);
-	// List list;
-	// list.push_back(1);
-	// boovec = list;
-	// boost::apply_visitor(TEST(), boovec);
-	// List& newlist = boost::get<List>(boovec);
-	// newlist.reserve(10);
-	// newlist.push_back(4);
-	// std::iota(newlist.begin(), newlist.end(), 11);
-	// boost::apply_visitor(TEST(), boovec);
+	// Variable a = "a";
+	// boost::apply_visitor(TEST(), a);
+	// a = Query{"b"};
+	// boost::apply_visitor(TEST(), a);
 	// return 0;
-
-
-	// Variable l = List();
-	// const List& ref = boost::get<List>(l);
-	// const Variable& cvref = ref;
-	// std::cout << cvref.which() << std::endl;
-	// Variable& vref = const_cast<Variable&>(cvref);
-	// std::cout << vref.which() << std::endl;
-	// List& newlist = boost::get<List>(vref);
-	// newlist.push_back(5);
-	// std::cout << newlist.size() << std::endl;
-	// std::cout << ref.size() << std::endl;
-	// return 0;
-
 
 	std::ifstream serverconfig{argv[1]};
 	if (serverconfig.fail())
