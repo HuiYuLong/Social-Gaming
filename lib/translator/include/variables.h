@@ -18,129 +18,24 @@ struct Query
     Query(std::string_view str): query(str) {}
 };
 
+bool operator==(const Query& q1, const Query& q2)
+{
+    return q1.query == q2.query;
+}
+
 using Variable = boost::make_recursive_variant<
     bool,   
     int,
     std::string,
     std::vector<boost::recursive_variant_>,
     std::unordered_map<std::string, boost::recursive_variant_ >,
-    boost::recursive_variant_*
-    //Query
+    boost::recursive_variant_*,
+    Query
 >::type;
 
 using List = std::vector<Variable>;
 using Map = std::unordered_map<std::string, Variable>;
 using Pointer = Variable*;
-
-class Equal
-    : public boost::static_visitor<bool>
-{
-public:
-
-    template <typename T, typename U>
-    bool operator()( const T &, const U & ) const
-    {
-        return false; // cannot compare different types
-    }
-
-    template <typename T>
-    bool operator()( const T & lhs, const T & rhs ) const
-    {
-        return lhs == rhs;
-    }
-
-};
-
-class NotEqual
-    : public boost::static_visitor<bool>
-{
-public:
-
-    template <typename T, typename U>
-    bool operator()( const T &, const U & ) const
-    {
-        return false; // cannot compare different types
-    }
-
-    template <typename T>
-    bool operator()( const T & lhs, const T & rhs ) const
-    {
-        return lhs != rhs;
-    }
-
-};
-
-class Less
-    : public boost::static_visitor<bool>
-{
-public:
-
-    template <typename T, typename U>
-    bool operator()( const T &, const U & ) const
-    {
-        return false; // cannot compare different types
-    }
-
-    bool operator()(int lhs, int rhs ) const
-    {
-        return lhs < rhs;
-    }
-
-};
-
-class LessOrEqual
-    : public boost::static_visitor<bool>
-{
-public:
-
-    template <typename T, typename U>
-    bool operator()( const T &, const U & ) const
-    {
-        return false; // cannot compare different types
-    }
-
-    bool operator()(int lhs, int rhs ) const
-    {
-        return lhs <= rhs;
-    }
-
-};
-
-class Greater
-    : public boost::static_visitor<bool>
-{
-public:
-
-    template <typename T, typename U>
-    bool operator()( const T &, const U & ) const
-    {
-        return false; // cannot compare different types
-    }
-
-    bool operator()(int lhs, int rhs ) const
-    {
-        return lhs > rhs;
-    }
-
-};
-
-class GreaterOrEqual
-    : public boost::static_visitor<bool>
-{
-public:
-
-    template <typename T, typename U>
-    bool operator()( const T &, const U & ) const
-    {
-        return false; // cannot compare different types
-    }
-
-    bool operator()(int lhs, int rhs ) const
-    {
-        return lhs >= rhs;
-    }
-
-};
 
 
 using tokenizer = boost::tokenizer<boost::char_separator<char> >;
@@ -264,11 +159,12 @@ class Getter
 {
     thread_local static Variable returned;
     static boost::char_separator<char> dot;
+    Variable& toplevel;
     tokenizer tokens;
     tokenizer::iterator it;
 public:
-    Getter(const std::string& untokenizer_query);
-    GetterResult get_from(Variable& toplevel);
+    Getter(const std::string& untokenizer_query, Variable& toplevel);
+    GetterResult get();
     GetterResult processBoolean(Variable& boolean);
     GetterResult processInteger(Variable& integer);
     GetterResult processString(Variable& string);
@@ -287,11 +183,11 @@ Callmap callmap = {
     [](Getter* getter, Variable& list) { return getter->processList(list); },
     [](Getter* getter, Variable& map) { return getter->processMap(map); },
     [](Getter* getter, Variable& pointer) { return getter->processPointer(pointer); },
-    //[](Getter* getter, Variable* query) { throw std::out_of_range("Cannot process query inside a query"); }
+    [](Getter* getter, Variable& query) { return getter->processQuery(query); }
 };
 
-Getter::Getter(const std::string& untokenizer_query):
-    tokens(untokenizer_query, dot), it(tokens.begin()) {}
+Getter::Getter(const std::string& untokenizer_query, Variable& toplevel):
+    tokens(untokenizer_query, dot), it(tokens.begin()), toplevel(toplevel) {}
 
 GetterResult Getter::processBoolean(Variable& boolean)
 {
@@ -388,7 +284,14 @@ GetterResult Getter::processPointer(Variable& varptr)
     return callmap[ptr->which()](this, *ptr);
 }
 
-GetterResult Getter::get_from(Variable& toplevel)
+GetterResult Getter::processQuery(Variable& query)
+{
+    const std::string& query_string = boost::get<Query>(query).query;
+    Getter subgetter(query_string, toplevel);
+    return subgetter.get();
+}
+
+GetterResult Getter::get()
 {
     return callmap[toplevel.which()](this, toplevel);
 }
@@ -450,6 +353,12 @@ public:
     {
         boost::apply_visitor(*this, *ptr);
     }
+
+    void operator()(const Query& query)
+    {
+        print_offset();
+        std::cout << "{" << query.query << "}" << std::endl;
+    }
 };
 
 // Converts arbitrary variable into a string
@@ -504,13 +413,149 @@ public:
     {
         return boost::apply_visitor(*this, *ptr);
     }
+
+    std::string operator()(const Query& query) const
+    {
+        return "{" + query.query + "}";
+    }
 };
 
-// query is a string like 'configuration.Rounds.upfrom(1)', tokenized by the '.'
-// TODO: input validation is easy to add
-// Variable& ConstantGetter(Variable& variable, const std::vector<std::string>& query, size_t current_token = 0u)
+//------------------------------------------Comparison operators-----------------------------------------
+
+class Equal
+    : public boost::static_visitor<bool>
+{
+    Variable& toplevel;
+public:
+
+    Equal(Variable& toplevel): toplevel(toplevel) {}
+
+    template <typename T, typename U>
+    bool operator()(const T& lhs, const U& rhs) const
+    {
+        return false; // cannot compare different types
+    }
+
+    template <typename U>
+    bool operator()(const Query& query, const U& rhs) const
+    {
+        Getter getter(query.query, toplevel);
+        U& value = boost::get<U>(getter.get().result);
+        return value == rhs;
+    }
+
+    template <typename T>
+    bool operator()(const T& lhs, const Query& query) const
+    {
+        this->operator()(query, lhs);
+    }
+
+    bool operator()(const Query& query1, const Query& query2) const
+    {
+        Getter getter1(query1.query, toplevel);
+        Variable lhs = getter1.get().result;    // save the first one
+        Getter getter2(query2.query, toplevel);
+        Variable& rhs = getter2.get().result;   // take a reference to the second one
+        return boost::apply_visitor(*this, lhs, rhs);
+    }
+
+    template <typename T>
+    bool operator()( const T & lhs, const T & rhs ) const
+    {
+        return lhs == rhs;
+    }
+
+};
+
+// Not needed yet, but may be implemented
+
+// class NotEqual
+//     : public boost::static_visitor<bool>
 // {
-//     if (current_token == query.size())
-//         return variable;
-//     switch
-// }
+// public:
+
+//     template <typename T, typename U>
+//     bool operator()( const T &, const U & ) const
+//     {
+//         return false; // cannot compare different types
+//     }
+
+//     template <typename T>
+//     bool operator()( const T & lhs, const T & rhs ) const
+//     {
+//         return lhs != rhs;
+//     }
+
+// };
+
+// class Less
+//     : public boost::static_visitor<bool>
+// {
+// public:
+
+//     template <typename T, typename U>
+//     bool operator()( const T &, const U & ) const
+//     {
+//         return false; // cannot compare different types
+//     }
+
+//     bool operator()(int lhs, int rhs ) const
+//     {
+//         return lhs < rhs;
+//     }
+
+// };
+
+// class LessOrEqual
+//     : public boost::static_visitor<bool>
+// {
+// public:
+
+//     template <typename T, typename U>
+//     bool operator()( const T &, const U & ) const
+//     {
+//         return false; // cannot compare different types
+//     }
+
+//     bool operator()(int lhs, int rhs ) const
+//     {
+//         return lhs <= rhs;
+//     }
+
+// };
+
+// class Greater
+//     : public boost::static_visitor<bool>
+// {
+// public:
+
+//     template <typename T, typename U>
+//     bool operator()( const T &, const U & ) const
+//     {
+//         return false; // cannot compare different types
+//     }
+
+//     bool operator()(int lhs, int rhs ) const
+//     {
+//         return lhs > rhs;
+//     }
+
+// };
+
+// class GreaterOrEqual
+//     : public boost::static_visitor<bool>
+// {
+// public:
+
+//     template <typename T, typename U>
+//     bool operator()( const T &, const U & ) const
+//     {
+//         return false; // cannot compare different types
+//     }
+
+//     bool operator()(int lhs, int rhs ) const
+//     {
+//         return lhs >= rhs;
+//     }
+
+// };

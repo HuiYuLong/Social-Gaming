@@ -74,10 +74,10 @@ void GlobalMessageRule::run(PseudoServer& server, GameSpec& spec)
 
 void ForEachRule::run(PseudoServer& server, GameSpec& spec)
 {
-	Getter getter(list);
-	GetterResult result = getter.get_from(spec.getVariables());
-	Variable temp;
-	List& elements = boost::get<List>(result.needs_to_be_saved ? temp = result.result, temp : result.result);
+	Getter getter(list, spec.getVariables());
+	GetterResult result = getter.get();
+	List temp;
+	List& elements = result.needs_to_be_saved ? temp = std::move(boost::get<List>(result.result)), temp : boost::get<List>(result.result);
 	Map& toplevel = boost::get<Map>(spec.getVariables());
 	for (Variable& element : elements) {
 		toplevel[element_name] = &element;
@@ -134,8 +134,8 @@ void definingDataType( const nlohmann::basic_json<> &item, DataType& value){
 
 void AddRule::run(PseudoServer& server, GameSpec& spec)
 {
-	Getter getter(to);
-	GetterResult result = getter.get_from(spec.getVariables());
+	Getter getter(to, spec.getVariables());
+	GetterResult result = getter.get();
 	assert(!result.needs_to_be_saved);
 	int& integer = boost::get<int>(result.result);
 	integer += value;
@@ -202,7 +202,7 @@ int main(int argc, char** argv) {
 	for (const std::string& name : {"a", "b"})
 		players.emplace_back(name, Connection());
 	configurations.reserve(j["games"].size());
-	for (const auto& [key, gamespecfile]: j["games"].items())
+	for ([[maybe_unused]] const auto& [ key, gamespecfile]: j["games"].items())
 	{
 		std::ifstream gamespecstream{gamespecfile};
 		if (gamespecstream.fail())
