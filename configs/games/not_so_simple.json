@@ -53,14 +53,14 @@
                     { "condition": "winners.size == players.size",
                       "rules": [
                         { "rule": "global-message",
-                          "value": "Tie game!"
+                          "value": "List of winners is the same size as players."
                         }
                       ]
                     },
                     { "condition": "winners.size == 0",
                       "rules": [
                         { "rule": "global-message",
-                          "value": "Tie game!"
+                          "value": "List of winners is empty"
                         }
                       ]
                     },

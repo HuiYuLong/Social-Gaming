@@ -59,7 +59,7 @@ RuleTree& RuleTree::operator=(RuleTree&& oldTree)
     return *this;
 }
 
-ruleList& RuleTree::getRules() { return rules; }
+RuleList& RuleTree::getRules() { return rules; }
 
 
 
@@ -74,10 +74,10 @@ void GlobalMessageRule::run(PseudoServer& server, GameSpec& spec)
 
 void ForEachRule::run(PseudoServer& server, GameSpec& spec)
 {
-	Getter getter(list);
-	GetterResult result = getter.get_from(spec.getVariables());
-	Variable temp;
-	List& elements = boost::get<List>(result.needs_to_be_saved ? temp = result.result, temp : result.result);
+	Getter getter(list, spec.getVariables());
+	GetterResult result = getter.get();
+	List temp;
+	List& elements = result.needs_to_be_saved ? temp = std::move(boost::get<List>(result.result)), temp : boost::get<List>(result.result);
 	Map& toplevel = boost::get<Map>(spec.getVariables());
 	for (Variable& element : elements) {
 		toplevel[element_name] = &element;
@@ -134,42 +134,47 @@ void definingDataType( const nlohmann::basic_json<> &item, DataType& value){
 
 void AddRule::run(PseudoServer& server, GameSpec& spec)
 {
-	Getter getter(to);
-	GetterResult result = getter.get_from(spec.getVariables());
+	Getter getter(to, spec.getVariables());
+	GetterResult result = getter.get();
 	assert(!result.needs_to_be_saved);
 	int& integer = boost::get<int>(result.result);
 	integer += value;
 }
 
-// class TEST : public boost::static_visitor<>
-// {
-// public:
+class TEST : public boost::static_visitor<>
+{
+public:
 
-//     void operator()(bool boolean) const
-//     {
-//         std::cout << (boolean ? "true" : "false") << std::endl;
-//     }
+    void operator()(bool boolean) const
+    {
+        std::cout << (boolean ? "true" : "false") << std::endl;
+    }
 
-//     void operator()(int integer) const
-//     {
-//         std::cout << integer << std::endl;
-//     }
+    void operator()(int integer) const
+    {
+        std::cout << integer << std::endl;
+    }
 
-//     void operator()(const std::string& string) const
-//     {
-//         std::cout << string << std::endl;
-//     }
+    void operator()(const std::string& string) const
+    {
+        std::cout << string << std::endl;
+    }
 
-//     void operator()(const List& list) const
-//     {
-//         std::cout << "Size: " << list.size() << std::endl;
-//     }
+	void operator()(const Query& query) const
+    {
+        std::cout << "Query: " << query.query << std::endl;
+    }
 
-//     void operator()(const Map& map) const
-//     {
-// 		std::cout << "Map: " << map.size() << std::endl;
-//     }
-// };
+    void operator()(const List& list) const
+    {
+        std::cout << "Size: " << list.size() << std::endl;
+    }
+
+    void operator()(const Map& map) const
+    {
+		std::cout << "Map: " << map.size() << std::endl;
+    }
+};
 
 int main(int argc, char** argv) {
 	if (argc < 2) {
@@ -178,32 +183,11 @@ int main(int argc, char** argv) {
 		return 1;
 	}
 
-	// Variable boovec = true;
-	// boost::apply_visitor(TEST(), boovec);
-	// List list;
-	// list.push_back(1);
-	// boovec = list;
-	// boost::apply_visitor(TEST(), boovec);
-	// List& newlist = boost::get<List>(boovec);
-	// newlist.reserve(10);
-	// newlist.push_back(4);
-	// std::iota(newlist.begin(), newlist.end(), 11);
-	// boost::apply_visitor(TEST(), boovec);
+	// Variable a = "a";
+	// boost::apply_visitor(TEST(), a);
+	// a = Query{"b"};
+	// boost::apply_visitor(TEST(), a);
 	// return 0;
-
-
-	// Variable l = List();
-	// const List& ref = boost::get<List>(l);
-	// const Variable& cvref = ref;
-	// std::cout << cvref.which() << std::endl;
-	// Variable& vref = const_cast<Variable&>(cvref);
-	// std::cout << vref.which() << std::endl;
-	// List& newlist = boost::get<List>(vref);
-	// newlist.push_back(5);
-	// std::cout << newlist.size() << std::endl;
-	// std::cout << ref.size() << std::endl;
-	// return 0;
-
 
 	std::ifstream serverconfig{argv[1]};
 	if (serverconfig.fail())
@@ -218,7 +202,7 @@ int main(int argc, char** argv) {
 	for (const std::string& name : {"a", "b"})
 		players.emplace_back(name, Connection());
 	configurations.reserve(j["games"].size());
-	for (const auto& [key, gamespecfile]: j["games"].items())
+	for ([[maybe_unused]] const auto& [ key, gamespecfile]: j["games"].items())
 	{
 		std::ifstream gamespecstream{gamespecfile};
 		if (gamespecstream.fail())
