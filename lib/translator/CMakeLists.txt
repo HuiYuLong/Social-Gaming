@@ -10,6 +10,9 @@ target_include_directories(translator_test
     ${Boost_INCLUDE_DIR}
 )
 
+SET(CMAKE_CXX_FLAGS -pthread)
+
+
 target_link_libraries(translator_test
   PRIVATE nlohmann_json::nlohmann_json
   PUBLIC common)
