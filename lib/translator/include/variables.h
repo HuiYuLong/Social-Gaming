@@ -1,6 +1,7 @@
 #include <boost/variant.hpp>
 #include <boost/tokenizer.hpp>
 #include <boost/function.hpp>
+#include <boost/algorithm/string/join.hpp>
 #include <iostream>
 #include <numeric>
 #include <unordered_map>
@@ -473,24 +474,28 @@ public:
 
     std::string operator()(const List& list) const
     {
-        std::ostringstream out;
-        out << "[";
-        for(const Variable& var : list) {
-            out << boost::apply_visitor(*this, var) << ", ";
+        if(list.size() == 0u) {
+            return "[]";
         }
-        out.seekp(out.tellp() - std::ostringstream::streampos(2));
+        std::ostringstream out;
+        out << "[" <<  boost::apply_visitor(*this, *list.begin());
+        for(auto it = ++list.begin(); it != list.end(); ++it) {
+            out << ", " << boost::apply_visitor(*this, *it) ;
+        }
         out << "]";
         return out.str();
     }
 
     std::string operator()(const Map& map) const
     {
-        std::ostringstream out;
-        out << "{";
-        for(const auto&[key, var] : map) {
-            out << key << ": " << boost::apply_visitor(*this, var) << ", ";
+        if (map.size() == 0u) {
+            return "{}";
         }
-        out.seekp(out.tellp() - std::ostringstream::streampos(2));
+        std::ostringstream out;
+        out << "{" << map.begin()->first << ": " << boost::apply_visitor(*this, map.begin()->second);
+        for(auto it = ++map.begin(); it != map.end(); ++it) {
+            out <<  ", " << it->first << ": " << boost::apply_visitor(*this, it->second);
+        }
         out << "}";
         return out.str();
     }
