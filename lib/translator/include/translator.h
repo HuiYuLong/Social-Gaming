@@ -805,7 +805,7 @@ std::unordered_map<std::string, std::function<std::unique_ptr<Rule>(const nlohma
 		{"foreach", [](const nlohmann::json& rule) { return std::make_unique<ForEachRule>(rule); }},
         {"global-message", [](const nlohmann::json& rule) { return std::make_unique<GlobalMessageRule>(rule); }},
         {"when", [](const nlohmann::json& rule) { return std::make_unique<WhenRule>(rule); }},
-        {"add", [](const nlohmann::json& rule) {return std::make_unique<AddRule>(rule); }}
+        {"add", [](const nlohmann::json& rule) {return std::make_unique<AddRule>(rule); }},
         // {"loop", [](const nlohmann::json&rule) {return std::make_unique<LoopRule>(rule);}},
         // {"inparallel", [](const nlohmann::json&rule) {return std::make_unique<InParallelRule>(rule);}},
         // {"parallelfor", [](const nlohmann::json&rule) {return std::make_unique<ParallelForRule>(rule);}},

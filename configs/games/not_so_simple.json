@@ -19,6 +19,7 @@
   "variables": {
     "winners": [
       {"name": "a", "wins" : 0}
+      
     ]
   },
 
@@ -87,6 +88,12 @@
           ]
         }
       ]
+    },
+    { "rule": "scores",
+      "score": "wins",
+      "ascending": false
     }
+
+
   ]
 }
