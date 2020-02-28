@@ -89,15 +89,15 @@ public:
     virtual void run(PseudoServer& server, GameSpec& spec) = 0;
 };
 
-using ruleList = std::vector<std::unique_ptr<Rule>>;
+using RuleList = std::vector<std::unique_ptr<Rule>>;
 
 class RuleTree {
-    ruleList rules;
+    RuleList rules;
 public:
     RuleTree(RuleTree&&);
     RuleTree& operator=(RuleTree&&);
     RuleTree(const nlohmann::json& gameConfig);
-    ruleList& getRules();
+    RuleList& getRules();
 
     std::thread spawn_detached(PseudoServer& server, GameSpec& spec)
     {
@@ -195,36 +195,47 @@ class Condition
     std::function<bool(Variable&)> clause;
     static std::regex equality_regex;
     static std::regex decimal_regex;
-    struct Operand
+    //static std::regex variable_regex;
+    // struct Operand
+    // {
+    //     Variable variable;
+    //     bool is_constant;
+
+    //     Operand(const std::string& str)
+    //     {
+    //         if (std::regex_match(str, decimal_regex)) {
+    //             variable = std::stoi(str);
+    //             is_constant = true;
+    //         }
+    //         else if (str == "true") {
+    //             variable = true;
+    //             is_constant = true;
+    //         }
+    //         else if (str == "false") {
+    //             variable = false;
+    //             is_constant = true;
+    //         }
+    //         else {
+    //             variable = str;
+    //             is_constant = false;
+    //         }
+    //     }
+
+    //     Variable get_from(Variable& toplevel) const
+    //     {
+    //         return is_constant ? variable : Getter(boost::get<std::string>(variable)).get_from(toplevel).result;
+    //     }
+    // };
+    Variable getOperand(const std::string& str)
     {
-        Variable variable;
-        bool is_constant;
-
-        Operand(const std::string& str)
-        {
-            if (std::regex_match(str, decimal_regex)) {
-                variable = std::stoi(str);
-                is_constant = true;
-            }
-            else if (str == "true") {
-                variable = true;
-                is_constant = true;
-            }
-            else if (str == "false") {
-                variable = false;
-                is_constant = true;
-            }
-            else {
-                variable = str;
-                is_constant = false;
-            }
+        if (std::regex_match(str, decimal_regex)) {
+            return std::stoi(str);
         }
-
-        Variable get_from(Variable& toplevel) const
-        {
-            return is_constant ? variable : Getter(boost::get<std::string>(variable)).get_from(toplevel).result;
+        else {
+            // Assume it's a variable name
+            return Query(str);
         }
-    };
+    }
 public:
     Condition(const nlohmann::json& condition)
     {
@@ -247,25 +258,17 @@ public:
             std::smatch match;
             if (std::regex_match(condition_str, match, equality_regex)) {
                 // Interpret as a comparison of two variables
-                Operand first(match.str(1));
-                Operand second(match.str(2));
-                clause = [first, second, negated] (Variable& toplevel) {
-                    
-                    // Getter getter(first.variable);
-                    // Variable result1 = getter.get_from(toplevel).result;
-                    // getter = Getter(second);
-                    // Variable result2 = getter.get_from(toplevel).result;
-                    Variable result1 = first.get_from(toplevel);
-                    Variable result2 = second.get_from(toplevel);
-                    return negated ^ boost::apply_visitor(Equal(), result1, result2);
+                clause = [first=getOperand(match.str(1)), second=getOperand(match.str(2)), negated] (Variable& toplevel) {
+                    Equal equal(toplevel);
+                    return negated ^ boost::apply_visitor(equal, first, second);
                 };
             }
             else {
                 // Interpret as a boolean variable
-                clause = [condition_str, negated] (Variable& toplevel) {
-                    Getter getter(condition_str);
-                    Variable result = getter.get_from(toplevel).result;
-                    return negated ^ boost::get<bool>(result);
+                Query query = Query(condition_str);
+                clause = [query, negated] (Variable& toplevel) {
+                    Getter getter(query.query, toplevel);
+                    return negated ^ boost::get<bool>(getter.get().result);
                 };
             }
         }
@@ -280,13 +283,14 @@ public:
 
 std::regex Condition::equality_regex("\\s*(\\S+)\\s*==\\s*(\\S+)\\s*");
 std::regex Condition::decimal_regex("\\d+");
+//std::regex Condition::variable_regex("(\\w+(\\(\\w+\\)))?\\w+(\\(\\w+\\)))?");
 
 struct Case
 { 
     Case(const nlohmann::json& case_);
 
 	Condition condition;
-	ruleList subrules;
+	RuleList subrules;
 };
 
 class Text
@@ -321,8 +325,8 @@ public:
         std::ostringstream out;
         for (const Value& value : values) {
             if (value.needs_to_be_replaced) {
-                Getter getter(value.text);
-                Variable& result = getter.get_from(toplevel).result;
+                Getter getter(value.text, toplevel);
+                Variable& result = getter.get().result;
                 out << boost::apply_visitor(StringConverter(), result);
             }
             else {
@@ -515,7 +519,7 @@ class ForEachRule : public Rule {
 private:
     ruleType list;
     ruleType element_name;
-    ruleList subrules;
+    RuleList subrules;
 
 public:
     ForEachRule(const nlohmann::json& rule);
@@ -538,7 +542,7 @@ public:
   
 class InParallelRule : public Rule {
 private:
-    ruleList subrules;
+    RuleList subrules;
 public:
     InParallelRule(const nlohmann::json& rule);
 
