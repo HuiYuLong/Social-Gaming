@@ -72,6 +72,12 @@ void GlobalMessageRule::run(PseudoServer& server, GameSpec& spec)
 	}
 }
 
+// void ScoresRule::run(PseudoServer& server, GameSpec& spec)
+// {
+// 	//const std::string& name = boost::get<std::string>(boost::get<Map>(player)["name"]);
+// 	server.send({"heloo\n"});
+// }
+
 void ForEachRule::run(PseudoServer& server, GameSpec& spec)
 {
 	Getter getter(list, spec.getVariables());

@@ -512,23 +512,22 @@ public:
 
 class ScoresRule: public Rule{
 private:
-    DataType score;
-    DataType ascending;
-
+    int score;
+    bool ascending;
 public:
     ScoresRule(const nlohmann::json& rule);
+   
+    void run(PseudoServer& server, GameSpec& spec) override;
 
-    DataType getScore() const {return score;}
-    DataType getAscending() const {return ascending;}
+    int getScore() const {return score;}
+    bool getAscending() const {return ascending;}
 
-    void setScore(const bool& score) {this->score = score;}
+    void setScore(const int& score) {this->score = score;}
     void setAscending(const bool& ascending) {this->ascending = ascending;}
 
-    std::unique_ptr<std::deque<Message>> run(const std::deque<Message>& incoming) {
-        std::unique_ptr<std::deque<Message>> outputs = std::make_unique<std::deque<Message>>(); 
-        return outputs;
-    }
 };
+
+
 
 //-------------------------------Sophia's Code------------------------------//
 
@@ -820,7 +819,7 @@ std::unordered_map<std::string, std::function<std::unique_ptr<Rule>(const nlohma
         // {"reverse", [](const nlohmann::json& rule) {return std::make_unique<ReverseRule>(rule); }},
         // {"discard", [](const nlohmann::json& rule) {return std::make_unique<DiscardRule>(rule); }}, 
         // {"input-choice", [](const nlohmann::json& rule) {return std::make_unique<InputChoiceRule>(rule); }},
-        // {"scores", [](const nlohmann::json& rule) {return std::make_unique<ScoresRule>(rule); }}
+         //{"scores", [](const nlohmann::json& rule) {return std::make_unique<ScoresRule>(rule); }}
 };
 
 
