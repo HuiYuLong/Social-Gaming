@@ -4,12 +4,7 @@
 #include <iostream>
 using namespace std;
 
-GlobalMessageRule::GlobalMessageRule(const nlohmann::json& rule): value(rule["value"]) { std::cout << "Global message: " << rule["value"] << std::endl; }
-
-
-ScoresRule::ScoresRule(const nlohmann::json& rule): score(rule["score"]) { 
-	std::cout << "Score Board: "  << std::endl; 
-	}
+//**** Control Structures ****//
 ForEachRule::ForEachRule(const nlohmann::json& rule): list(rule["list"]), element_name(rule["element"])
 {
     std::cout << "For each: " << element_name << std::endl;
@@ -19,6 +14,13 @@ ForEachRule::ForEachRule(const nlohmann::json& rule): list(rule["list"]), elemen
     }
 }
 
+LoopRule::LoopRule(const nlohmann::json& rule): failCondition(rule["while"]) {
+	std::cout << "Loop" << std::endl;
+	for (const auto& it : rule["rules"].items()) {
+		subrules.push_back(rulemap[it.value()["rule"]](it.value()));
+	}
+}
+	
 WhenRule::WhenRule(const nlohmann::json& rule)
 {
     std::cout << "When" << std::endl;
@@ -34,8 +36,50 @@ Case::Case(const nlohmann::json& case_): condition(case_["condition"]) {
 		subrules.push_back(rulemap[subrule.value()["rule"]](subrule.value()));
 	}
 }
+//
+// Todo: ParallelFor
+//
 
+
+//**** List Operations ****//
+ReverseRule::ReverseRule(const nlohmann::json& rule): list(rule["list"]) {
+	std::cout << "Reverse: " << list << std::endl;
+}
+//
+// Todo: Extend, Shuffle, Sort, Deal, Discard & ListAttributes
+//
+
+
+//**** Arithmetic Operations ****//
 AddRule::AddRule(const nlohmann::json& rule): to(rule["to"]), value(rule["value"]) { std::cout << "Add " << value << std::endl; }
+//
+// Todo: NumericalAttribues
+//
+
+
+//**** Timing ****//
+//
+// Todo: Timer
+//
+
+
+//**** Human Input ****//
+//
+// Todo: InputChoice, InputText & InputVote
+//
+
+
+//**** Output ****//
+ScoresRule::ScoresRule(const nlohmann::json& rule): score(rule["score"]) { 
+	std::cout << "Score Board: "  << std::endl; 
+	}
+
+GlobalMessageRule::GlobalMessageRule(const nlohmann::json& rule): value(rule["value"]) { std::cout << "Global message: " << rule["value"] << std::endl; }
+//
+// Todo: Message
+//
+
+
 
 RuleTree::RuleTree(const nlohmann::json& gameConfig)
 {
@@ -66,13 +110,6 @@ RuleTree& RuleTree::operator=(RuleTree&& oldTree)
 RuleList& RuleTree::getRules() { return rules; }
 
 
-LoopRule::LoopRule(const nlohmann::json& rule): failCondition(rule["while"]) {
-	std::cout << "Loop" << std::endl;
-	for (const auto& it : rule["rules"].items()) {
-		subrules.push_back(rulemap[it.value()["rule"]](it.value()));
-	}
-}
-	
 void LoopRule::run(PseudoServer& server, GameSpec& spec) {
 
 	while (failCondition.evaluate(spec.getVariables())) {
@@ -90,6 +127,18 @@ void GlobalMessageRule::run(PseudoServer& server, GameSpec& spec)
 		server.send({spec.getConnectionByName(name), value.fill_with(spec.getVariables())});
 	}
 }
+
+void ReverseRule::run(PseudoServer& server, GameSpec& spec) {
+	std::string toReverse = this->list;
+	List& reverseList = boost::get<List>(boost::get<Map>(spec.getVariables())[toReverse]);
+	std::reverse(reverseList.begin(), reverseList.end());
+	//** For testing **//
+	// for (Variable& weapon : reverseList) {
+	// 	const std::string& weapons = boost::get<std::string>(boost::get<Map>(weapon)["name"]);
+	// 	std::cout << "***After weapons***" << weapons << std::endl;
+	// }
+}
+
 
 void ScoresRule::run(PseudoServer& server, GameSpec& spec)
 {
