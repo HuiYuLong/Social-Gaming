@@ -589,11 +589,11 @@ std::unordered_map<std::string, std::function<std::unique_ptr<Rule>(const nlohma
         {"global-message", [](const nlohmann::json& rule) { return std::make_unique<GlobalMessageRule>(rule); }},
         {"when", [](const nlohmann::json& rule) { return std::make_unique<WhenRule>(rule); }},
         {"add", [](const nlohmann::json& rule) {return std::make_unique<AddRule>(rule); }},
-        {"loop", [](const nlohmann::json&rule) {return std::make_unique<LoopRule>(rule);}}
+        {"loop", [](const nlohmann::json&rule) {return std::make_unique<LoopRule>(rule);}},
         // {"inparallel", [](const nlohmann::json&rule) {return std::make_unique<InParallelRule>(rule);}},
         // {"parallelfor", [](const nlohmann::json&rule) {return std::make_unique<ParallelForRule>(rule);}},
         // {"extend", [](const nlohmann::json& rule) {return std::make_unique<ExtendRule>(rule); }}, 
-        // {"reverse", [](const nlohmann::json& rule) {return std::make_unique<ReverseRule>(rule); }},
+        {"reverse", [](const nlohmann::json& rule) {return std::make_unique<ReverseRule>(rule); }},
         // {"discard", [](const nlohmann::json& rule) {return std::make_unique<DiscardRule>(rule); }}, 
         // {"input-choice", [](const nlohmann::json& rule) {return std::make_unique<InputChoiceRule>(rule); }},
          {"scores", [](const nlohmann::json& rule) {return std::make_unique<ScoresRule>(rule); }}
