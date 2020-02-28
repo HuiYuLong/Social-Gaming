@@ -17,7 +17,6 @@
 #include "common.h"
 #include "variables.h"
 
-using DataType = std::string;
 using networking::Message;
 using networking::Connection;
 
@@ -80,8 +79,6 @@ Variable buildVariables(const nlohmann::json& json)
     }
 }
 
-
-using ruleType = std::string;
 
 class GameSpec;
 
@@ -336,6 +333,7 @@ public:
     }
 };
 
+using ruleType = std::string;
 
 //-----------------------PETER'S CODE:---------------------------------
 
@@ -353,7 +351,7 @@ public:
 class TimerRule : public Rule{
 private:
     int duration;
-    DataType mode;
+    ruleType mode;
     ruleList subrules;
 public:
     TimerRule(const nlohmann::json& rule);
@@ -364,9 +362,9 @@ public:
 
 class InputChoiceRule : public Rule{
 private:
-    DataType to;
+    ruleType to;
     Text prompt;
-    DataType choices; 
+    ruleType choices; 
     Text result;
 public:
     InputChoiceRule(const nlohmann::json& rule);
@@ -377,7 +375,7 @@ public:
 
 class InputTextRule : public Rule{
 private:
-    DataType to; 
+    ruleType to; 
     Text prompt;
     Text result; 
 public:
@@ -388,9 +386,9 @@ public:
 
 class InputVoteRule : public Rule{
 private:
-    DataType to; 
+    ruleType to; 
     Text prompt; 
-    DataType choices;
+    ruleType choices;
     Text result;
 public:
     InputVoteRule(const nlohmann::json& rule);
@@ -401,7 +399,7 @@ public:
 
 class MessageRule : public Rule{
 private:
-    DataType to; 
+    ruleType to; 
     Text value;
 
 public:
@@ -423,7 +421,7 @@ public:
 
 class ScoresRule: public Rule{
 private:
-    DataType score;
+    ruleType score;
     bool ascending;
 
 public:
@@ -437,8 +435,8 @@ public:
 
 class ExtendRule : public Rule {
 private:
-    DataType target;
-    DataType list;
+    ruleType target;
+    ruleType list;
 public:
     ExtendRule(const nlohmann::json& rule);
     
@@ -449,7 +447,7 @@ public:
   
 class ReverseRule : public Rule{
 private:
-    DataType list;
+    ruleType list;
 public:
     ReverseRule(const nlohmann::json& rule);
     
@@ -459,7 +457,7 @@ public:
 
 class ShuffleRule : public Rule{
 private:
-    DataType list;
+    ruleType list;
 public:
     ShuffleRule(const nlohmann::json& rule);
     
@@ -470,7 +468,7 @@ public:
 // Sorts a list in ascending order
 class SortRule : public Rule {
 private:
-    DataType list;
+    ruleType list;
     // Variable key;
 public:
     SortRule(const nlohmann::json& rule);
@@ -481,8 +479,8 @@ public:
 
 class DealRule : public Rule {
 private:
-    DataType from;
-    DataType to;
+    ruleType from;
+    ruleType to;
     int count;
 public:
     DealRule(const nlohmann::json& rule);
@@ -493,7 +491,7 @@ public:
 
 class DiscardRule : public Rule {
 private:
-    DataType from;
+    ruleType from;
     int count;
 public:
     DiscardRule(const nlohmann::json& rule);
@@ -503,7 +501,7 @@ public:
 
 class ListAttributesRule : public Rule {
 private:
-    DataType list;
+    ruleType list;
 public:
     ListAttributesRule(const nlohmann::json& rule);
     
@@ -515,8 +513,8 @@ public:
 
 class ForEachRule : public Rule {
 private:
-    DataType list;
-    DataType element_name;
+    ruleType list;
+    ruleType element_name;
     ruleList subrules;
 
 public:
@@ -550,8 +548,8 @@ public:
 
 class ParallelForRule : public Rule {
 private:
-    DataType list;
-    DataType element;
+    ruleType list;
+    ruleType element;
     ruleList subrules;
 public:
     ParallelForRule(const nlohmann::json& rule);
@@ -563,8 +561,8 @@ public:
 // Sorts a list in ascending order
 class SwitchRule : public Rule {
 private:
-    DataType list;
-    DataType value;
+    ruleType list;
+    ruleType value;
     std::vector<Case> cases;
 public:
     SwitchRule(const nlohmann::json& rule);

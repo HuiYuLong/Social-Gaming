@@ -111,24 +111,24 @@ nlohmann::json CropSection(const nlohmann::json& j,std::string name){
 	return nullptr;
 }
 
-//Define type of value in item of json.xs
-void definingDataType( const nlohmann::basic_json<> &item, DataType& value){
-	using type = nlohmann::json::value_t;	
-	if (item.type() == type::number_unsigned){
-		unsigned temp = item;
-		value = temp;
+// //Define type of value in item of json.xs
+// void definingDataType( const nlohmann::basic_json<> &item, DataType& value){
+// 	using type = nlohmann::json::value_t;	
+// 	if (item.type() == type::number_unsigned){
+// 		unsigned temp = item;
+// 		value = temp;
 		
-	} else if (item.type() == type::number_integer){
-		int temp = item;
-		value = temp;
-	} else if (item.type() == type::boolean){
-		bool temp = item;
-		value = temp;
-	} else if (item.type() == type::string){
-		std::string temp = item;
-		value = temp;
-	}
-}
+// 	} else if (item.type() == type::number_integer){
+// 		int temp = item;
+// 		value = temp;
+// 	} else if (item.type() == type::boolean){
+// 		bool temp = item;
+// 		value = temp;
+// 	} else if (item.type() == type::string){
+// 		std::string temp = item;
+// 		value = temp;
+// 	}
+// }
 
 
 
