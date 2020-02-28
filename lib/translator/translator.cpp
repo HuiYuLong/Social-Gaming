@@ -62,6 +62,21 @@ RuleTree& RuleTree::operator=(RuleTree&& oldTree)
 RuleList& RuleTree::getRules() { return rules; }
 
 
+LoopRule::LoopRule(const nlohmann::json& rule): failCondition(rule["while"]) {
+	std::cout << "Loop" << std::endl;
+	for (const auto& it : rule["rules"].items()) {
+		subrules.push_back(rulemap[it.value()["rule"]](it.value()));
+	}
+}
+	
+void LoopRule::run(PseudoServer& server, GameSpec& spec) {
+
+	while (failCondition.evaluate(spec.getVariables())) {
+		for (const auto& ptr : subrules) {
+			ptr->run(server, spec);
+		}
+	}
+}
 
 void GlobalMessageRule::run(PseudoServer& server, GameSpec& spec)
 {
