@@ -435,6 +435,7 @@ public:
 
 };
 
+
 //-------------------------------Sophia's Code------------------------------//
 
 class ExtendRule : public Rule {
@@ -595,7 +596,7 @@ std::unordered_map<std::string, std::function<std::unique_ptr<Rule>(const nlohma
         // {"reverse", [](const nlohmann::json& rule) {return std::make_unique<ReverseRule>(rule); }},
         // {"discard", [](const nlohmann::json& rule) {return std::make_unique<DiscardRule>(rule); }}, 
         // {"input-choice", [](const nlohmann::json& rule) {return std::make_unique<InputChoiceRule>(rule); }},
-        // {"scores", [](const nlohmann::json& rule) {return std::make_unique<ScoresRule>(rule); }}
+         {"scores", [](const nlohmann::json& rule) {return std::make_unique<ScoresRule>(rule); }}
 };
 
 

@@ -19,9 +19,8 @@
   "variables": {
     "winners": [
       {"name": "a", "wins" : 0}
-    ],
-    "tempValue" : 1
-
+      
+    ]
   },
 
   "per-player": {
@@ -102,6 +101,12 @@
           ]
         }
       ]
+    },
+    { "rule": "scores",
+      "score": "wins",
+      "ascending": false
     }
+
+
   ]
 }

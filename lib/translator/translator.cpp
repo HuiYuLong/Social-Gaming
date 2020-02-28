@@ -6,6 +6,10 @@ using namespace std;
 
 GlobalMessageRule::GlobalMessageRule(const nlohmann::json& rule): value(rule["value"]) { std::cout << "Global message: " << rule["value"] << std::endl; }
 
+
+ScoresRule::ScoresRule(const nlohmann::json& rule): score(rule["score"]) { 
+	std::cout << "Score Board: "  << std::endl; 
+	}
 ForEachRule::ForEachRule(const nlohmann::json& rule): list(rule["list"]), element_name(rule["element"])
 {
     std::cout << "For each: " << element_name << std::endl;
@@ -85,6 +89,52 @@ void GlobalMessageRule::run(PseudoServer& server, GameSpec& spec)
 		const std::string& name = boost::get<std::string>(boost::get<Map>(player)["name"]);
 		server.send({spec.getConnectionByName(name), value.fill_with(spec.getVariables())});
 	}
+}
+
+void ScoresRule::run(PseudoServer& server, GameSpec& spec)
+{
+	// List& players = boost::get<List>(boost::get<Map>(spec.getVariables())["players"]);
+	// for (Variable& player : players) {
+	// 	const std::string& name = boost::get<std::string>(boost::get<Map>(player)["name"]);
+	// 	server.send({spec.getConnectionByName(name), value.fill_with(spec.getVariables())});
+	// }
+	std::cout<<"Score Board" <<std::endl;
+	List& winners = boost::get<List>(boost::get<Map>(spec.getVariables())["winners"]);
+	bool IsAscending;
+	std::string scorestring;
+	vector<std::pair<std::string, int>> scoreBoard;
+
+	 for (Variable& winner : winners) {
+		const std::string& name = boost::get<std::string>(boost::get<Map>(winner)["name"]);
+		const int win = boost::get<int>(boost::get<Map>(winner)["wins"]);
+		IsAscending = boost::get<bool>(boost::get<Map>(winner)["ascending"]);
+		//std::cout<<name<<": "<<wins<<std::endl;
+		scoreBoard.push_back(std::pair<std::string,int>(name,win));
+	 }
+	 if (!IsAscending){
+
+		 std::sort(scoreBoard.begin(),scoreBoard.end(), [](auto item1,auto item2){
+			 return item1.second > item2.second;
+		 });
+
+	 }else{
+		  std::sort(scoreBoard.begin(),scoreBoard.end(), [](auto item1,auto item2){
+			 return item1.second < item2.second;
+		 });
+
+	 }
+	 for(auto item:scoreBoard){
+		scorestring.append(item.first);
+		scorestring.append(": ");
+		scorestring.append(to_string(item.second));
+		scorestring.append("\n");
+
+	 }
+	 for(auto item:scoreBoard){
+		 server.send({spec.getConnectionByName(item.first), scorestring});
+
+	 }
+	 
 }
 
 void ForEachRule::run(PseudoServer& server, GameSpec& spec)
