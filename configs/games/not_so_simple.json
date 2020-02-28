@@ -19,7 +19,7 @@
   "variables": {
     "winners": [
       {"name": "a", "wins" : 0}
-    ],
+     ],
     "tempValue" : 1
 
   },
