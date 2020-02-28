@@ -512,21 +512,15 @@ public:
 
 class ScoresRule: public Rule{
 private:
-    int score;
+    ruleType score;
     bool ascending;
+
 public:
     ScoresRule(const nlohmann::json& rule);
-   
+
     void run(PseudoServer& server, GameSpec& spec) override;
 
-    int getScore() const {return score;}
-    bool getAscending() const {return ascending;}
-
-    void setScore(const int& score) {this->score = score;}
-    void setAscending(const bool& ascending) {this->ascending = ascending;}
-
 };
-
 
 
 //-------------------------------Sophia's Code------------------------------//
@@ -819,7 +813,7 @@ std::unordered_map<std::string, std::function<std::unique_ptr<Rule>(const nlohma
         // {"reverse", [](const nlohmann::json& rule) {return std::make_unique<ReverseRule>(rule); }},
         // {"discard", [](const nlohmann::json& rule) {return std::make_unique<DiscardRule>(rule); }}, 
         // {"input-choice", [](const nlohmann::json& rule) {return std::make_unique<InputChoiceRule>(rule); }},
-         //{"scores", [](const nlohmann::json& rule) {return std::make_unique<ScoresRule>(rule); }}
+         {"scores", [](const nlohmann::json& rule) {return std::make_unique<ScoresRule>(rule); }}
 };
 
 
