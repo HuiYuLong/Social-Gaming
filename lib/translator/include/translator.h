@@ -356,7 +356,7 @@ class TimerRule : public Rule{
 private:
     int duration;
     ruleType mode;
-    ruleList subrules;
+    RuleList subrules;
 public:
     TimerRule(const nlohmann::json& rule);
 
@@ -532,10 +532,9 @@ public:
 class LoopRule : public Rule {
 private:
     Condition failCondition;
-    ruleList subrules;
+    RuleList subrules;
 public:
     LoopRule(const nlohmann::json& rule);
-
     void run(PseudoServer& server, GameSpec& spec) override;
 
 };
@@ -554,7 +553,7 @@ class ParallelForRule : public Rule {
 private:
     ruleType list;
     ruleType element;
-    ruleList subrules;
+    RuleList subrules;
 public:
     ParallelForRule(const nlohmann::json& rule);
 
@@ -588,8 +587,8 @@ std::unordered_map<std::string, std::function<std::unique_ptr<Rule>(const nlohma
 		{"foreach", [](const nlohmann::json& rule) { return std::make_unique<ForEachRule>(rule); }},
         {"global-message", [](const nlohmann::json& rule) { return std::make_unique<GlobalMessageRule>(rule); }},
         {"when", [](const nlohmann::json& rule) { return std::make_unique<WhenRule>(rule); }},
-        {"add", [](const nlohmann::json& rule) {return std::make_unique<AddRule>(rule); }}
-        // {"loop", [](const nlohmann::json&rule) {return std::make_unique<LoopRule>(rule);}},
+        {"add", [](const nlohmann::json& rule) {return std::make_unique<AddRule>(rule); }},
+        {"loop", [](const nlohmann::json&rule) {return std::make_unique<LoopRule>(rule);}}
         // {"inparallel", [](const nlohmann::json&rule) {return std::make_unique<InParallelRule>(rule);}},
         // {"parallelfor", [](const nlohmann::json&rule) {return std::make_unique<ParallelForRule>(rule);}},
         // {"extend", [](const nlohmann::json& rule) {return std::make_unique<ExtendRule>(rule); }}, 
