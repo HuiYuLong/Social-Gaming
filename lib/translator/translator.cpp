@@ -218,25 +218,21 @@ void WhenRule::run(PseudoServer& server, GameSpec& spec)
 }
 
 void InputChoiceRule::run(PseudoServer& server, GameSpec& spec){
-	// Getter getter(choices, spec.getVariables());
-	// GetterResult result = getter.get();
-	
+
 	List& players = boost::get<List>(boost::get<Map>(spec.getVariables())["players"]);
 	Map& toplevel = boost::get<Map>(spec.getVariables());
 	toplevel[to] = &players.front(); //first player
 	const std::string& name = boost::get<std::string>(boost::get<Map>(players.front())["name"]); 
 	server.send({spec.getConnectionByName(name), prompt.fill_with(spec.getVariables())});
-	// server.send({spec.getConnectionByName(name), choices});
-
-	// List& weapons = boost::get<List>
-	// for(Variable& player:players){
-	// 	toplevel[to] = &player;
-	// 	const std::string& name = boost::get<std::string>(boost::get<Map>(player)["name"]); //first player
-	// 	server.send({spec.getConnectionByName(name), prompt.fill_with(spec.getVariables())});
-	// }
-
-	// cout << "***********************" << prompt.fill_with(spec.getVariables()) << endl;
-
+	List& weapons = boost::get<List>(boost::get<Map>(spec.getVariables())["weapons"]);
+	for(auto weapon:weapons){
+		const std::string& weaponName = boost::get<std::string>(boost::get<Map>(weapon)["name"]);
+		server.send({spec.getConnectionByName(name), weaponName});
+	}
+	//NEED more test on this
+	std::string choice;	
+	std::cin >> choice;
+	server.send({spec.getConnectionByName(name), choice});
 }
 //Helper functions
 //Crop The big JSON file into short target secction with input name
