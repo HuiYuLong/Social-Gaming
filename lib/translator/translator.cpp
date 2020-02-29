@@ -55,7 +55,7 @@ ShuffleRule::ShuffleRule(const nlohmann::json& rule): list(rule["list"]) {
 	std::cout << "Shuffle: " << list << std::endl;
 }
 
-// Todo: Extend, Sort, Deal, Discard & ListAttributes
+// Todo: Extend, Deal, Discard & ListAttributes
 
 //
 
@@ -93,9 +93,10 @@ ScoresRule::ScoresRule(const nlohmann::json& rule): score(rule["score"]) {
 	}
 
 GlobalMessageRule::GlobalMessageRule(const nlohmann::json& rule): value(rule["value"]) { std::cout << "Global message: " << rule["value"] << std::endl; }
-//
-// Todo: Message
-//
+
+MessageRule::MessageRule(const nlohmann::json& rule): to(rule["to"]), value(rule["value"]) { 
+	std::cout << "message: " << rule["value"] << std::endl; 
+}
 
 
 
@@ -144,6 +145,14 @@ void GlobalMessageRule::run(PseudoServer& server, Configuration& spec)
 		const std::string& name = boost::get<std::string>(boost::get<Map>(player)["name"]);
 		server.send({spec.getConnectionByName(name), value.fill_with(spec.getVariables())});
 	}
+}
+
+void MessageRule::run(PseudoServer& server, Configuration& spec) {
+	List& players = boost::get<List>(boost::get<Map>(spec.getVariables())["players"]);
+	Map& toplevel = boost::get<Map>(spec.getVariables());
+	toplevel[to] = &players.front(); //pick first player in the list for now, might be changed in the future
+	const std::string& name = boost::get<std::string>(boost::get<Map>(players.front())["name"]); 
+	server.send({spec.getConnectionByName(name), value.fill_with(spec.getVariables())});
 }
 
 void ReverseRule::run(PseudoServer& server, Configuration& spec) {
