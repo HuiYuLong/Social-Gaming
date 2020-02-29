@@ -1,37 +1,29 @@
-#include <iostream>
+##include <iostream>
 #include <string>
 #include <ctime>
-#include <cstdlib>
+#include <cstdl2ib>
 #include <limits>
 #include <translator.h>
 
-class Gamespec {
-    private:
-    std::unique_ptr<Configuration> configuration;
-    std::unique_ptr<Constants> constants;
-    std::unique_ptr<Variables> variables;
-    std::unique_ptr<PerPlayer> perplayer;
-    std::vector<std::unique_ptr<Rule*>> ruleTree;
-  
-    //PerAudience peraudience;
-    public:
-    Gamespec(std::unique_ptr<Configuration> configuration, std::unique_ptr<Constants> constants, std::unique_ptr<Variables> variables, std::unique_ptr<PerPlayer> perplayer, std::vector<std::unique_ptr<Rule*>> ruleTree) : std::unique_ptr<Configuration>(configuration), std::unique_ptr<Constants>(constants), std::unique_ptr<Variables>(variables), std::unique_ptr<PerPlayer>(perplayer), std::vector<std::unique_ptr<Rule*>>(ruleTree) {}
-    std::unique_ptr<Configuration> getConfiguration() const;
-    std::unique_ptr<Constants> getConstants() const;
-    std::unique_ptr<Variables> getVariables() const;
-    std::unique_ptr<PerPlayer> getPerplayer() const;
-    std::vector<std::unique_ptr<Rule*>> getRuleTree() const;
+class GameSpec {
+public:
+    GameSpec(const nlohmann::json& gamespec, const std::vector<Player>& players);
+    const std::string& getName() const;
+    size_t getPlayerCountMin() const;
+    size_t getPlayerCountMax() const;
+    Variable& getVariables();
+    Connection getConnectionByName(const std::string& name);
+    void launchGame(PseudoServer& server);
+    std::thread launchGameDetached(PseudoServer& server);
 
-
-    std::unique_ptr<Configuration> setConfiguration(std::unique_ptr<Configuration> configuration);
-    std::unique_ptr<Constants> setConstants(std::unique_ptr<Constants> constants);
-    std::unique_ptr<Variables> setVariables(std::unique_ptr<Variables> variables);
-    std::unique_ptr<PerPlayer> setPerplayer(std::unique_ptr<PerPlayer> perplayer);
-    std::vector<std::unique_ptr<Rule*>> setRuleTree(std::vector<std::unique_ptr<Rule*>> ruleTree);
-  
-
-    virtual ~Gamespec() {}
-
+private:
+    std::string name;
+    size_t playerCountMin;
+    size_t playerCountMax;
+    Variable variables;
+    RuleTree rules;
+    using PlayerMap = std::unordered_map<std::string, Connection>;
+    PlayerMap playersMap;
 };
 
 
