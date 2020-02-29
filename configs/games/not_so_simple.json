@@ -50,7 +50,7 @@
       "element": "round",
       "rules": [
 
-        { "rule": "reverse",
+        { "rule": "shuffle",
           "list": "weapons"
         },
 

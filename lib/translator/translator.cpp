@@ -45,8 +45,13 @@ Case::Case(const nlohmann::json& case_): condition(case_["condition"]) {
 ReverseRule::ReverseRule(const nlohmann::json& rule): list(rule["list"]) {
 	std::cout << "Reverse: " << list << std::endl;
 }
+
+ShuffleRule::ShuffleRule(const nlohmann::json& rule): list(rule["list"]) {
+	std::cout << "Shuffle: " << list << std::endl;
+}
+
 //
-// Todo: Extend, Shuffle, Sort, Deal, Discard & ListAttributes
+// Todo: Extend, Sort, Deal, Discard & ListAttributes
 //
 
 
@@ -132,15 +137,20 @@ void GlobalMessageRule::run(PseudoServer& server, Configuration& spec)
 
 void ReverseRule::run(PseudoServer& server, Configuration& spec) {
 	std::string toReverse = this->list;
-	List& reverseList = boost::get<List>(boost::get<Map>(spec.getVariables())[toReverse]);
-	std::reverse(reverseList.begin(), reverseList.end());
+	List& toReverseList = boost::get<List>(boost::get<Map>(spec.getVariables())[toReverse]);
+	std::reverse(toReverseList.begin(), toReverseList.end());
 	//** For testing **//
 	// for (Variable& weapon : reverseList) {
 	// 	const std::string& weapons = boost::get<std::string>(boost::get<Map>(weapon)["name"]);
-	// 	std::cout << "***After weapons***" << weapons << std::endl;
+	// 	std::cout << "***After reversing weapons list***" << weapons << std::endl;
 	// }
 }
 
+void ShuffleRule::run(PseudoServer& server, Configuration& spec) {
+	std::string toShuffle= this->list;
+	List& toShuffleList = boost::get<List>(boost::get<Map>(spec.getVariables())[toShuffle]);
+	std::random_shuffle(toShuffleList.begin(), toShuffleList.end());
+}
 
 void ScoresRule::run(PseudoServer& server, Configuration& spec)
 {
