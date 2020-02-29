@@ -5,6 +5,7 @@
 #include <iostream>
 #include <numeric>
 #include <unordered_map>
+#include <algorithm>
 
 // using String = std::string;
 // using Integer = long;
