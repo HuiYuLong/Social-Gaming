@@ -597,7 +597,11 @@ std::unordered_map<std::string, std::function<std::unique_ptr<Rule>(const nlohma
         // {"discard", [](const nlohmann::json& rule) {return std::make_unique<DiscardRule>(rule); }}, 
         {"input-choice", [](const nlohmann::json& rule) {return std::make_unique<InputChoiceRule>(rule); }},
         {"scores", [](const nlohmann::json& rule) {return std::make_unique<ScoresRule>(rule); }},
-        {"shuffle", [](const nlohmann::json& rule) {return std::make_unique<ShuffleRule>(rule); }}
+        {"shuffle", [](const nlohmann::json& rule) {return std::make_unique<ShuffleRule>(rule); }},
+        {"input-text", [](const nlohmann::json& rule) {return std::make_unique<InputTextRule>(rule); }},
+        {"input-vote", [](const nlohmann::json& rule) {return std::make_unique<InputVoteRule>(rule); }}
+
+
 };
 
 

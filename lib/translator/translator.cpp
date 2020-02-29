@@ -75,6 +75,12 @@ AddRule::AddRule(const nlohmann::json& rule): to(rule["to"]), value(rule["value"
 InputChoiceRule::InputChoiceRule(const nlohmann::json& rule): to(rule["to"]), prompt(rule["prompt"]), choices(rule["choices"]), result(rule["result"]){
 	std::cout << "Input Choice: " << rule["prompt"] << std::endl;
 }
+InputTextRule::InputTextRule(const nlohmann::json& rule): to(rule["to"]), prompt(rule["prompt"]), result(rule["result"]){
+	std::cout << "Input Text: " << rule["prompt"] << std::endl;
+}
+InputVoteRule::InputVoteRule(const nlohmann::json& rule): to(rule["to"]), prompt(rule["prompt"]), choices(rule["choices"]),result(rule["result"]){
+	std::cout << "Input vote: " << rule["prompt"] << std::endl;
+}
 
 //**** Output ****//
 ScoresRule::ScoresRule(const nlohmann::json& rule): score(rule["score"]) { 
@@ -231,7 +237,7 @@ void InputChoiceRule::run(PseudoServer& server, Configuration& spec){
 
 	List& players = boost::get<List>(boost::get<Map>(spec.getVariables())["players"]);
 	Map& toplevel = boost::get<Map>(spec.getVariables());
-	toplevel[to] = &players.front(); //first player
+	toplevel[to] = &players.front(); //pick first player in the list for now, might be changed in the future
 	const std::string& name = boost::get<std::string>(boost::get<Map>(players.front())["name"]); 
 	server.send({spec.getConnectionByName(name), prompt.fill_with(spec.getVariables())});
 	List& weapons = boost::get<List>(boost::get<Map>(spec.getVariables())["weapons"]);
@@ -252,6 +258,22 @@ void InputChoiceRule::run(PseudoServer& server, Configuration& spec){
 	} else {
 		std::cout << "Please enter valid choice" << std::endl;
 	}
+}
+
+void InputTextRule::run(PseudoServer& server, Configuration& spec){
+	List& players = boost::get<List>(boost::get<Map>(spec.getVariables())["players"]);
+	Map& toplevel = boost::get<Map>(spec.getVariables());
+	toplevel[to] = &players.front(); //pick first player in the list for now, might be changed in the future
+	const std::string& name = boost::get<std::string>(boost::get<Map>(players.front())["name"]); 
+	server.send({spec.getConnectionByName(name), prompt.fill_with(spec.getVariables())});
+
+	std::string text;
+	std::cin >> text;
+	server.send({spec.getConnectionByName(name), text});
+}
+
+void InputVoteRule::run(PseudoServer& server, Configuration& spec){
+	//TODO
 }
 //Helper functions
 //Crop The big JSON file into short target secction with input name
