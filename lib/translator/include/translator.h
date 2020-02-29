@@ -80,13 +80,13 @@ Variable buildVariables(const nlohmann::json& json)
 }
 
 
-class GameSpec;
+class Configuration;
 
 class Rule {
 public:
     virtual ~Rule() {};
 
-    virtual void run(PseudoServer& server, GameSpec& spec) = 0;
+    virtual void run(PseudoServer& server, Configuration& spec) = 0;
 };
 
 using RuleList = std::vector<std::unique_ptr<Rule>>;
@@ -99,7 +99,7 @@ public:
     RuleTree(const nlohmann::json& gameConfig);
     RuleList& getRules();
 
-    std::thread spawn_detached(PseudoServer& server, GameSpec& spec)
+    std::thread spawn_detached(PseudoServer& server, Configuration& spec)
     {
         return std::thread([this, &server, &spec] {
             for (const auto& ptr : rules) {
@@ -108,7 +108,7 @@ public:
         });
     }
 
-    void spawn(PseudoServer& server, GameSpec& spec)
+    void spawn(PseudoServer& server, Configuration& spec)
     {
         for (const auto& ptr : rules) {
             ptr->run(server, spec);
@@ -124,14 +124,14 @@ struct Player
     Player(const std::string& name, Connection connection): name(name), connection(connection) {}
 };
 
-class GameSpec {
+class Configuration {
 public:
-	GameSpec(const nlohmann::json& gamespec, const std::vector<Player>& players):
-        name(gamespec["configuration"]["name"]),
-        playerCountMin(gamespec["configuration"]["player count"]["min"]),
-        playerCountMax(gamespec["configuration"]["player count"]["max"]),
+	Configuration(const nlohmann::json& config, const std::vector<Player>& players):
+        name(config["configuration"]["name"]),
+        playerCountMin(config["configuration"]["player count"]["min"]),
+        playerCountMax(config["configuration"]["player count"]["max"]),
         variables(Map()),
-        rules(gamespec["rules"])
+        rules(config["rules"])
     {
         if (players.size() < playerCountMin) {
             std::cout << "Too few players" << std::endl;
@@ -145,22 +145,22 @@ public:
         // Put "setup" variables into "configuration" submap
         map["configuration"] = Map();
         Map& configuration = boost::get<Map>(map["configuration"]);
-        for(const auto&[key, value]: gamespec["configuration"]["setup"].items()) {
+        for(const auto&[key, value]: config["configuration"]["setup"].items()) {
             configuration[key] = buildVariables(value);
         }
         // Put variables into the top-level map
-        for(const auto&[key, value]: gamespec["variables"].items()) {
+        for(const auto&[key, value]: config["variables"].items()) {
             map[key] = buildVariables(value);
         }
         // Put constants into the top-level map
-        for(const auto&[key, value]: gamespec["constants"].items()) {
+        for(const auto&[key, value]: config["constants"].items()) {
             map[key] = buildVariables(value);
         }
         // Add players
         map["players"] = List();
         List& player_list = boost::get<List>(map["players"]);
         for(const Player& player: players) {
-            Map player_map = boost::get<Map>(buildVariables(gamespec["per-player"]));
+            Map player_map = boost::get<Map>(buildVariables(config["per-player"]));
             player_map["name"] = player.name;
             playersMap[player.name] = player.connection;
             player_list.push_back(player_map);
@@ -348,7 +348,7 @@ private:
 public:
     AddRule(const nlohmann::json& rule);
 
-    void run(PseudoServer& server, GameSpec& spec) override;
+    void run(PseudoServer& server, Configuration& spec) override;
 
 };
 
@@ -360,7 +360,7 @@ private:
 public:
     TimerRule(const nlohmann::json& rule);
 
-    void run(PseudoServer& server, GameSpec& spec) override;
+    void run(PseudoServer& server, Configuration& spec) override;
 
 };
 
@@ -373,7 +373,7 @@ private:
 public:
     InputChoiceRule(const nlohmann::json& rule);
 
-    void run(PseudoServer& server, GameSpec& spec) override;
+    void run(PseudoServer& server, Configuration& spec) override;
 
 };
 
@@ -385,7 +385,7 @@ private:
 public:
     InputTextRule(const nlohmann::json& rule);
 
-    void run(PseudoServer& server, GameSpec& spec) override;
+    void run(PseudoServer& server, Configuration& spec) override;
 };
 
 class InputVoteRule : public Rule{
@@ -397,7 +397,7 @@ private:
 public:
     InputVoteRule(const nlohmann::json& rule);
 
-    void run(PseudoServer& server, GameSpec& spec) override;
+    void run(PseudoServer& server, Configuration& spec) override;
 
 };
 
@@ -409,7 +409,7 @@ private:
 public:
     MessageRule(const nlohmann::json& rule);
 
-    void run(PseudoServer& server, GameSpec& spec) override;
+    void run(PseudoServer& server, Configuration& spec) override;
 
 };
 
@@ -420,7 +420,7 @@ private:
 public:
     GlobalMessageRule(const nlohmann::json& rule);
 
-    void run(PseudoServer& server, GameSpec& spec) override;
+    void run(PseudoServer& server, Configuration& spec) override;
 };
 
 class ScoresRule: public Rule{
@@ -431,7 +431,7 @@ private:
 public:
     ScoresRule(const nlohmann::json& rule);
 
-    void run(PseudoServer& server, GameSpec& spec) override;
+    void run(PseudoServer& server, Configuration& spec) override;
 
 };
 
@@ -445,7 +445,7 @@ private:
 public:
     ExtendRule(const nlohmann::json& rule);
     
-    void run(PseudoServer& server, GameSpec& spec) override;
+    void run(PseudoServer& server, Configuration& spec) override;
 
 };
 
@@ -456,7 +456,7 @@ private:
 public:
     ReverseRule(const nlohmann::json& rule);
     
-    void run(PseudoServer& server, GameSpec& spec) override;
+    void run(PseudoServer& server, Configuration& spec) override;
 
 };
 
@@ -466,7 +466,7 @@ private:
 public:
     ShuffleRule(const nlohmann::json& rule);
     
-    void run(PseudoServer& server, GameSpec& spec) override;
+    void run(PseudoServer& server, Configuration& spec) override;
 
 };
 
@@ -478,7 +478,7 @@ private:
 public:
     SortRule(const nlohmann::json& rule);
     
-    void run(PseudoServer& server, GameSpec& spec) override;
+    void run(PseudoServer& server, Configuration& spec) override;
 
 };
 
@@ -490,7 +490,7 @@ private:
 public:
     DealRule(const nlohmann::json& rule);
 
-    void run(PseudoServer& server, GameSpec& spec) override;
+    void run(PseudoServer& server, Configuration& spec) override;
 
 };
 
@@ -501,7 +501,7 @@ private:
 public:
     DiscardRule(const nlohmann::json& rule);
 
-    void run(PseudoServer& server, GameSpec& spec) override;
+    void run(PseudoServer& server, Configuration& spec) override;
 };
 
 class ListAttributesRule : public Rule {
@@ -510,7 +510,7 @@ private:
 public:
     ListAttributesRule(const nlohmann::json& rule);
     
-    void run(PseudoServer& server, GameSpec& spec) override;
+    void run(PseudoServer& server, Configuration& spec) override;
 
 };
 
@@ -526,7 +526,7 @@ public:
     ForEachRule(const nlohmann::json& rule);
     // ~ForEachRule() override;
 
-    void run(PseudoServer& server, GameSpec& spec) override;
+    void run(PseudoServer& server, Configuration& spec) override;
 
 };
 
@@ -536,7 +536,7 @@ private:
     RuleList subrules;
 public:
     LoopRule(const nlohmann::json& rule);
-    void run(PseudoServer& server, GameSpec& spec) override;
+    void run(PseudoServer& server, Configuration& spec) override;
 
 };
   
@@ -546,7 +546,7 @@ private:
 public:
     InParallelRule(const nlohmann::json& rule);
 
-    void run(PseudoServer& server, GameSpec& spec) override;
+    void run(PseudoServer& server, Configuration& spec) override;
 
 };
 
@@ -558,7 +558,7 @@ private:
 public:
     ParallelForRule(const nlohmann::json& rule);
 
-    void run(PseudoServer& server, GameSpec& spec) override;    
+    void run(PseudoServer& server, Configuration& spec) override;    
 
 };
 
@@ -571,7 +571,7 @@ private:
 public:
     SwitchRule(const nlohmann::json& rule);
 
-    void run(PseudoServer& server, GameSpec& spec) override;
+    void run(PseudoServer& server, Configuration& spec) override;
 
 };
 
@@ -581,7 +581,7 @@ private:
 public:
     WhenRule(const nlohmann::json& rule);
 
-    void run(PseudoServer& server, GameSpec& spec) override;
+    void run(PseudoServer& server, Configuration& spec) override;
 };
 
 std::unordered_map<std::string, std::function<std::unique_ptr<Rule>(const nlohmann::json&)>> rulemap = {

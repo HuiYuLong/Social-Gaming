@@ -112,7 +112,7 @@ RuleTree& RuleTree::operator=(RuleTree&& oldTree)
 RuleList& RuleTree::getRules() { return rules; }
 
 
-void LoopRule::run(PseudoServer& server, GameSpec& spec) {
+void LoopRule::run(PseudoServer& server, Configuration& spec) {
 
 	while (failCondition.evaluate(spec.getVariables())) {
 		for (const auto& ptr : subrules) {
@@ -121,7 +121,7 @@ void LoopRule::run(PseudoServer& server, GameSpec& spec) {
 	}
 }
 
-void GlobalMessageRule::run(PseudoServer& server, GameSpec& spec)
+void GlobalMessageRule::run(PseudoServer& server, Configuration& spec)
 {
 	List& players = boost::get<List>(boost::get<Map>(spec.getVariables())["players"]);
 	for (Variable& player : players) {
@@ -130,7 +130,7 @@ void GlobalMessageRule::run(PseudoServer& server, GameSpec& spec)
 	}
 }
 
-void ReverseRule::run(PseudoServer& server, GameSpec& spec) {
+void ReverseRule::run(PseudoServer& server, Configuration& spec) {
 	std::string toReverse = this->list;
 	List& reverseList = boost::get<List>(boost::get<Map>(spec.getVariables())[toReverse]);
 	std::reverse(reverseList.begin(), reverseList.end());
@@ -142,7 +142,7 @@ void ReverseRule::run(PseudoServer& server, GameSpec& spec) {
 }
 
 
-void ScoresRule::run(PseudoServer& server, GameSpec& spec)
+void ScoresRule::run(PseudoServer& server, Configuration& spec)
 {
 	// List& players = boost::get<List>(boost::get<Map>(spec.getVariables())["players"]);
 	// for (Variable& player : players) {
@@ -188,7 +188,7 @@ void ScoresRule::run(PseudoServer& server, GameSpec& spec)
 	 
 }
 
-void ForEachRule::run(PseudoServer& server, GameSpec& spec)
+void ForEachRule::run(PseudoServer& server, Configuration& spec)
 {
 	Getter getter(list, spec.getVariables());
 	GetterResult result = getter.get();
@@ -205,7 +205,7 @@ void ForEachRule::run(PseudoServer& server, GameSpec& spec)
 	}
 }
 
-void WhenRule::run(PseudoServer& server, GameSpec& spec)
+void WhenRule::run(PseudoServer& server, Configuration& spec)
 {
 	for(Case& current_case : cases) {
 		if (current_case.condition.evaluate(spec.getVariables())) {
@@ -217,7 +217,7 @@ void WhenRule::run(PseudoServer& server, GameSpec& spec)
 	}
 }
 
-void InputChoiceRule::run(PseudoServer& server, GameSpec& spec){
+void InputChoiceRule::run(PseudoServer& server, Configuration& spec){
 
 	List& players = boost::get<List>(boost::get<Map>(spec.getVariables())["players"]);
 	Map& toplevel = boost::get<Map>(spec.getVariables());
@@ -245,28 +245,7 @@ nlohmann::json CropSection(const nlohmann::json& j,std::string name){
 	return nullptr;
 }
 
-// //Define type of value in item of json.xs
-// void definingDataType( const nlohmann::basic_json<> &item, DataType& value){
-// 	using type = nlohmann::json::value_t;	
-// 	if (item.type() == type::number_unsigned){
-// 		unsigned temp = item;
-// 		value = temp;
-		
-// 	} else if (item.type() == type::number_integer){
-// 		int temp = item;
-// 		value = temp;
-// 	} else if (item.type() == type::boolean){
-// 		bool temp = item;
-// 		value = temp;
-// 	} else if (item.type() == type::string){
-// 		std::string temp = item;
-// 		value = temp;
-// 	}
-// }
-
-
-
-void AddRule::run(PseudoServer& server, GameSpec& spec)
+void AddRule::run(PseudoServer& server, Configuration& spec)
 {
 	Getter getter(to, spec.getVariables());
 	GetterResult result = getter.get();
@@ -331,7 +310,7 @@ int main(int argc, char** argv) {
     }
 	nlohmann::json j = nlohmann::json::parse(serverconfig);
 
-	std::vector<GameSpec> configurations;
+	std::vector<Configuration> configurations;
 	std::vector<Player> players;
 	for (const std::string& name : {"a", "b"})
 		players.emplace_back(name, Connection());
@@ -356,13 +335,13 @@ int main(int argc, char** argv) {
 
 	std::cout << "\nStarting a test\n\n";
 	PseudoServer server;
-	std::thread t1 = configurations.front().launchGameDetached(server);
-	// std::thread t2 = configurations.back().launchGameDetached(server);
-	t1.join();
-	// t2.join();
+	//std::thread t1 = configurations.front().launchGameDetached(server);
+	std::thread t2 = configurations.back().launchGameDetached(server);
+	//t1.join();
+	t2.join();
 	//PseudoServer server;
 	//configurations.back().launchGame(server);
-	// for(GameSpec& c : configurations) {
+	// for(Configuration& c : configurations) {
 	// 	std::cout << "\nGame " << c.getName() << "\n\n";
 	// 	c.launchGame(server);
 	// }
@@ -470,3 +449,23 @@ int main(int argc, char** argv) {
 // 		}
 // 	}
 // }
+
+// //Define type of value in item of json.xs
+// void definingDataType( const nlohmann::basic_json<> &item, DataType& value){
+// 	using type = nlohmann::json::value_t;	
+// 	if (item.type() == type::number_unsigned){
+// 		unsigned temp = item;
+// 		value = temp;
+		
+// 	} else if (item.type() == type::number_integer){
+// 		int temp = item;
+// 		value = temp;
+// 	} else if (item.type() == type::boolean){
+// 		bool temp = item;
+// 		value = temp;
+// 	} else if (item.type() == type::string){
+// 		std::string temp = item;
+// 		value = temp;
+// 	}
+// }
+
