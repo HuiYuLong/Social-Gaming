@@ -67,7 +67,9 @@ AddRule::AddRule(const nlohmann::json& rule): to(rule["to"]), value(rule["value"
 //
 // Todo: InputChoice, InputText & InputVote
 //
-
+InputChoiceRule::InputChoiceRule(const nlohmann::json& rule): to(rule["to"]), prompt(rule["prompt"]), choices(rule["choices"]), result(rule["result"]){
+	std::cout << "Input Choice: " << rule["prompt"] << std::endl;
+}
 
 //**** Output ****//
 ScoresRule::ScoresRule(const nlohmann::json& rule): score(rule["score"]) { 
@@ -214,6 +216,28 @@ void WhenRule::run(PseudoServer& server, GameSpec& spec)
 		}
 	}
 }
+
+void InputChoiceRule::run(PseudoServer& server, GameSpec& spec){
+	// Getter getter(choices, spec.getVariables());
+	// GetterResult result = getter.get();
+	
+	List& players = boost::get<List>(boost::get<Map>(spec.getVariables())["players"]);
+	Map& toplevel = boost::get<Map>(spec.getVariables());
+	toplevel[to] = &players.front(); //first player
+	const std::string& name = boost::get<std::string>(boost::get<Map>(players.front())["name"]); 
+	server.send({spec.getConnectionByName(name), prompt.fill_with(spec.getVariables())});
+	// server.send({spec.getConnectionByName(name), choices});
+
+	// List& weapons = boost::get<List>
+	// for(Variable& player:players){
+	// 	toplevel[to] = &player;
+	// 	const std::string& name = boost::get<std::string>(boost::get<Map>(player)["name"]); //first player
+	// 	server.send({spec.getConnectionByName(name), prompt.fill_with(spec.getVariables())});
+	// }
+
+	// cout << "***********************" << prompt.fill_with(spec.getVariables()) << endl;
+
+}
 //Helper functions
 //Crop The big JSON file into short target secction with input name
 nlohmann::json CropSection(const nlohmann::json& j,std::string name){
@@ -330,16 +354,16 @@ int main(int argc, char** argv) {
     }
 
 	// TEST
-	Variable& variables = configurations.back().getVariables();
+	Variable& variables = configurations.front().getVariables();
 	PrintTheThing p;
 	boost::apply_visitor(p, variables);
 
 	std::cout << "\nStarting a test\n\n";
 	PseudoServer server;
 	std::thread t1 = configurations.front().launchGameDetached(server);
-	std::thread t2 = configurations.back().launchGameDetached(server);
+	// std::thread t2 = configurations.back().launchGameDetached(server);
 	t1.join();
-	t2.join();
+	// t2.join();
 	//PseudoServer server;
 	//configurations.back().launchGame(server);
 	// for(GameSpec& c : configurations) {
