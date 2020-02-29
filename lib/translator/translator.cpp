@@ -235,14 +235,23 @@ void InputChoiceRule::run(PseudoServer& server, Configuration& spec){
 	const std::string& name = boost::get<std::string>(boost::get<Map>(players.front())["name"]); 
 	server.send({spec.getConnectionByName(name), prompt.fill_with(spec.getVariables())});
 	List& weapons = boost::get<List>(boost::get<Map>(spec.getVariables())["weapons"]);
+	vector<std::string> weaponCheck; //vector to check if the choice is valid
 	for(auto weapon:weapons){
 		const std::string& weaponName = boost::get<std::string>(boost::get<Map>(weapon)["name"]);
+		weaponCheck.push_back(weaponName);
 		server.send({spec.getConnectionByName(name), weaponName});
 	}
 	//NEED more test on this
 	std::string choice;	
 	std::cin >> choice;
-	server.send({spec.getConnectionByName(name), choice});
+	auto isValid = std::any_of(weaponCheck.begin(), weaponCheck.end(), [&choice](auto &item){
+		return item == choice;
+	});
+	if (isValid){
+		server.send({spec.getConnectionByName(name), choice});
+	} else {
+		std::cout << "Please enter valid choice" << std::endl;
+	}
 }
 //Helper functions
 //Crop The big JSON file into short target secction with input name
@@ -345,10 +354,10 @@ int main(int argc, char** argv) {
 
 	std::cout << "\nStarting a test\n\n";
 	PseudoServer server;
-	//std::thread t1 = configurations.front().launchGameDetached(server);
-	std::thread t2 = configurations.back().launchGameDetached(server);
-	//t1.join();
-	t2.join();
+	std::thread t1 = configurations.front().launchGameDetached(server);
+	// std::thread t2 = configurations.back().launchGameDetached(server);
+	t1.join();
+	// t2.join();
 	//PseudoServer server;
 	//configurations.back().launchGame(server);
 	// for(Configuration& c : configurations) {
