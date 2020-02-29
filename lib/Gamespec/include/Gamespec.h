@@ -1,7 +1,7 @@
-##include <iostream>
+#include <iostream>
 #include <string>
 #include <ctime>
-#include <cstdl2ib>
+#include <cstdlib>
 #include <limits>
 #include <translator.h>
 
