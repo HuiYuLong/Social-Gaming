@@ -54,6 +54,10 @@
           "list": "weapons"
         },
 
+        { "rule": "sort",
+          "list": "weapons"
+        },
+
         { "rule": "global-message",
           "value": "Round {round}. Choose your weapon!"
         },

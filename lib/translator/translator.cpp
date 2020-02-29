@@ -2,6 +2,7 @@
 #include <unordered_map>
 #include "boost/variant.hpp"
 #include <iostream>
+#include <algorithm>
 using namespace std;
 
 //**** Control Structures ****//
@@ -46,12 +47,16 @@ ReverseRule::ReverseRule(const nlohmann::json& rule): list(rule["list"]) {
 	std::cout << "Reverse: " << list << std::endl;
 }
 
+SortRule::SortRule(const nlohmann::json& rule): list(rule["list"]) {
+	std::cout << "Sort: " << list << std::endl;
+}
+
 ShuffleRule::ShuffleRule(const nlohmann::json& rule): list(rule["list"]) {
 	std::cout << "Shuffle: " << list << std::endl;
 }
 
-//
 // Todo: Extend, Sort, Deal, Discard & ListAttributes
+
 //
 
 
@@ -152,10 +157,26 @@ void ReverseRule::run(PseudoServer& server, Configuration& spec) {
 	// }
 }
 
+
 void ShuffleRule::run(PseudoServer& server, Configuration& spec) {
 	std::string toShuffle= this->list;
 	List& toShuffleList = boost::get<List>(boost::get<Map>(spec.getVariables())[toShuffle]);
 	std::random_shuffle(toShuffleList.begin(), toShuffleList.end());
+}
+
+bool sort_variant_ascending(Variable& lhs, Variable& rhs) {
+	return boost::get<std::string>(boost::get<Map>(lhs)["name"]) < boost::get<std::string>(boost::get<Map>(rhs)["name"]);
+}
+
+void SortRule::run(PseudoServer& server, Configuration& spec) {
+	std::string toSort = this->list;
+	List& sortList = boost::get<List>(boost::get<Map>(spec.getVariables())[toSort]);
+	std::sort(sortList.begin(), sortList.end(), sort_variant_ascending);
+	// //** For testing **//
+	for (Variable& weapon : sortList) {
+	 	const std::string& weapons = boost::get<std::string>(boost::get<Map>(weapon)["name"]);
+	 	std::cout << "***After weapons***" << weapons << std::endl;
+	}
 }
 
 void ScoresRule::run(PseudoServer& server, Configuration& spec)
@@ -346,7 +367,7 @@ int main(int argc, char** argv) {
 	std::ifstream serverconfig{argv[1]};
 	if (serverconfig.fail())
     {
-        std::cout << "cannot open the congiguration file" << std::endl;
+        std::cout << "cannot open the configuration file" << std::endl;
         return 0;
     }
 	nlohmann::json j = nlohmann::json::parse(serverconfig);
