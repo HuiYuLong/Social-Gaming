@@ -258,7 +258,7 @@ GetterResult Getter::processList(Variable& varlist)
         return {varlist, true};
     }
     else if(current_query.compare(0, 8, "elements") == 0)
-    {
+    { 
         // TODO
         return {varlist, true};
     }

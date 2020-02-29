@@ -51,8 +51,12 @@ SortRule::SortRule(const nlohmann::json& rule): list(rule["list"]) {
 	std::cout << "Sort: " << list << std::endl;
 }
 
-//
-// Todo: Extend, Shuffle, Deal, Discard & ListAttributes
+ShuffleRule::ShuffleRule(const nlohmann::json& rule): list(rule["list"]) {
+	std::cout << "Shuffle: " << list << std::endl;
+}
+
+// Todo: Extend, Sort, Deal, Discard & ListAttributes
+
 //
 
 
@@ -75,6 +79,12 @@ AddRule::AddRule(const nlohmann::json& rule): to(rule["to"]), value(rule["value"
 //
 InputChoiceRule::InputChoiceRule(const nlohmann::json& rule): to(rule["to"]), prompt(rule["prompt"]), choices(rule["choices"]), result(rule["result"]){
 	std::cout << "Input Choice: " << rule["prompt"] << std::endl;
+}
+InputTextRule::InputTextRule(const nlohmann::json& rule): to(rule["to"]), prompt(rule["prompt"]), result(rule["result"]){
+	std::cout << "Input Text: " << rule["prompt"] << std::endl;
+}
+InputVoteRule::InputVoteRule(const nlohmann::json& rule): to(rule["to"]), prompt(rule["prompt"]), choices(rule["choices"]),result(rule["result"]){
+	std::cout << "Input vote: " << rule["prompt"] << std::endl;
 }
 
 //**** Output ****//
@@ -138,13 +148,20 @@ void GlobalMessageRule::run(PseudoServer& server, Configuration& spec)
 
 void ReverseRule::run(PseudoServer& server, Configuration& spec) {
 	std::string toReverse = this->list;
-	List& reverseList = boost::get<List>(boost::get<Map>(spec.getVariables())[toReverse]);
-	std::reverse(reverseList.begin(), reverseList.end());
+	List& toReverseList = boost::get<List>(boost::get<Map>(spec.getVariables())[toReverse]);
+	std::reverse(toReverseList.begin(), toReverseList.end());
 	//** For testing **//
 	// for (Variable& weapon : reverseList) {
 	// 	const std::string& weapons = boost::get<std::string>(boost::get<Map>(weapon)["name"]);
-	// 	std::cout << "***After weapons***" << weapons << std::endl;
+	// 	std::cout << "***After reversing weapons list***" << weapons << std::endl;
 	// }
+}
+
+
+void ShuffleRule::run(PseudoServer& server, Configuration& spec) {
+	std::string toShuffle= this->list;
+	List& toShuffleList = boost::get<List>(boost::get<Map>(spec.getVariables())[toShuffle]);
+	std::random_shuffle(toShuffleList.begin(), toShuffleList.end());
 }
 
 bool sort_variant_ascending(Variable& lhs, Variable& rhs) {
@@ -161,7 +178,6 @@ void SortRule::run(PseudoServer& server, Configuration& spec) {
 	 	std::cout << "***After weapons***" << weapons << std::endl;
 	}
 }
-
 
 void ScoresRule::run(PseudoServer& server, Configuration& spec)
 {
@@ -242,18 +258,43 @@ void InputChoiceRule::run(PseudoServer& server, Configuration& spec){
 
 	List& players = boost::get<List>(boost::get<Map>(spec.getVariables())["players"]);
 	Map& toplevel = boost::get<Map>(spec.getVariables());
-	toplevel[to] = &players.front(); //first player
+	toplevel[to] = &players.front(); //pick first player in the list for now, might be changed in the future
 	const std::string& name = boost::get<std::string>(boost::get<Map>(players.front())["name"]); 
 	server.send({spec.getConnectionByName(name), prompt.fill_with(spec.getVariables())});
 	List& weapons = boost::get<List>(boost::get<Map>(spec.getVariables())["weapons"]);
+	vector<std::string> weaponCheck; //vector to check if the choice is valid
 	for(auto weapon:weapons){
 		const std::string& weaponName = boost::get<std::string>(boost::get<Map>(weapon)["name"]);
+		weaponCheck.push_back(weaponName);
 		server.send({spec.getConnectionByName(name), weaponName});
 	}
 	//NEED more test on this
 	std::string choice;	
 	std::cin >> choice;
-	server.send({spec.getConnectionByName(name), choice});
+	auto isValid = std::any_of(weaponCheck.begin(), weaponCheck.end(), [&choice](auto &item){
+		return item == choice;
+	});
+	if (isValid){
+		server.send({spec.getConnectionByName(name), choice});
+	} else {
+		std::cout << "Please enter valid choice" << std::endl;
+	}
+}
+
+void InputTextRule::run(PseudoServer& server, Configuration& spec){
+	List& players = boost::get<List>(boost::get<Map>(spec.getVariables())["players"]);
+	Map& toplevel = boost::get<Map>(spec.getVariables());
+	toplevel[to] = &players.front(); //pick first player in the list for now, might be changed in the future
+	const std::string& name = boost::get<std::string>(boost::get<Map>(players.front())["name"]); 
+	server.send({spec.getConnectionByName(name), prompt.fill_with(spec.getVariables())});
+
+	std::string text;
+	std::cin >> text;
+	server.send({spec.getConnectionByName(name), text});
+}
+
+void InputVoteRule::run(PseudoServer& server, Configuration& spec){
+	//TODO
 }
 //Helper functions
 //Crop The big JSON file into short target secction with input name
@@ -356,10 +397,10 @@ int main(int argc, char** argv) {
 
 	std::cout << "\nStarting a test\n\n";
 	PseudoServer server;
-	//std::thread t1 = configurations.front().launchGameDetached(server);
-	std::thread t2 = configurations.back().launchGameDetached(server);
-	//t1.join();
-	t2.join();
+	std::thread t1 = configurations.front().launchGameDetached(server);
+	// std::thread t2 = configurations.back().launchGameDetached(server);
+	t1.join();
+	// t2.join();
 	//PseudoServer server;
 	//configurations.back().launchGame(server);
 	// for(Configuration& c : configurations) {
