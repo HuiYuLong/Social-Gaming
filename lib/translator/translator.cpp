@@ -3,6 +3,7 @@
 #include "boost/variant.hpp"
 #include <iostream>
 #include <algorithm>
+#include <random>
 using namespace std;
 
 //**** Control Structures ****//
@@ -166,11 +167,18 @@ void ReverseRule::run(PseudoServer& server, Configuration& spec) {
 	// }
 }
 
+// int randomfunc(int j) 
+// { 
+//     return rand() % j; 
+// } 
 
 void ShuffleRule::run(PseudoServer& server, Configuration& spec) {
 	std::string toShuffle= this->list;
 	List& toShuffleList = boost::get<List>(boost::get<Map>(spec.getVariables())[toShuffle]);
-	std::random_shuffle(toShuffleList.begin(), toShuffleList.end());
+	std::random_device rd;
+	std::mt19937 g(rd());
+	std::shuffle(toShuffleList.begin(), toShuffleList.end(),g);
+	
 }
 
 bool sort_variant_ascending(Variable& lhs, Variable& rhs) {
