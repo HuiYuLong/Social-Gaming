@@ -171,6 +171,7 @@ void ReverseRule::run(PseudoServer& server, Configuration& spec) {
 // { 
 //     return rand() % j; 
 // } 
+
 void ShuffleRule::run(PseudoServer& server, Configuration& spec) {
 	std::string toShuffle= this->list;
 	List& toShuffleList = boost::get<List>(boost::get<Map>(spec.getVariables())[toShuffle]);
