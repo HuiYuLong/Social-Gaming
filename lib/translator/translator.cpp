@@ -396,7 +396,7 @@ int main(int argc, char** argv) {
 	configurations.reserve(j["games"].size());
 	for ([[maybe_unused]] const auto& [ key, gamespecfile]: j["games"].items())
 	{
-		std::ifstream gamespecstream{gamespecfile};
+		std::ifstream gamespecstream{std::string(gamespecfile)};
 		if (gamespecstream.fail())
 		{
 			std::cout << "cannot open the game configuration file " << gamespecfile << std::endl;
