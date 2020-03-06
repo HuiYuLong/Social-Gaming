@@ -3,16 +3,18 @@
 #include <ctime>
 #include <cstdlib>
 #include <limits>
-#include <translator.h>
+//#include <translator.h>
+#include "../../translator/include/translator.h"
 
-class GameSpec {
+class Gamespec {
 public:
-    GameSpec(const Configuration& configuration);
-    Configuration getConfiguration();
-    Configuration setConfiguration();
+    Gamespec(Configuration& configuration){
+    	this->configuration = &configuration;
+    }
+    // Configuration getConfiguration();
+    // Configuration setConfiguration(const Configuration& configuration);
 private:
-    Configuration configuration;
-
+    Configuration* configuration;
 };
 
 
