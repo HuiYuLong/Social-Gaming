@@ -1,55 +1,13 @@
 #include <Gamespec.h>
 
-GameSpec::GameSpec(const nlohmann::json& gamespec, const std::vector<Player>& players):
-        name(gamespec["configuration"]["name"]),
-        playerCountMin(gamespec["configuration"]["player count"]["min"]),
-        playerCountMax(gamespec["configuration"]["player count"]["max"]),
-        variables(Map()),
-        rules(gamespec["rules"])
-    {
-        if (players.size() < playerCountMin) {
-            std::cout << "Too few players" << std::endl;
-            std::terminate();
-        }
-        if (players.size() > playerCountMax) {
-            std::cout << "Too many players" << std::endl;
-            std::terminate();
-        }
-        Map& map = boost::get<Map>(variables);
-        // Put "setup" variables into "configuration" submap
-        map["configuration"] = Map();
-        Map& configuration = boost::get<Map>(map["configuration"]);
-        for(const auto&[key, value]: gamespec["configuration"]["setup"].items()) {
-            configuration[key] = buildVariables(value);
-        }
-        // Put variables into the top-level map
-        for(const auto&[key, value]: gamespec["variables"].items()) {
-            map[key] = buildVariables(value);
-        }
-        // Put constants into the top-level map
-        for(const auto&[key, value]: gamespec["constants"].items()) {
-            map[key] = buildVariables(value);
-        }
-        // Add players
-        map["players"] = List();
-        List& player_list = boost::get<List>(map["players"]);
-        for(const Player& player: players) {
-            Map player_map = boost::get<Map>(buildVariables(gamespec["per-player"]));
-            player_map["name"] = player.name;
-            playersMap[player.name] = player.connection;
-            player_list.push_back(player_map);
-        }
-        // Who cares
-        map["audience"] = &map["players"];
-    }
+GameSpec::GameSpec(const Configuration& configuration): configuration(configuration) {}
 
-const std::string& GameSpec::getName() const { return name; }
-size_t GameSpec::getPlayerCountMin() const { return playerCountMin; }
-size_t GameSpec::getPlayerCountMax() const { return playerCountMax; }
-Variable& GameSpec::getVariables() { return variables; }
-Connection GameSpec::getConnectionByName(const std::string& name) { return playersMap[name]; }
-void GameSpec::launchGame(PseudoServer& server) { rules.spawn(server, *this); }
-std::thread GameSpec::launchGameDetached(PseudoServer& server) { return rules.spawn_detached(server, *this); }
+Gamespec::getConfiguration(const Configuration& configuration) {
+    return this->configuration;
+}
+Gamespec::setConfiguration(const Configuration& configuration) {
+    this->configuration = configuration;
+}
 
 // temporarily test code ... should eventually migrate code away from test code in translator.cpp
 
