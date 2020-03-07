@@ -271,13 +271,16 @@ void WhenRule::run(PseudoServer& server, Configuration& spec)
 	}
 }
 
-void InputChoiceRule::run(PseudoServer& server, Configuration& spec){
 
-	List& players = boost::get<List>(boost::get<Map>(spec.getVariables())["players"]);
-	Map& toplevel = boost::get<Map>(spec.getVariables());
-	toplevel[to] = &players.front(); //pick first player in the list for now, might be changed in the future
-	const std::string& name = boost::get<std::string>(boost::get<Map>(players.front())["name"]); 
-	server.send({spec.getConnectionByName(name), prompt.fill_with(spec.getVariables())});
+void InputChoiceRule::run(PseudoServer& server, Configuration& spec){
+	Getter getter(to, spec.getVariables());
+	GetterResult result = getter.get();
+	Map& p = boost::get<Map>(result.result);
+	const std::string& name = boost::get<std::string>(p["name"]);
+	server.send({spec.getConnectionByName(name), prompt.fill_with(spec.getVariables())});	
+	// List& players = boost::get<List>(boost::get<Map>(spec.getVariables())["players"]);
+	// const std::string& name = boost::get<std::string>(boost::get<Map>(players.front())["name"]); 
+	// server.send({spec.getConnectionByName(name), prompt.fill_with(spec.getVariables())});
 	List& weapons = boost::get<List>(boost::get<Map>(spec.getVariables())["weapons"]);
 	vector<std::string> weaponCheck; //vector to check if the choice is valid
 	for(auto weapon:weapons){
