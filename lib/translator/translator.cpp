@@ -57,13 +57,23 @@ ShuffleRule::ShuffleRule(const nlohmann::json& rule): list(rule["list"]) {
 }
 
 // Todo: Extend, Deal, Discard & ListAttributes
+DealRule::DealRule(const nlohmann::json& rule): from(rule["from"]), to(rule["to"]), count(rule["count"]){
+	std::cout << "Deal: " << "from " << from << " to " << to << std::endl;
+}
 
+<<<<<<< HEAD
 	DiscardRule::DiscardRule(const nlohmann::json& rule):from(rule["from"]), count(rule["count"]){
 	std::cout << "Discard Variable: " << from << std::endl;
 	std::cout << "Variable Size: " << count << std::endl;
 
 }
 
+=======
+ExtendRule::ExtendRule(const nlohmann::json& rule): list(rule["list"]), target(rule["target"]) {
+	std::cout << "Extend: " << list << std::endl;
+	std::cout << "Extend: " << target << std::endl;
+}
+>>>>>>> 76270b01062b116b69dbda2c8394b87ab23dfacc
 //
 
 
@@ -162,7 +172,30 @@ void MessageRule::run(PseudoServer& server, Configuration& spec) {
 	server.send({spec.getConnectionByName(name), value.fill_with(spec.getVariables())});
 }
 
+//List Operation
+
+void ExtendRule::run(PseudoServer& server, Configuration& spec) {
+
+	List& ExtendList = boost::get<List>(boost::get<Map>(spec.getVariables())[this->list]);
+	List& Target = boost::get<List>(boost::get<Map>(spec.getVariables())[this->target]);
+	//it=Target.begin();
+	
+	//const std::string& name = boost::get<std::string>(boost::get<Map>(players.front())["name"]); 
+	cout<<"Extend begin\n";
+	Target.insert(Target.end(), ExtendList.begin(), ExtendList.end());
+
+	for(auto weapon:Target){
+		const std::string& weaponName = boost::get<std::string>(boost::get<Map>(weapon)["name"]);
+		cout<<weaponName<<endl;
+		const std::string& beatName = boost::get<std::string>(boost::get<Map>(weapon)["beats"]);
+		
+		cout<<weaponName<<" beat "<<beatName<<endl;
+		// server.send({spec.getConnectionByName(name), weaponName});
+	}
+
+}
 void ReverseRule::run(PseudoServer& server, Configuration& spec) {
+	
 	std::string toReverse = this->list;
 	List& toReverseList = boost::get<List>(boost::get<Map>(spec.getVariables())[toReverse]);
 	std::reverse(toReverseList.begin(), toReverseList.end());
@@ -213,6 +246,7 @@ void SortRule::run(PseudoServer& server, Configuration& spec) {
 	 	std::cout << "***After weapons***" << weapons << std::endl;
 	}
 }
+
 
 void ScoresRule::run(PseudoServer& server, Configuration& spec)
 {
@@ -289,13 +323,16 @@ void WhenRule::run(PseudoServer& server, Configuration& spec)
 	}
 }
 
-void InputChoiceRule::run(PseudoServer& server, Configuration& spec){
 
-	List& players = boost::get<List>(boost::get<Map>(spec.getVariables())["players"]);
-	Map& toplevel = boost::get<Map>(spec.getVariables());
-	toplevel[to] = &players.front(); //pick first player in the list for now, might be changed in the future
-	const std::string& name = boost::get<std::string>(boost::get<Map>(players.front())["name"]); 
-	server.send({spec.getConnectionByName(name), prompt.fill_with(spec.getVariables())});
+void InputChoiceRule::run(PseudoServer& server, Configuration& spec){ //STILL WRONG - SHOULD NOT HARD CODE THIS
+	Getter getter(to, spec.getVariables());
+	GetterResult result = getter.get();
+	Map& p = boost::get<Map>(result.result);
+	const std::string& name = boost::get<std::string>(p["name"]);
+	server.send({spec.getConnectionByName(name), prompt.fill_with(spec.getVariables())});	
+	// List& players = boost::get<List>(boost::get<Map>(spec.getVariables())["players"]);
+	// const std::string& name = boost::get<std::string>(boost::get<Map>(players.front())["name"]); 
+	// server.send({spec.getConnectionByName(name), prompt.fill_with(spec.getVariables())});
 	List& weapons = boost::get<List>(boost::get<Map>(spec.getVariables())["weapons"]);
 	vector<std::string> weaponCheck; //vector to check if the choice is valid
 	for(auto weapon:weapons){
@@ -303,13 +340,15 @@ void InputChoiceRule::run(PseudoServer& server, Configuration& spec){
 		weaponCheck.push_back(weaponName);
 		server.send({spec.getConnectionByName(name), weaponName});
 	}
-	//NEED more test on this
 	std::string choice;	
 	std::cin >> choice;
 	auto isValid = std::any_of(weaponCheck.begin(), weaponCheck.end(), [&choice](auto &item){
 		return item == choice;
 	});
+
+
 	if (isValid){
+		//NEED SOMEHOW SAVE THE CHOICE
 		server.send({spec.getConnectionByName(name), choice});
 	} else {
 		std::cout << "Please enter valid choice" << std::endl;
@@ -317,19 +356,45 @@ void InputChoiceRule::run(PseudoServer& server, Configuration& spec){
 }
 
 void InputTextRule::run(PseudoServer& server, Configuration& spec){
-	List& players = boost::get<List>(boost::get<Map>(spec.getVariables())["players"]);
-	Map& toplevel = boost::get<Map>(spec.getVariables());
-	toplevel[to] = &players.front(); //pick first player in the list for now, might be changed in the future
-	const std::string& name = boost::get<std::string>(boost::get<Map>(players.front())["name"]); 
+	Getter getter(to, spec.getVariables());
+	GetterResult result = getter.get();
+	Map& p = boost::get<Map>(result.result);
+	const std::string& name = boost::get<std::string>(p["name"]);
 	server.send({spec.getConnectionByName(name), prompt.fill_with(spec.getVariables())});
 
 	std::string text;
 	std::cin >> text;
+	//NEED SOMEHOW SAVE THE TEXT
 	server.send({spec.getConnectionByName(name), text});
 }
 
+
 void InputVoteRule::run(PseudoServer& server, Configuration& spec){
 	//TODO
+}
+
+void DealRule::run(PseudoServer& server, Configuration& spec){ //ONLY WORKS FOR INTEGER COUNT :(
+	List& fromList = boost::get<List>(boost::get<Map>(spec.getVariables())[from]);
+	List& toList = boost::get<List>(boost::get<Map>(spec.getVariables())[to]);
+	for(int i = 0; i < count; i++){
+		if(fromList.empty()){
+			break;
+		}
+		auto temp = fromList.back();
+		fromList.pop_back();
+		toList.emplace_back(temp);
+	}
+	//for testing
+	for (auto item:fromList){
+		const std::string& name = boost::get<std::string>(boost::get<Map>(item)["name"]);
+		std::cout << name << "	";
+	}
+	std::cout << std::endl;
+	 for (auto item:toList){
+		const std::string& name = boost::get<std::string>(boost::get<Map>(item)["name"]);
+		std::cout << name << "	";
+	}
+	std::cout << std::endl;
 }
 //Helper functions
 //Crop The big JSON file into short target secction with input name
@@ -341,6 +406,7 @@ nlohmann::json CropSection(const nlohmann::json& j,std::string name){
 	}
 	return nullptr;
 }
+
 
 void AddRule::run(PseudoServer& server, Configuration& spec)
 {
@@ -411,7 +477,9 @@ int main(int argc, char** argv) {
 	std::vector<Player> players;
 	for (const std::string& name : {"a", "b"})
 		players.emplace_back(name, Connection());
+
 	configurations.reserve(j["games"].size());
+
 	for ([[maybe_unused]] const auto& [ key, gamespecfile]: j["games"].items())
 	{
 		std::ifstream gamespecstream{std::string(gamespecfile)};
@@ -421,8 +489,25 @@ int main(int argc, char** argv) {
 			return 0;
 		}
 		nlohmann::json gamespec = nlohmann::json::parse(gamespecstream);
-		configurations.emplace_back(gamespec, players);
+		configurations.emplace_back(gamespec);
 		std::cout << "\nTranslated game " << key << "\n\n";
+    }
+
+    // test that moving the players out of configurations works
+    // in the future populating the players list would be done inside GameSession
+    for (auto& configuration : configurations) {
+    	Map& map = boost::get<Map>(configuration.getVariables());
+        List& player_list = boost::get<List>(map["players"]);
+        for (const Player& player : players) {
+        	std::cout << "harro" << std::endl;
+        	// this needs to be handled differently in GameSession
+        	//Map player_map = boost::get<Map>(buildVariables(j["per-player"]));
+        	Map player_map = Map();
+        	player_map["name"] = player.name;
+        	PlayerMap& players_map = configuration.getPlayersMap();
+        	players_map[player.name] = player.connection;
+        	player_list.push_back(player_map);
+        }
     }
 
 	// TEST
@@ -446,12 +531,6 @@ int main(int argc, char** argv) {
 
 	return 0;
 };
-
-
-
-
-
-
 
 
 
