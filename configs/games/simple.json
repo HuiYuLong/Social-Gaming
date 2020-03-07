@@ -17,10 +17,17 @@
     },
   
     "variables": {
-      "player":
-        { "name": "a"}
+      "player":[
+        { "name": "a"}]
       ,
-      "winners": []
+      "winners": [
+        { "name": "a"},
+        { "name": "b"},
+        { "name" : "c"}
+
+      ],
+      "losers": [
+      ]
     },
   
     "per-player": {
@@ -31,18 +38,12 @@
     "per-audience": {},
   
     "rules": [
-            { "rule": "input-choice",
-              "to": "player",
-              "prompt": "{player.name}, choose your weapon!",
-              "choices": "weapons.name",
-              "result": "player.weapon",
-              "timeout": 10
-            }, 
 
             {
-              "rule": "message",
-              "to": "player",
-              "value": "Gread job, {player.name}!"
+              "rule": "deal",
+              "from": "winners",
+              "to": "losers",
+              "count": 2
             }
         
       

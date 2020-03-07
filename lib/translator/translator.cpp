@@ -57,6 +57,9 @@ ShuffleRule::ShuffleRule(const nlohmann::json& rule): list(rule["list"]) {
 }
 
 // Todo: Extend, Deal, Discard & ListAttributes
+DealRule::DealRule(const nlohmann::json& rule): from(rule["from"]), to(rule["to"]), count(rule["count"]){
+	std::cout << "Deal: " << "from " << from << " to " << to << std::endl;
+
 
 ExtendRule::ExtendRule(const nlohmann::json& rule): list(rule["list"]), target(rule["target"]) {
 	std::cout << "Extend: " << list << std::endl;
@@ -300,7 +303,7 @@ void WhenRule::run(PseudoServer& server, Configuration& spec)
 }
 
 
-void InputChoiceRule::run(PseudoServer& server, Configuration& spec){
+void InputChoiceRule::run(PseudoServer& server, Configuration& spec){ //STILL WRONG - SHOULD NOT HARD CODE THIS
 	Getter getter(to, spec.getVariables());
 	GetterResult result = getter.get();
 	Map& p = boost::get<Map>(result.result);
@@ -316,13 +319,15 @@ void InputChoiceRule::run(PseudoServer& server, Configuration& spec){
 		weaponCheck.push_back(weaponName);
 		server.send({spec.getConnectionByName(name), weaponName});
 	}
-	//NEED more test on this
 	std::string choice;	
 	std::cin >> choice;
 	auto isValid = std::any_of(weaponCheck.begin(), weaponCheck.end(), [&choice](auto &item){
 		return item == choice;
 	});
+
+
 	if (isValid){
+		//NEED SOMEHOW SAVE THE CHOICE
 		server.send({spec.getConnectionByName(name), choice});
 	} else {
 		std::cout << "Please enter valid choice" << std::endl;
@@ -330,20 +335,45 @@ void InputChoiceRule::run(PseudoServer& server, Configuration& spec){
 }
 
 void InputTextRule::run(PseudoServer& server, Configuration& spec){
-	List& players = boost::get<List>(boost::get<Map>(spec.getVariables())["players"]);
-	Map& toplevel = boost::get<Map>(spec.getVariables());
-	toplevel[to] = &players.front(); //pick first player in the list for now, might be changed in the future
-	const std::string& name = boost::get<std::string>(boost::get<Map>(players.front())["name"]); 
+	Getter getter(to, spec.getVariables());
+	GetterResult result = getter.get();
+	Map& p = boost::get<Map>(result.result);
+	const std::string& name = boost::get<std::string>(p["name"]);
 	server.send({spec.getConnectionByName(name), prompt.fill_with(spec.getVariables())});
 
 	std::string text;
 	std::cin >> text;
+	//NEED SOMEHOW SAVE THE TEXT
 	server.send({spec.getConnectionByName(name), text});
 }
 
 
 void InputVoteRule::run(PseudoServer& server, Configuration& spec){
 	//TODO
+}
+
+void DealRule::run(PseudoServer& server, Configuration& spec){ //ONLY WORKS FOR INTEGER COUNT :(
+	List& fromList = boost::get<List>(boost::get<Map>(spec.getVariables())[from]);
+	List& toList = boost::get<List>(boost::get<Map>(spec.getVariables())[to]);
+	for(int i = 0; i < count; i++){
+		if(fromList.empty()){
+			break;
+		}
+		auto temp = fromList.back();
+		fromList.pop_back();
+		toList.emplace_back(temp);
+	}
+	//for testing
+	for (auto item:fromList){
+		const std::string& name = boost::get<std::string>(boost::get<Map>(item)["name"]);
+		std::cout << name << "	";
+	}
+	std::cout << std::endl;
+	 for (auto item:toList){
+		const std::string& name = boost::get<std::string>(boost::get<Map>(item)["name"]);
+		std::cout << name << "	";
+	}
+	std::cout << std::endl;
 }
 //Helper functions
 //Crop The big JSON file into short target secction with input name
