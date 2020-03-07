@@ -603,6 +603,8 @@ std::unordered_map<std::string, std::function<std::unique_ptr<Rule>(const nlohma
         {"reverse", [](const nlohmann::json& rule) {return std::make_unique<ReverseRule>(rule); }},
         {"shuffle", [](const nlohmann::json& rule) {return std::make_unique<ShuffleRule>(rule); }},
         {"sort",[](const nlohmann::json& rule) {return std::make_unique<SortRule>(rule);}},
+        //{"deal",[](const nlohmann::json& rule) {return std::make_unique<DealRule>(rule);}},
+        {"discard", [](const nlohmann::json& rule) {return std::make_unique<DiscardRule>(rule); }}, 
         {"deal",[](const nlohmann::json& rule) {return std::make_unique<DealRule>(rule);}},
         //{"discard", [](const nlohmann::json& rule) {return std::make_unique<DiscardRule>(rule); }}, 
 

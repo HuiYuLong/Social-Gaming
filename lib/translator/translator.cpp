@@ -61,6 +61,12 @@ DealRule::DealRule(const nlohmann::json& rule): from(rule["from"]), to(rule["to"
 	std::cout << "Deal: " << "from " << from << " to " << to << std::endl;
 }
 
+DiscardRule::DiscardRule(const nlohmann::json& rule):from(rule["from"]), count(rule["count"]){
+	std::cout << "Discard Variable: " << from << std::endl;
+	std::cout << "Variable Size: " << count << std::endl;
+
+}
+
 ExtendRule::ExtendRule(const nlohmann::json& rule): list(rule["list"]), target(rule["target"]) {
 	std::cout << "Extend: " << list << std::endl;
 	std::cout << "Extend: " << target << std::endl;
@@ -208,6 +214,18 @@ void ShuffleRule::run(PseudoServer& server, Configuration& spec) {
 	std::random_device rd;
 	std::mt19937 g(rd());
 	std::shuffle(toShuffleList.begin(), toShuffleList.end(),g);
+	
+}
+
+void DiscardRule::run(PseudoServer& server, Configuration& spec){
+	List& list = boost::get<List>(boost::get<Map>(spec.getVariables())[std::string(from)]);
+	if(list.size() == count){
+		list.clear();
+		std::cout<<"winner list have been discarded" <<std::endl;
+	}else
+	{
+		std::cout<<"list size not equal to count" <<std::endl;
+	}
 	
 }
 
