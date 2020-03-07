@@ -3,27 +3,18 @@
 #include <ctime>
 #include <cstdlib>
 #include <limits>
-#include <translator.h>
+//#include <translator.h>
+#include "../../translator/include/translator.h"
 
-class GameSpec {
+class Gamespec {
 public:
-    GameSpec(const nlohmann::json& gamespec, const std::vector<Player>& players);
-    const std::string& getName() const;
-    size_t getPlayerCountMin() const;
-    size_t getPlayerCountMax() const;
-    Variable& getVariables();
-    Connection getConnectionByName(const std::string& name);
-    void launchGame(PseudoServer& server);
-    std::thread launchGameDetached(PseudoServer& server);
-
+    Gamespec(Configuration& configuration){
+    	this->configuration = &configuration;
+    }
+    // Configuration getConfiguration();
+    // Configuration setConfiguration(const Configuration& configuration);
 private:
-    std::string name;
-    size_t playerCountMin;
-    size_t playerCountMax;
-    Variable variables;
-    RuleTree rules;
-    using PlayerMap = std::unordered_map<std::string, Connection>;
-    PlayerMap playersMap;
+    Configuration* configuration;
 };
 
 

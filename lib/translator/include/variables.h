@@ -459,7 +459,7 @@ public:
     template <typename T>
     bool operator()(const T& lhs, const Query& query) const
     {
-        this->operator()(query, lhs);
+       return this->operator()(query, lhs);
     }
 
     bool operator()(const Query& query1, const Query& query2) const

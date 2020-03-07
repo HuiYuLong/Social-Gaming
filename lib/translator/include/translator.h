@@ -139,21 +139,23 @@ struct Player
 // Contains the game configuration
 class Configuration {
 public:
-	Configuration(const nlohmann::json& config, const std::vector<Player>& players):
+	Configuration(const nlohmann::json& config):
         name(config["configuration"]["name"]),
         playerCountMin(config["configuration"]["player count"]["min"]),
         playerCountMax(config["configuration"]["player count"]["max"]),
         variables(Map()),
         rules(config["rules"])
     {
-        if (players.size() < playerCountMin) {
-            std::cout << "Too few players" << std::endl;
-            std::terminate();
-        }
-        if (players.size() > playerCountMax) {
-            std::cout << "Too many players" << std::endl;
-            std::terminate();
-        }
+        // no way to know if there are how many ppl are in at the beginning
+        // if (players.size() < playerCountMin) {
+        //     std::cout << "Too few players" << std::endl;
+        //     std::terminate();
+        // }
+        // if (players.size() > playerCountMax) {
+        //     std::cout << "Too many players" << std::endl;
+        //     std::terminate();
+        // }
+
         Map& map = boost::get<Map>(variables);
         // Put "setup" variables into "configuration" submap
         map["configuration"] = Map();
@@ -170,6 +172,7 @@ public:
             map[key] = buildVariables(value);
         }
         // Add players
+        // We should leave the map creation here for now, just populate later
         map["players"] = List();
         List& player_list = boost::get<List>(map["players"]);
         for(const Player& player: players) {
@@ -330,7 +333,6 @@ public:
 
 using ruleType = std::string;
 
-//-----------------------PETER'S CODE:---------------------------------
 
 class AddRule : public Rule{
 private:
@@ -427,7 +429,6 @@ public:
 };
 
 
-//-------------------------------Sophia's Code------------------------------//
 
 class ExtendRule : public Rule {
 private:
@@ -505,8 +506,6 @@ public:
 
 };
 
-//-------------------------------Junho's Code------------------------------//
-
 class ForEachRule : public Rule {
 private:
     ruleType list;
@@ -576,23 +575,42 @@ public:
 };
 
 std::unordered_map<std::string, std::function<std::unique_ptr<Rule>(const nlohmann::json&)>> rulemap = {
+
+        //Control Structures
 		{"foreach", [](const nlohmann::json& rule) { return std::make_unique<ForEachRule>(rule); }},
-        {"global-message", [](const nlohmann::json& rule) { return std::make_unique<GlobalMessageRule>(rule); }},
-        {"message", [](const nlohmann::json& rule) { return std::make_unique<MessageRule>(rule); }},
-        {"when", [](const nlohmann::json& rule) { return std::make_unique<WhenRule>(rule); }},
-        {"add", [](const nlohmann::json& rule) {return std::make_unique<AddRule>(rule); }},
         {"loop", [](const nlohmann::json&rule) {return std::make_unique<LoopRule>(rule);}},
         // {"inparallel", [](const nlohmann::json&rule) {return std::make_unique<InParallelRule>(rule);}},
         // {"parallelfor", [](const nlohmann::json&rule) {return std::make_unique<ParallelForRule>(rule);}},
-        // {"extend", [](const nlohmann::json& rule) {return std::make_unique<ExtendRule>(rule); }}, 
+        //{"switch", [](const nlohmann::json&rule) {return std::make_unique<SwitchRule>(rule);}},
+        {"when", [](const nlohmann::json& rule) { return std::make_unique<WhenRule>(rule); }},
+
+        //List Operations
+        {"extend", [](const nlohmann::json& rule) {return std::make_unique<ExtendRule>(rule); }}, 
         {"reverse", [](const nlohmann::json& rule) {return std::make_unique<ReverseRule>(rule); }},
-        // {"discard", [](const nlohmann::json& rule) {return std::make_unique<DiscardRule>(rule); }}, 
-        {"input-choice", [](const nlohmann::json& rule) {return std::make_unique<InputChoiceRule>(rule); }},
-        {"scores", [](const nlohmann::json& rule) {return std::make_unique<ScoresRule>(rule); }},
-        {"sort",[](const nlohmann::json& rule) {return std::make_unique<SortRule>(rule);}},
         {"shuffle", [](const nlohmann::json& rule) {return std::make_unique<ShuffleRule>(rule); }},
+        {"sort",[](const nlohmann::json& rule) {return std::make_unique<SortRule>(rule);}},
+        //{"deal",[](const nlohmann::json& rule) {return std::make_unique<DealRule>(rule);}},
+        {"discard", [](const nlohmann::json& rule) {return std::make_unique<DiscardRule>(rule); }}, 
+        {"deal",[](const nlohmann::json& rule) {return std::make_unique<DealRule>(rule);}},
+        //{"discard", [](const nlohmann::json& rule) {return std::make_unique<DiscardRule>(rule); }}, 
+
+        //Arithmetic Operations
+        {"add", [](const nlohmann::json& rule) {return std::make_unique<AddRule>(rule); }},
+
+        //Timing
+        //{"timer", [](const nlohmann::json& rule) {return std::make_unique<TimerRule>(rule); }},
+
+        //Human Input 
+        {"input-choice", [](const nlohmann::json& rule) {return std::make_unique<InputChoiceRule>(rule); }},
         {"input-text", [](const nlohmann::json& rule) {return std::make_unique<InputTextRule>(rule); }},
-        {"input-vote", [](const nlohmann::json& rule) {return std::make_unique<InputVoteRule>(rule); }}
+        {"input-vote", [](const nlohmann::json& rule) {return std::make_unique<InputVoteRule>(rule); }},
+
+        //Output
+        {"message", [](const nlohmann::json& rule) { return std::make_unique<MessageRule>(rule); }},
+        {"global-message", [](const nlohmann::json& rule) { return std::make_unique<GlobalMessageRule>(rule); }},
+        {"scores", [](const nlohmann::json& rule) {return std::make_unique<ScoresRule>(rule); }}
+        
+      
 };
 
 
