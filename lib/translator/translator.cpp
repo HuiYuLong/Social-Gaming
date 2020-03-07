@@ -59,7 +59,7 @@ ShuffleRule::ShuffleRule(const nlohmann::json& rule): list(rule["list"]) {
 // Todo: Extend, Deal, Discard & ListAttributes
 DealRule::DealRule(const nlohmann::json& rule): from(rule["from"]), to(rule["to"]), count(rule["count"]){
 	std::cout << "Deal: " << "from " << from << " to " << to << std::endl;
-
+}
 
 ExtendRule::ExtendRule(const nlohmann::json& rule): list(rule["list"]), target(rule["target"]) {
 	std::cout << "Extend: " << list << std::endl;
@@ -510,12 +510,6 @@ int main(int argc, char** argv) {
 
 	return 0;
 };
-
-
-
-
-
-
 
 
 
