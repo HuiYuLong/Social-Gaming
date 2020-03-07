@@ -124,23 +124,27 @@ struct Player
     Player(const std::string& name, Connection connection): name(name), connection(connection) {}
 };
 
+using PlayerMap = std::unordered_map<std::string, Connection>;
+
 class Configuration {
 public:
-	Configuration(const nlohmann::json& config, const std::vector<Player>& players):
+	Configuration(const nlohmann::json& config):
         name(config["configuration"]["name"]),
         playerCountMin(config["configuration"]["player count"]["min"]),
         playerCountMax(config["configuration"]["player count"]["max"]),
         variables(Map()),
         rules(config["rules"])
     {
-        if (players.size() < playerCountMin) {
-            std::cout << "Too few players" << std::endl;
-            std::terminate();
-        }
-        if (players.size() > playerCountMax) {
-            std::cout << "Too many players" << std::endl;
-            std::terminate();
-        }
+        // no way to know if there are how many ppl are in at the beginning
+        // if (players.size() < playerCountMin) {
+        //     std::cout << "Too few players" << std::endl;
+        //     std::terminate();
+        // }
+        // if (players.size() > playerCountMax) {
+        //     std::cout << "Too many players" << std::endl;
+        //     std::terminate();
+        // }
+
         Map& map = boost::get<Map>(variables);
         // Put "setup" variables into "configuration" submap
         map["configuration"] = Map();
@@ -157,14 +161,17 @@ public:
             map[key] = buildVariables(value);
         }
         // Add players
+        // We should leave the map creation here for now, just populate later
         map["players"] = List();
-        List& player_list = boost::get<List>(map["players"]);
-        for(const Player& player: players) {
-            Map player_map = boost::get<Map>(buildVariables(config["per-player"]));
-            player_map["name"] = player.name;
-            playersMap[player.name] = player.connection;
-            player_list.push_back(player_map);
-        }
+
+        // List& player_list = boost::get<List>(map["players"]);
+        // for(const Player& player: players) {
+        //     Map player_map = boost::get<Map>(buildVariables(config["per-player"]));
+        //     player_map["name"] = player.name;
+        //     playersMap[player.name] = player.connection;
+        //     player_list.push_back(player_map);
+        // }
+
         // Who cares
         map["audience"] = &map["players"];
     }
@@ -173,6 +180,7 @@ public:
 	size_t getPlayerCountMin() const { return playerCountMin; }
 	size_t getPlayerCountMax() const { return playerCountMax; }
     Variable& getVariables() { return variables; }
+    PlayerMap& getPlayersMap() {return playersMap; }
     Connection getConnectionByName(const std::string& name) { return playersMap[name]; }
     void launchGame(PseudoServer& server) { rules.spawn(server, *this); }
     std::thread launchGameDetached(PseudoServer& server) { return rules.spawn_detached(server, *this); }
@@ -183,7 +191,7 @@ private:
 	size_t playerCountMax;
     Variable variables;
     RuleTree rules;
-    using PlayerMap = std::unordered_map<std::string, Connection>;
+    //using PlayerMap = std::unordered_map<std::string, Connection>;
     PlayerMap playersMap;
 };
 			
