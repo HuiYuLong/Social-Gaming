@@ -12,6 +12,7 @@
 // using Boolean = bool;
 // using Key = std::string;
 
+// Contains a variable name or expression (like configuration.Rounds.upfrom(1))
 struct Query
 {
     std::string query;
@@ -40,6 +41,9 @@ using Pointer = Variable*;
 
 
 using tokenizer = boost::tokenizer<boost::char_separator<char> >;
+
+// I tried to use a visitor to access the variables by their names
+// but I couldn't return references to variants from it
 
 // class ConstantGetter : public boost::static_visitor<const Variable&>
 // {
@@ -148,6 +152,9 @@ using tokenizer = boost::tokenizer<boost::char_separator<char> >;
 
 // Attempt #2
 
+// The reference to the requested variable and a flag
+// that indicates whether the variable needs to be copied or moved
+// before making any other variable accesses
 struct GetterResult
 {
     Variable& result;
@@ -197,11 +204,13 @@ GetterResult Getter::processBoolean(Variable& boolean)
 
 GetterResult Getter::processInteger(Variable& integer)
 {
+    // Return the integer if it is the last token in the query
     if (it == tokens.end()) {
         return {integer, false};
     }
     auto next = it;
     ++next;
+    // If the integer has a method call, process it
     if (next == tokens.end())
     {
         const std::string& current_query = *it;
@@ -302,7 +311,7 @@ thread_local Variable Getter::returned;
 boost::char_separator<char> Getter::dot(".");
 
 
-// Prints the variable to the standard outputt
+// Prints the variable to the standard output
 class PrintTheThing : public boost::static_visitor<>
 {
     size_t current_offset = 0u;
@@ -423,6 +432,8 @@ public:
 
 //------------------------------------------Comparison operators-----------------------------------------
 
+// Tests any two variables for equality
+// Capable of automatically getting the values of the queries
 class Equal
     : public boost::static_visitor<bool>
 {

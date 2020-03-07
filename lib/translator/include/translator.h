@@ -21,6 +21,8 @@ using networking::Message;
 using networking::Connection;
 
 // For testing the interpreter
+// It will be replaced by an actual server implementation in the future
+// which will have the same interface
 #include <mutex>
 class PseudoServer
 {
@@ -43,6 +45,7 @@ public:
 
 std::mutex PseudoServer::lock;
 
+// Converts JSON objects into Variable objects
 Variable buildVariables(const nlohmann::json& json)
 {
     if (json.is_boolean()) {
@@ -82,6 +85,8 @@ Variable buildVariables(const nlohmann::json& json)
 
 class Configuration;
 
+// The base class for all the rules in the game configuration
+// The derived rules only need to define the run method that implements all their logic
 class Rule {
 public:
     virtual ~Rule() {};
@@ -91,6 +96,7 @@ public:
 
 using RuleList = std::vector<std::unique_ptr<Rule>>;
 
+// A holder for all the rules in some game configuration
 class RuleTree {
     RuleList rules;
 public:
@@ -99,7 +105,8 @@ public:
     RuleTree(const nlohmann::json& gameConfig);
     RuleList& getRules();
 
-    std::thread spawn_detached(PseudoServer& server, Configuration& spec)
+    // Run the rules in a separate thread
+    std::thread spawnDetached(PseudoServer& server, Configuration& spec)
     {
         return std::thread([this, &server, &spec] {
             for (const auto& ptr : rules) {
@@ -108,6 +115,7 @@ public:
         });
     }
 
+    // Just run the rules (kept for debugging purposes)
     void spawn(PseudoServer& server, Configuration& spec)
     {
         for (const auto& ptr : rules) {
@@ -116,16 +124,19 @@ public:
     }
 };
 
+// This class is only used in the Configuration constructor to pass the information about the players
 struct Player
 {
+    // The in-game name of a player that can be referenced from the game spec
     std::string name;
+
+    // A unique identifier of each player needed by the Server to send and receive messages
     Connection connection;
 
     Player(const std::string& name, Connection connection): name(name), connection(connection) {}
 };
 
-using PlayerMap = std::unordered_map<std::string, Connection>;
-
+// Contains the game configuration
 class Configuration {
 public:
 	Configuration(const nlohmann::json& config):
@@ -163,27 +174,27 @@ public:
         // Add players
         // We should leave the map creation here for now, just populate later
         map["players"] = List();
-
-        // List& player_list = boost::get<List>(map["players"]);
-        // for(const Player& player: players) {
-        //     Map player_map = boost::get<Map>(buildVariables(config["per-player"]));
-        //     player_map["name"] = player.name;
-        //     playersMap[player.name] = player.connection;
-        //     player_list.push_back(player_map);
-        // }
-
-        // Who cares
-        map["audience"] = &map["players"];
+        List& player_list = boost::get<List>(map["players"]);
+        for(const Player& player: players) {
+            Map player_map = boost::get<Map>(buildVariables(config["per-player"]));
+            player_map["name"] = player.name;
+            name2conection[player.name] = player.connection;
+            player_list.push_back(player_map);
+        }
+        // Add audience list
+        if (config["configuration"]["audience"])
+        {
+            map["audience"] = List();
+        }
     }
 
 	const std::string& getName() const { return name; }
 	size_t getPlayerCountMin() const { return playerCountMin; }
 	size_t getPlayerCountMax() const { return playerCountMax; }
     Variable& getVariables() { return variables; }
-    PlayerMap& getPlayersMap() {return playersMap; }
-    Connection getConnectionByName(const std::string& name) { return playersMap[name]; }
+    Connection getConnectionByName(const std::string& name) { return name2conection.at(name); }
     void launchGame(PseudoServer& server) { rules.spawn(server, *this); }
-    std::thread launchGameDetached(PseudoServer& server) { return rules.spawn_detached(server, *this); }
+    std::thread launchGameDetached(PseudoServer& server) { return rules.spawnDetached(server, *this); }
 
 private:
 	std::string name;
@@ -191,11 +202,15 @@ private:
 	size_t playerCountMax;
     Variable variables;
     RuleTree rules;
-    //using PlayerMap = std::unordered_map<std::string, Connection>;
-    PlayerMap playersMap;
+    using Name2Connection = std::unordered_map<std::string, Connection>;
+    Name2Connection name2conection;
 };
-			
 
+// The job of the Condition class is to prepare a function that corresponds
+// to a logical expression inside the game specification (like players.wins == 0)
+// During the game, you just need to call the evaluate method with the current variable tree
+// that automatically accesses all variables involved in the logical expression
+// and returns its result as a boolean variable
 class Condition 
 {
     // The clause will take in a top-level variable map and return a boolean value
@@ -203,37 +218,7 @@ class Condition
     std::function<bool(Variable&)> clause;
     static std::regex equality_regex;
     static std::regex decimal_regex;
-    //static std::regex variable_regex;
-    // struct Operand
-    // {
-    //     Variable variable;
-    //     bool is_constant;
-
-    //     Operand(const std::string& str)
-    //     {
-    //         if (std::regex_match(str, decimal_regex)) {
-    //             variable = std::stoi(str);
-    //             is_constant = true;
-    //         }
-    //         else if (str == "true") {
-    //             variable = true;
-    //             is_constant = true;
-    //         }
-    //         else if (str == "false") {
-    //             variable = false;
-    //             is_constant = true;
-    //         }
-    //         else {
-    //             variable = str;
-    //             is_constant = false;
-    //         }
-    //     }
-
-    //     Variable get_from(Variable& toplevel) const
-    //     {
-    //         return is_constant ? variable : Getter(boost::get<std::string>(variable)).get_from(toplevel).result;
-    //     }
-    // };
+  
     Variable getOperand(const std::string& str)
     {
         if (std::regex_match(str, decimal_regex)) {
@@ -301,6 +286,7 @@ struct Case
 	RuleList subrules;
 };
 
+// Builds a string with all {...} variable references replaced by their values
 class Text
 {
     struct Value
