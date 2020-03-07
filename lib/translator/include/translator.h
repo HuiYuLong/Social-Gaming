@@ -339,7 +339,6 @@ public:
 
 using ruleType = std::string;
 
-//-----------------------PETER'S CODE:---------------------------------
 
 class AddRule : public Rule{
 private:
@@ -436,7 +435,6 @@ public:
 };
 
 
-//-------------------------------Sophia's Code------------------------------//
 
 class ExtendRule : public Rule {
 private:
@@ -514,8 +512,6 @@ public:
 
 };
 
-//-------------------------------Junho's Code------------------------------//
-
 class ForEachRule : public Rule {
 private:
     ruleType list;
@@ -589,13 +585,13 @@ std::unordered_map<std::string, std::function<std::unique_ptr<Rule>(const nlohma
         //Control Structures
 		{"foreach", [](const nlohmann::json& rule) { return std::make_unique<ForEachRule>(rule); }},
         {"loop", [](const nlohmann::json&rule) {return std::make_unique<LoopRule>(rule);}},
-         // {"inparallel", [](const nlohmann::json&rule) {return std::make_unique<InParallelRule>(rule);}},
+        // {"inparallel", [](const nlohmann::json&rule) {return std::make_unique<InParallelRule>(rule);}},
         // {"parallelfor", [](const nlohmann::json&rule) {return std::make_unique<ParallelForRule>(rule);}},
         //{"switch", [](const nlohmann::json&rule) {return std::make_unique<SwitchRule>(rule);}},
         {"when", [](const nlohmann::json& rule) { return std::make_unique<WhenRule>(rule); }},
 
         //List Operations
-        // {"extend", [](const nlohmann::json& rule) {return std::make_unique<ExtendRule>(rule); }}, 
+        {"extend", [](const nlohmann::json& rule) {return std::make_unique<ExtendRule>(rule); }}, 
         {"reverse", [](const nlohmann::json& rule) {return std::make_unique<ReverseRule>(rule); }},
         {"shuffle", [](const nlohmann::json& rule) {return std::make_unique<ShuffleRule>(rule); }},
         {"sort",[](const nlohmann::json& rule) {return std::make_unique<SortRule>(rule);}},
