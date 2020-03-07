@@ -61,19 +61,16 @@ DealRule::DealRule(const nlohmann::json& rule): from(rule["from"]), to(rule["to"
 	std::cout << "Deal: " << "from " << from << " to " << to << std::endl;
 }
 
-<<<<<<< HEAD
-	DiscardRule::DiscardRule(const nlohmann::json& rule):from(rule["from"]), count(rule["count"]){
+DiscardRule::DiscardRule(const nlohmann::json& rule):from(rule["from"]), count(rule["count"]){
 	std::cout << "Discard Variable: " << from << std::endl;
 	std::cout << "Variable Size: " << count << std::endl;
 
 }
 
-=======
 ExtendRule::ExtendRule(const nlohmann::json& rule): list(rule["list"]), target(rule["target"]) {
 	std::cout << "Extend: " << list << std::endl;
 	std::cout << "Extend: " << target << std::endl;
 }
->>>>>>> 76270b01062b116b69dbda2c8394b87ab23dfacc
 //
 
 
