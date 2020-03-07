@@ -39,11 +39,23 @@
   
     "rules": [
 
-            {
-              "rule": "deal",
-              "from": "winners",
-              "to": "losers",
-              "count": 2
+            { "rule": "timer",
+              "duration": 0,
+              "mode": "exact",
+              "rules": [
+                {
+                  "rule": "deal",
+                  "from": "winners",
+                  "to": "losers",
+                  "count": 2
+                },
+                {
+                  "rule": "deal",
+                  "from": "winners",
+                  "to": "losers",
+                  "count": 2
+                }
+              ]
             }
         
       

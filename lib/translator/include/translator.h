@@ -612,7 +612,7 @@ std::unordered_map<std::string, std::function<std::unique_ptr<Rule>(const nlohma
         {"add", [](const nlohmann::json& rule) {return std::make_unique<AddRule>(rule); }},
 
         //Timing
-        //{"timer", [](const nlohmann::json& rule) {return std::make_unique<TimerRule>(rule); }},
+        {"timer", [](const nlohmann::json& rule) {return std::make_unique<TimerRule>(rule); }},
 
         //Human Input 
         {"input-choice", [](const nlohmann::json& rule) {return std::make_unique<InputChoiceRule>(rule); }},

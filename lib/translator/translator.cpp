@@ -4,6 +4,7 @@
 #include <iostream>
 #include <algorithm>
 #include <random>
+#include <ctime>
 using namespace std;
 
 //**** Control Structures ****//
@@ -82,9 +83,13 @@ AddRule::AddRule(const nlohmann::json& rule): to(rule["to"]), value(rule["value"
 
 
 //**** Timing ****//
-//
-// Todo: Timer
-//
+TimerRule::TimerRule(const nlohmann::json& rule): duration(rule["duration"]), mode(rule["mode"]) {
+	std::cout << "Timer: " << duration << std::endl;
+    for (const auto& it : rule["rules"].items())
+    {
+		subrules.push_back(rulemap[it.value()["rule"]](it.value()));
+    }
+}
 
 
 //**** Human Input ****//
@@ -412,6 +417,28 @@ void AddRule::run(PseudoServer& server, Configuration& spec)
 	assert(!result.needs_to_be_saved);
 	int& integer = boost::get<int>(result.result);
 	integer += value;
+}
+
+void TimerRule::run(PseudoServer& server, Configuration& spec) {
+	// Todo: An "exact" timer will pad the execution time to the given duration
+	std::cout << mode << std::endl;
+	std::clock_t start;
+    start = std::clock();
+	bool flag = false;
+
+	float timer = float(std::clock()-start)/CLOCKS_PER_SEC;
+	for (const auto& ptr : subrules) {
+		timer = float(std::clock()-start)/CLOCKS_PER_SEC;
+		if( (timer>duration) && (mode == "exact")) {
+			std::cout << "times up!" << std::endl;
+			// TODO: send a msg to the server to stop the rest of the rules
+			return;
+		}
+		else if( (timer>duration) && (mode == "track")) {
+			std::cout << "!!flag" << std::endl;
+		}
+		ptr->run(server, spec);
+	}
 }
 
 class TEST : public boost::static_visitor<>
