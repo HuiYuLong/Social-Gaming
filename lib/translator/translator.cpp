@@ -396,7 +396,9 @@ int main(int argc, char** argv) {
 	std::vector<Player> players;
 	for (const std::string& name : {"a", "b"})
 		players.emplace_back(name, Connection());
+
 	configurations.reserve(j["games"].size());
+
 	for ([[maybe_unused]] const auto& [ key, gamespecfile]: j["games"].items())
 	{
 		std::ifstream gamespecstream{std::string(gamespecfile)};
@@ -406,8 +408,25 @@ int main(int argc, char** argv) {
 			return 0;
 		}
 		nlohmann::json gamespec = nlohmann::json::parse(gamespecstream);
-		configurations.emplace_back(gamespec, players);
+		configurations.emplace_back(gamespec);
 		std::cout << "\nTranslated game " << key << "\n\n";
+    }
+
+    // test that moving the players out of configurations works
+    // in the future populating the players list would be done inside GameSession
+    for (auto& configuration : configurations) {
+    	Map& map = boost::get<Map>(configuration.getVariables());
+        List& player_list = boost::get<List>(map["players"]);
+        for (const Player& player : players) {
+        	std::cout << "harro" << std::endl;
+        	// this needs to be handled differently in GameSession
+        	//Map player_map = boost::get<Map>(buildVariables(j["per-player"]));
+        	Map player_map = Map();
+        	player_map["name"] = player.name;
+        	PlayerMap& players_map = configuration.getPlayersMap();
+        	players_map[player.name] = player.connection;
+        	player_list.push_back(player_map);
+        }
     }
 
 	// TEST
