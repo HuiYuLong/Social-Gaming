@@ -17,6 +17,9 @@
     },
   
     "variables": {
+      "player":
+        { "name": "a"}
+      ,
       "winners": []
     },
   
@@ -41,7 +44,6 @@
               "to": "player",
               "value": "Gread job, {player.name}!"
             }
-     
         
       
     ]
