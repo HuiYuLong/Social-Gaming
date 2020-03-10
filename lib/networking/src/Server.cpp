@@ -107,7 +107,6 @@ private:
 
 using networking::Connection;
 using networking::Channel;
-using networking::GameSession;
 
 void
 Channel::start(boost::beast::http::request<boost::beast::http::string_body>& request) {
@@ -364,7 +363,7 @@ void
 ServerImpl::registerChannel(Channel& channel, boost::beast::string_view target) {
   auto connection = channel.getConnection();
   channels[connection] = channel.shared_from_this();
-  server.connectionHandler->handleConnect(connection, std::string_view{target.data(), target.size()});
+  server.connectionHandler->handleConnect(connection, std::string_view{target.data(), target.size()}, server);
 }
 
 
@@ -386,6 +385,8 @@ ServerImplDeleter::operator()(ServerImpl* serverImpl) {
 // Core Server
 /////////////////////////////////////////////////////////////////////////////
 
+std::mutex Server::lock;
+
 void
 Server::update() {
   try {
@@ -399,12 +400,14 @@ Server::update() {
 
 std::optional<std::string>
 Server::receive(Connection connection) {
+  std::lock_guard lg(lock);
   return impl->channels.at(connection)->receive();
 }
 
 
 void
 Server::send(const Message& message) {
+  std::lock_guard lg(lock);
   impl->channels.at(message.connection)->send(message.text);
 }
 

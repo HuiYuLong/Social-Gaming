@@ -4,7 +4,3 @@ add_subdirectory(translator)
 add_subdirectory(authentication)
 add_subdirectory(GameSession)
 add_subdirectory(Gamespec)
-
-add_library(common INTERFACE)
-
-target_include_directories(common INTERFACE .)

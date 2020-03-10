@@ -7,6 +7,7 @@
 
 
 #include "Server.h"
+#include "translator.h"
 
 #include <fstream>
 #include <iostream>
@@ -15,14 +16,87 @@
 #include <unistd.h>
 #include <vector>
 #include <nlohmann/json.hpp>
+#include <thread>
 
 using networking::Server;
 using networking::Connection;
 using networking::Message;
-using networking::GameSession;
 using networking::ConnectionHash;
 
 using json = nlohmann::json;
+
+//Connection DISCONNECTED{reinterpret_cast<uintptr_t>(nullptr)};
+
+/**
+ * Since the server should be able to handle multiple games,
+ * some identifier is needed to distinguish different connections.
+ * Each game corresponds to a session, and each connection of the game belongs to that session.
+ */
+struct GameSession {
+  uintptr_t id;
+  Connection gameOwner;
+  std::string invite_code;
+  std::vector<Connection> players;
+  std::unique_ptr<GameState> game_state;
+  Name2Connection name2connection;
+  Configuration* configuration;
+
+  GameSession(Connection gameOwner, std::string_view invite_code):
+    id(reinterpret_cast<uintptr_t>(this)),
+    gameOwner(gameOwner),
+    invite_code(invite_code),
+    configuration(nullptr)
+    { players.push_back(gameOwner); }
+
+  bool
+  operator==(const GameSession& other) const {
+    return id == other.id;
+  }
+
+  std::string register_username(const std::string& name, Connection connection) {
+    if(name.size() == 0) {
+      return "Invalid command";
+    }
+    if (name2connection.find(name) != name2connection.end()) {
+      return "This name is already used";
+    }
+    auto found = std::find_if(name2connection.begin(), name2connection.end(), [connection](const std::pair<std::string, Connection>& iter) {
+      return connection == iter.second;
+    });
+    if(found != name2connection.end()) {
+      name2connection.erase(found);
+    }
+    name2connection[name] = connection;
+    return "Changed the username to " + name;
+  }
+
+  std::pair<std::string, bool> validate() {
+    if (configuration == nullptr) {
+      return {"Please /select a game from the list\n", false};
+    }
+    if (players.size() <= configuration->getPlayerCountMax()) {
+      std::ostringstream ostream;
+      ostream << "Too many players for this game. You need to evict "
+        << configuration->getPlayerCountMax() - players.size() << " player(s)" << std::endl;
+      return {ostream.str(), false};
+    }
+    if (players.size() >= configuration->getPlayerCountMin()) {
+      std::ostringstream ostream;
+      ostream << "This game requires at least " << configuration->getPlayerCountMin() << "people to play, but only "
+        << players.size() << " are present in the lobby" << std::endl;
+      return {ostream.str(), false};
+    }
+    if (players.size() != name2connection.size()) {
+      return {"Some of the players haven't named themselves yet", false};
+    }
+    return {"Starting the game...\n", true};
+  }
+
+  void operator()(Server& server) {
+    game_state = std::make_unique<GameState>(*configuration, this->name2connection);
+    configuration->launchGame(server, *game_state);
+  }
+};
 
 /**
  *  Publicly available collection of sessions
@@ -31,8 +105,17 @@ std::unordered_map<Connection, GameSession*, ConnectionHash> sessionMap;
 
 std::vector<std::unique_ptr<GameSession>> gameSessions;
 
+std::vector<Configuration> configurations;
+
+const std::string welcoming_message = "Welcome to the Social Game Engine!\n\n\
+/username &lt;name&gt; - choose yourself an in-game name\n\
+/select &lt;game&gt; - choose a game to play from the list below\n\
+/start - when you are ready\n\
+/quit - if you need to leave\n\
+/shutdown - close the game\n";
+
 void
-onConnect(Connection c, std::string_view target) {
+onConnect(Connection c, std::string_view target, Server& server) {
   auto gameSessionIter = std::find_if(gameSessions.begin(), gameSessions.end(), [target](std::unique_ptr<GameSession>& gameSession) {
     return target.compare(gameSession->invite_code) == 0;
   });
@@ -41,11 +124,20 @@ onConnect(Connection c, std::string_view target) {
     gameSession->players.push_back(c);
     sessionMap[c] = gameSession.get();
     std::cout << "Session " << gameSession->id << " joined by " << c.id << std::endl;
-    return;
   }
-  gameSessions.emplace_back(std::make_unique<GameSession>(c, target));
-  sessionMap[c] = gameSessions.back().get();
-  std::cout << "Session " << gameSessions.back()->id << " created by " << c.id << std::endl;
+  else {
+    gameSessions.emplace_back(std::make_unique<GameSession>(c, target));
+    sessionMap[c] = gameSessions.back().get();
+    std::cout << "Session " << gameSessions.back()->id << " created by " << c.id << std::endl;
+  }
+
+  std::ostringstream ostream;
+  ostream << "Available games:\n\n";
+  for (size_t i = 0u, end = configurations.size(); i < end; i++) {
+    ostream << '\t' << i << ". " << configurations[i].getName() << "\n";
+  }
+  server.send({c, welcoming_message});
+  server.send({c, ostream.str()});
 }
 
 
@@ -86,13 +178,33 @@ main(int argc, char* argv[]) {
     return 1;
   }
 
-  std::ifstream config{argv[1]};
-  json j = json::parse(config);
+  std::ifstream serverconfig{argv[1]};
+  if (serverconfig.fail()) {
+      std::cout << "Could not open the server configuration file" << std::endl;
+      return 1;
+  }
+  json serverspec = json::parse(serverconfig);
 
-  unsigned short port = j["port"];
-  Server server{port, getHTTPMessage(j["indexhtml"]), onConnect, onDisconnect};
+	configurations.reserve(serverspec["games"].size());
+
+  for ([[maybe_unused]] const auto& [key, gamespecfile]: serverspec["games"].items())
+	{
+		std::ifstream gamespecstream{std::string(gamespecfile)};
+		if (gamespecstream.fail()) {
+			std::cout << "Could not open the game configuration file " << gamespecfile << std::endl;
+			return 1;
+		}
+		json gamespec = json::parse(gamespecstream);
+		configurations.emplace_back(gamespec);
+		std::cout << "\nTranslated game " << gamespecfile << "\n\n";
+  }
+
+  unsigned short port = serverspec["port"];
+  Server server{port, getHTTPMessage(serverspec["indexhtml"]), onConnect, onDisconnect};
+
+
+
   std::ostringstream buffer;
-
   while (true) {
     try {
       server.update();
@@ -108,22 +220,54 @@ main(int argc, char* argv[]) {
         auto received = server.receive(connection);
         if (received.has_value()) {
           std::string message_text = std::move(received.value());
-        
-          if (message_text == "quit") {
-            it = session->players.erase(it);
-            sessionMap.erase(connection);
-            server.disconnect(connection, false);
-            std::cout << "Session " << session->id << " has lost connection " << connection.id << std::endl; 
-            continue;
-          }
-          if (message_text == "shutdown" && session->gameOwner == connection) {
-            for (Connection player : session->players) {
-              sessionMap.erase(player);
-              server.disconnect(player, false);
+
+          if(message_text.size() > 0 && message_text[0] == '/') {
+            if (message_text == "/quit") {
+              it = session->players.erase(it);
+              sessionMap.erase(connection);
+              server.disconnect(connection, false);
               std::cout << "Session " << session->id << " has lost connection " << connection.id << std::endl; 
+              continue;
             }
-            session->players.clear();
-            break;
+            if (message_text.compare(0, 10, "/username ") == 0) {
+              std::string name = message_text.substr(10);
+              std::string response = session->register_username(name, connection);
+              server.send({connection, response});
+            }
+
+            if(connection == session->gameOwner) {
+              if (message_text == "/shutdown") {
+                for (Connection player : session->players) {
+                  sessionMap.erase(player);
+                  server.disconnect(player, false);
+                  std::cout << "Session " << session->id << " has lost connection " << connection.id << std::endl; 
+                }
+                session->players.clear();
+                break;
+              }
+              if (message_text.compare(0, 8, "/select ") == 0) {
+                auto game = std::find_if(configurations.begin(), configurations.end(),
+                  [game_name = std::move(message_text.substr(8))](const Configuration& conf) {
+                  return game_name == conf.getName();
+                });
+                if (game != configurations.end()) {
+                  session->configuration = &(*game);
+                  server.send({connection, "Successfully changed the game to " + game->getName()});
+                }
+                else {
+                  server.send({connection, "Could not find a game with the given name"});
+                }
+              }
+              else if (message_text.compare(0, 6, "/start") == 0) {
+                auto [notice, good_to_go] = session->validate();
+                buffer << "bot> " << notice << "\n";
+                if(good_to_go) {
+                  std::cout << "Session " << session->id << " is set free" << std::endl;
+                  std::thread t(std::ref(*session), std::ref(server));
+                  t.detach();
+                }
+              }
+            }
           }
           buffer << connection.id << "> " << message_text << "\n";
         }

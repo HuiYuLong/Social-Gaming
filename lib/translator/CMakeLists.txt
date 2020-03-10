@@ -1,7 +1,6 @@
-project(translator_test)
-add_executable(translator_test translator.cpp)
+add_library(translator translator.cpp variables.cpp)
 
-target_include_directories(translator_test
+target_include_directories(translator
   PUBLIC
     $<INSTALL_INTERFACE:include>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -12,7 +11,6 @@ target_include_directories(translator_test
 
 SET(CMAKE_CXX_FLAGS -pthread)
 
-
-target_link_libraries(translator_test
+target_link_libraries(translator
   PRIVATE nlohmann_json::nlohmann_json
-  PUBLIC common)
+  PRIVATE networking)

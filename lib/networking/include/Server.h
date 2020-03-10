@@ -18,36 +18,42 @@
 #include <sstream>
 #include <vector>
 #include <optional>
-#include "common.h"
+#include <mutex>
 
 
 namespace networking {
 
-//Connection DISCONNECTED{reinterpret_cast<uintptr_t>(nullptr)};
-
 /**
- * Since the server should be able to handle multiple games,
- * some identifier is needed to distinguish different connections.
- * Each game corresponds to a session, and each connection of the game belongs to that session.
+ *  An identifier for a Client connected to a Server. The ID of a Connection is
+ *  guaranteed to be unique across all actively connected Client instances.
  */
-struct GameSession {
+struct Connection {
   uintptr_t id;
-  Connection gameOwner;
-  std::string invite_code;
-  std::vector<Connection> players;
-
-  GameSession(Connection gameOwner, std::string_view invite_code):
-    id(reinterpret_cast<uintptr_t>(this)),
-    gameOwner(gameOwner),
-    invite_code(invite_code)
-    { players.push_back(gameOwner); }
 
   bool
-  operator==(const GameSession& other) const {
+  operator==(Connection other) const {
     return id == other.id;
   }
 };
 
+struct ConnectionHash {
+  size_t
+  operator()(Connection c) const {
+    return std::hash<decltype(c.id)>{}(c.id);
+  }
+};
+
+using Name2Connection = std::unordered_map<std::string, Connection>;
+
+
+/**
+ *  A Message containing text that can be sent to or was recieved from a given
+ *  Connection.
+ */
+struct Message {
+  Connection connection;
+  std::string text;
+};
 
 /** A compilation firewall for the server. */
 class ServerImpl;
@@ -132,7 +138,7 @@ private:
   class ConnectionHandler {
   public:
     virtual ~ConnectionHandler() = default;
-    virtual void handleConnect(Connection, std::string_view) = 0;
+    virtual void handleConnect(Connection, std::string_view, Server&) = 0;
     virtual void handleDisconnect(Connection) = 0;
   };
 
@@ -144,7 +150,7 @@ private:
         onDisconnect{std::move(onDisconnect)}
         { }
     ~ConnectionHandlerImpl() override = default;
-    void handleConnect(Connection c, std::string_view target)    override { onConnect(c, target);    }
+    void handleConnect(Connection c, std::string_view target, Server& server)    override { onConnect(c, target, server);    }
     void handleDisconnect(Connection c) override { onDisconnect(c); }
   private:
     C onConnect;
@@ -156,6 +162,8 @@ private:
 
   std::unique_ptr<ConnectionHandler> connectionHandler;
   std::unique_ptr<ServerImpl,ServerImplDeleter> impl;
+
+  static std::mutex lock;
 };
 
 
