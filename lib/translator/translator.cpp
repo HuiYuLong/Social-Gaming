@@ -519,20 +519,20 @@ int main(int argc, char** argv) {
 
     // test that moving the players out of configurations works
     // in the future populating the players list would be done inside GameSession
-    for (auto& configuration : configurations) {
-    	Map& map = boost::get<Map>(configuration.getVariables());
-        List& player_list = boost::get<List>(map["players"]);
-        for (const Player& player : players) {
-        	std::cout << "harro" << std::endl;
-        	// this needs to be handled differently in GameSession
-        	//Map player_map = boost::get<Map>(buildVariables(j["per-player"]));
-        	Map player_map = Map();
-        	player_map["name"] = player.name;
-        	PlayerMap& players_map = configuration.getPlayersMap();
-        	players_map[player.name] = player.connection;
-        	player_list.push_back(player_map);
-        }
-    }
+    // for (auto& configuration : configurations) {
+    // 	Map& map = boost::get<Map>(configuration.getVariables());
+    //     List& player_list = boost::get<List>(map["players"]);
+    //     for (const Player& player : players) {
+    //     	std::cout << "harro" << std::endl;
+    //     	// this needs to be handled differently in GameSession
+    //     	//Map player_map = boost::get<Map>(buildVariables(j["per-player"]));
+    //     	Map player_map = Map();
+    //     	player_map["name"] = player.name;
+    //     	PlayerMap& players_map = configuration.getPlayersMap();
+    //     	players_map[player.name] = player.connection;
+    //     	player_list.push_back(player_map);
+    //     }
+    // }
 
 	// TEST
 	Variable& variables = configurations.front().getVariables();

@@ -173,19 +173,19 @@ public:
         }
         // Add players
         // We should leave the map creation here for now, just populate later
-        map["players"] = List();
-        List& player_list = boost::get<List>(map["players"]);
-        for(const Player& player: players) {
-            Map player_map = boost::get<Map>(buildVariables(config["per-player"]));
-            player_map["name"] = player.name;
-            name2conection[player.name] = player.connection;
-            player_list.push_back(player_map);
-        }
+        // map["players"] = List();
+        // List& player_list = boost::get<List>(map["players"]);
+        // for(const Player& player: players) {
+        //     Map player_map = boost::get<Map>(buildVariables(config["per-player"]));
+        //     player_map["name"] = player.name;
+        //     name2conection[player.name] = player.connection;
+        //     player_list.push_back(player_map);
+        // }
         // Add audience list
-        if (config["configuration"]["audience"])
-        {
-            map["audience"] = List();
-        }
+        // if (config["configuration"]["audience"])
+        // {
+        //     map["audience"] = List();
+        // }
     }
 
 	const std::string& getName() const { return name; }

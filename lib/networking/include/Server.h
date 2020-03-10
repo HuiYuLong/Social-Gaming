@@ -17,11 +17,13 @@
 #include <algorithm>
 #include <sstream>
 #include <vector>
+#include <optional>
 #include "common.h"
 
 
 namespace networking {
 
+//Connection DISCONNECTED{reinterpret_cast<uintptr_t>(nullptr)};
 
 /**
  * Since the server should be able to handle multiple games,
@@ -33,7 +35,6 @@ struct GameSession {
   Connection gameOwner;
   std::string invite_code;
   std::vector<Connection> players;
-  std::ostringstream communication;
 
   GameSession(Connection gameOwner, std::string_view invite_code):
     id(reinterpret_cast<uintptr_t>(this)),
@@ -42,7 +43,7 @@ struct GameSession {
     { players.push_back(gameOwner); }
 
   bool
-  operator==(GameSession other) const {
+  operator==(const GameSession& other) const {
     return id == other.id;
   }
 };
@@ -107,19 +108,19 @@ public:
   /**
    *  Send a list of messages to their respective Clients.
    */
-  void send(const std::deque<Message>& messages);
+  void send(const Message& message);
 
   /**
    *  Receive Message instances from Client instances. This returns all Message
    *  instances collected by previous calls to Server::update() and not yet
    *  received.
    */
-  [[nodiscard]] std::deque<Message> receive();
+  [[nodiscard]] std::optional<std::string> receive(Connection);
 
   /**
    *  Disconnect the Client specified by the given Connection.
    */
-  void disconnect(Connection connection);
+  void disconnect(Connection connection, bool handleDisconnect = true);
 
 private:
   friend class ServerImpl;

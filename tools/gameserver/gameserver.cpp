@@ -53,6 +53,7 @@ void
 onDisconnect(Connection c) {
   // remove the connection from the session
   auto session = sessionMap.at(c);
+  sessionMap.erase(c);
   std::cout << "Session " << session->id << " has lost connection " << c.id << std::endl; 
   session->players.erase(std::remove(std::begin(session->players), std::end(session->players), c), std::end(session->players));
   if(session->players.empty())
@@ -60,43 +61,6 @@ onDisconnect(Connection c) {
     std::cout << "No players left. Shutting down session " << session->id << std::endl;
     gameSessions.erase(std::remove_if(std::begin(gameSessions), std::end(gameSessions), [](std::unique_ptr<GameSession>& session) { return session->players.empty(); }), std::end(gameSessions));
   }
-  sessionMap.erase(c);
-}
-
-
-std::deque<Message>
-processMessages(Server& server, const std::deque<Message>& incoming) {
-  for (auto& message : incoming) {
-    if (message.text == "quit") {
-      server.disconnect(message.connection);
-    } else if (message.text == "shutdown") {
-      GameSession* session = sessionMap[message.connection];
-      if(session->gameOwner == message.connection)
-      {
-        for (Connection player : std::vector<Connection>(session->players))
-          server.disconnect(player);
-      }
-    } else {
-      sessionMap[message.connection]->communication << message.connection.id << "> " << message.text << "\n";
-    }
-  }
-
-  std::deque<Message> outgoing;
-  for (auto const [connection, gameSession] : sessionMap)
-  {
-    outgoing.push_back({connection, gameSession->communication.str()});
-  }
-  for (auto& session : gameSessions)
-  {
-    session->communication.str(""); // clear the stream
-  }
-  // std::vector<std::string> output(server.gameSessions.size());
-  // std::transform(server.gameSessions.begin(), server.gameSessions.end(), output.begin(), [](GameSession& session) {
-  //   std::string temp = session.communication.str();
-  //   session.communication.str("");  // clear the stream
-  //   return temp;
-  // });
-  return outgoing;
 }
 
 
@@ -127,6 +91,7 @@ main(int argc, char* argv[]) {
 
   unsigned short port = j["port"];
   Server server{port, getHTTPMessage(j["indexhtml"]), onConnect, onDisconnect};
+  std::ostringstream buffer;
 
   while (true) {
     try {
@@ -137,10 +102,46 @@ main(int argc, char* argv[]) {
       break;
     }
 
-    auto incoming = server.receive();
-    auto outgoing = processMessages(server, incoming);
-    server.send(outgoing);
+    for (const auto& session: gameSessions) {
+      for(auto it = session->players.begin(); it != session->players.end(); ) {
+        Connection connection = *it;
+        auto received = server.receive(connection);
+        if (received.has_value()) {
+          std::string message_text = std::move(received.value());
+        
+          if (message_text == "quit") {
+            it = session->players.erase(it);
+            sessionMap.erase(connection);
+            server.disconnect(connection, false);
+            std::cout << "Session " << session->id << " has lost connection " << connection.id << std::endl; 
+            continue;
+          }
+          if (message_text == "shutdown" && session->gameOwner == connection) {
+            for (Connection player : session->players) {
+              sessionMap.erase(player);
+              server.disconnect(player, false);
+              std::cout << "Session " << session->id << " has lost connection " << connection.id << std::endl; 
+            }
+            session->players.clear();
+            break;
+          }
+          buffer << connection.id << "> " << message_text << "\n";
+        }
+        ++it;
+      }
 
+      if(session->players.empty())
+      {
+        std::cout << "No players left. Shutting down session " << session->id << std::endl;
+        gameSessions.erase(std::remove_if(std::begin(gameSessions), std::end(gameSessions), [](const std::unique_ptr<GameSession>& session) { return session->players.empty(); }), std::end(gameSessions));
+        continue;
+      }
+
+      for(Connection connection: session->players) {
+        server.send({connection, buffer.str()});
+      }
+      buffer.str(""); // clear buffer
+    }
     sleep(1);
   }
 
