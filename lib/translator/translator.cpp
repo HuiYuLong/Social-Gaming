@@ -1,4 +1,4 @@
-#include "include/translator.h"
+#include "translator.h"
 #include <unordered_map>
 #include "boost/variant.hpp"
 #include <iostream>
@@ -6,6 +6,86 @@
 #include <random>
 #include <ctime>
 using namespace std;
+
+Variable buildVariables(const nlohmann::json& json)
+{
+    if (json.is_boolean()) {
+        //std::cout << json << std::endl;
+        return (Variable) (bool) json;
+    }
+    else if (json.is_number()) {
+        //std::cout << json << std::endl;
+        return (Variable) (int) json;
+    }
+    else if (json.is_string()) {
+        //std::cout << json << std::endl;
+        return (Variable) (std::string) json;
+    }
+    else if (json.is_object()) {
+        Map map;
+        for(const auto&[key, value]: json.items()) {
+            //std::cout << key << std::endl;
+            map[key] = buildVariables(value);
+        }
+        return (Variable) map;
+    }
+    else if (json.is_array()) {
+        List list;
+        for(const auto&[key, value]: json.items()) {
+            //std::cout << key << std::endl;
+            list.push_back(buildVariables(value));
+        }
+        return (Variable) list;
+    }
+    else {
+        std::cout << "Invalid JSON variable type" << std::endl;
+        std::terminate();
+    }
+}
+
+std::regex Condition::equality_regex("\\s*(\\S+)\\s*==\\s*(\\S+)\\s*");
+std::regex Condition::decimal_regex("\\d+");
+//std::regex Condition::variable_regex("(\\w+(\\(\\w+\\)))?\\w+(\\(\\w+\\)))?");
+
+std::unordered_map<std::string, std::function<std::unique_ptr<Rule>(const nlohmann::json&)>> rulemap = {
+
+        //Control Structures
+		{"foreach", [](const nlohmann::json& rule) { return std::make_unique<ForEachRule>(rule); }},
+        {"loop", [](const nlohmann::json&rule) {return std::make_unique<LoopRule>(rule);}},
+        // {"inparallel", [](const nlohmann::json&rule) {return std::make_unique<InParallelRule>(rule);}},
+        // {"parallelfor", [](const nlohmann::json&rule) {return std::make_unique<ParallelForRule>(rule);}},
+        //{"switch", [](const nlohmann::json&rule) {return std::make_unique<SwitchRule>(rule);}},
+        {"when", [](const nlohmann::json& rule) { return std::make_unique<WhenRule>(rule); }},
+
+        //List Operations
+        {"extend", [](const nlohmann::json& rule) {return std::make_unique<ExtendRule>(rule); }}, 
+        {"reverse", [](const nlohmann::json& rule) {return std::make_unique<ReverseRule>(rule); }},
+        {"shuffle", [](const nlohmann::json& rule) {return std::make_unique<ShuffleRule>(rule); }},
+        {"sort",[](const nlohmann::json& rule) {return std::make_unique<SortRule>(rule);}},
+        //{"deal",[](const nlohmann::json& rule) {return std::make_unique<DealRule>(rule);}},
+        {"discard", [](const nlohmann::json& rule) {return std::make_unique<DiscardRule>(rule); }}, 
+        {"deal",[](const nlohmann::json& rule) {return std::make_unique<DealRule>(rule);}},
+        //{"discard", [](const nlohmann::json& rule) {return std::make_unique<DiscardRule>(rule); }}, 
+
+        //Arithmetic Operations
+        {"add", [](const nlohmann::json& rule) {return std::make_unique<AddRule>(rule); }},
+
+        //Timing
+        {"timer", [](const nlohmann::json& rule) {return std::make_unique<TimerRule>(rule); }},
+		{"pause", [](const nlohmann::json& rule) {return std::make_unique<PauseRule>(rule); }},
+
+        //Human Input 
+        {"input-choice", [](const nlohmann::json& rule) {return std::make_unique<InputChoiceRule>(rule); }},
+        {"input-text", [](const nlohmann::json& rule) {return std::make_unique<InputTextRule>(rule); }},
+        {"input-vote", [](const nlohmann::json& rule) {return std::make_unique<InputVoteRule>(rule); }},
+
+        //Output
+        {"message", [](const nlohmann::json& rule) { return std::make_unique<MessageRule>(rule); }},
+        {"global-message", [](const nlohmann::json& rule) { return std::make_unique<GlobalMessageRule>(rule); }},
+        {"scores", [](const nlohmann::json& rule) {return std::make_unique<ScoresRule>(rule); }}
+        
+      
+};
 
 //**** Control Structures ****//
 ForEachRule::ForEachRule(const nlohmann::json& rule): list(rule["list"]), element_name(rule["element"])
@@ -91,6 +171,8 @@ TimerRule::TimerRule(const nlohmann::json& rule): duration(rule["duration"]), mo
     }
 }
 
+PauseRule::PauseRule(const nlohmann::json& rule): duration(rule["duration"]) { }
+
 
 //**** Human Input ****//
 //
@@ -129,6 +211,13 @@ RuleTree::RuleTree(const nlohmann::json& gameConfig)
     }
 }
 
+void RuleTree::launchGame(Server& server, GameState& state)
+{
+	for (const auto& ptr : rules) {
+		ptr->run(server, state);
+	}
+}
+
 RuleTree::RuleTree(RuleTree&& oldTree)
 {
     for (std::unique_ptr<Rule>& ptr : oldTree.getRules()) {
@@ -148,38 +237,38 @@ RuleTree& RuleTree::operator=(RuleTree&& oldTree)
 RuleList& RuleTree::getRules() { return rules; }
 
 
-void LoopRule::run(PseudoServer& server, Configuration& spec) {
+void LoopRule::run(Server& server, GameState& state) {
 
-	while (failCondition.evaluate(spec.getVariables())) {
+	while (failCondition.evaluate(state.getVariables())) {
 		for (const auto& ptr : subrules) {
-			ptr->run(server, spec);
+			ptr->run(server, state);
 		}
 	}
 }
 
-void GlobalMessageRule::run(PseudoServer& server, Configuration& spec)
+void GlobalMessageRule::run(Server& server, GameState& state)
 {
-	List& players = boost::get<List>(boost::get<Map>(spec.getVariables())["players"]);
+	List& players = boost::get<List>(boost::get<Map>(state.getVariables())["players"]);
 	for (Variable& player : players) {
 		const std::string& name = boost::get<std::string>(boost::get<Map>(player)["name"]);
-		server.send({spec.getConnectionByName(name), value.fill_with(spec.getVariables())});
+		server.send({state.getConnectionByName(name), value.fill_with(state.getVariables()) });
 	}
 }
 
-void MessageRule::run(PseudoServer& server, Configuration& spec) {
-	List& players = boost::get<List>(boost::get<Map>(spec.getVariables())["players"]);
-	Map& toplevel = boost::get<Map>(spec.getVariables());
+void MessageRule::run(Server& server, GameState& state) {
+	List& players = boost::get<List>(boost::get<Map>(state.getVariables())["players"]);
+	Map& toplevel = boost::get<Map>(state.getVariables());
 	toplevel[to] = &players.front(); //pick first player in the list for now, might be changed in the future
 	const std::string& name = boost::get<std::string>(boost::get<Map>(players.front())["name"]); 
-	server.send({spec.getConnectionByName(name), value.fill_with(spec.getVariables())});
+	server.send({state.getConnectionByName(name), value.fill_with(state.getVariables()) });
 }
 
 //List Operation
 
-void ExtendRule::run(PseudoServer& server, Configuration& spec) {
+void ExtendRule::run(Server& server, GameState& state) {
 
-	List& ExtendList = boost::get<List>(boost::get<Map>(spec.getVariables())[this->list]);
-	List& Target = boost::get<List>(boost::get<Map>(spec.getVariables())[this->target]);
+	List& ExtendList = boost::get<List>(boost::get<Map>(state.getVariables())[this->list]);
+	List& Target = boost::get<List>(boost::get<Map>(state.getVariables())[this->target]);
 	//it=Target.begin();
 	
 	//const std::string& name = boost::get<std::string>(boost::get<Map>(players.front())["name"]); 
@@ -192,14 +281,14 @@ void ExtendRule::run(PseudoServer& server, Configuration& spec) {
 		const std::string& beatName = boost::get<std::string>(boost::get<Map>(weapon)["beats"]);
 		
 		cout<<weaponName<<" beat "<<beatName<<endl;
-		// server.send({spec.getConnectionByName(name), weaponName});
+		// server.send({state.getConnectionByName(name), weaponName});
 	}
 
 }
-void ReverseRule::run(PseudoServer& server, Configuration& spec) {
+void ReverseRule::run(Server& server, GameState& state) {
 	
 	std::string toReverse = this->list;
-	List& toReverseList = boost::get<List>(boost::get<Map>(spec.getVariables())[toReverse]);
+	List& toReverseList = boost::get<List>(boost::get<Map>(state.getVariables())[toReverse]);
 	std::reverse(toReverseList.begin(), toReverseList.end());
 	//** For testing **//
 	// for (Variable& weapon : reverseList) {
@@ -213,17 +302,17 @@ void ReverseRule::run(PseudoServer& server, Configuration& spec) {
 //     return rand() % j; 
 // } 
 
-void ShuffleRule::run(PseudoServer& server, Configuration& spec) {
+void ShuffleRule::run(Server& server, GameState& state) {
 	std::string toShuffle= this->list;
-	List& toShuffleList = boost::get<List>(boost::get<Map>(spec.getVariables())[toShuffle]);
+	List& toShuffleList = boost::get<List>(boost::get<Map>(state.getVariables())[toShuffle]);
 	std::random_device rd;
 	std::mt19937 g(rd());
 	std::shuffle(toShuffleList.begin(), toShuffleList.end(),g);
 	
 }
 
-void DiscardRule::run(PseudoServer& server, Configuration& spec){
-	List& list = boost::get<List>(boost::get<Map>(spec.getVariables())[std::string(from)]);
+void DiscardRule::run(Server& server, GameState& state){
+	List& list = boost::get<List>(boost::get<Map>(state.getVariables())[std::string(from)]);
 	if(list.size() == count){
 		list.clear();
 		std::cout<<"winner list have been discarded" <<std::endl;
@@ -238,9 +327,9 @@ bool sort_variant_ascending(Variable& lhs, Variable& rhs) {
 	return boost::get<std::string>(boost::get<Map>(lhs)["name"]) < boost::get<std::string>(boost::get<Map>(rhs)["name"]);
 }
 
-void SortRule::run(PseudoServer& server, Configuration& spec) {
+void SortRule::run(Server& server, GameState& state) {
 	std::string toSort = this->list;
-	List& sortList = boost::get<List>(boost::get<Map>(spec.getVariables())[toSort]);
+	List& sortList = boost::get<List>(boost::get<Map>(state.getVariables())[toSort]);
 	std::sort(sortList.begin(), sortList.end(), sort_variant_ascending);
 	// //** For testing **//
 	for (Variable& weapon : sortList) {
@@ -250,15 +339,15 @@ void SortRule::run(PseudoServer& server, Configuration& spec) {
 }
 
 
-void ScoresRule::run(PseudoServer& server, Configuration& spec)
+void ScoresRule::run(Server& server, GameState& state)
 {
-	// List& players = boost::get<List>(boost::get<Map>(spec.getVariables())["players"]);
+	// List& players = boost::get<List>(boost::get<Map>(state.getVariables())["players"]);
 	// for (Variable& player : players) {
 	// 	const std::string& name = boost::get<std::string>(boost::get<Map>(player)["name"]);
-	// 	server.send({spec.getConnectionByName(name), value.fill_with(spec.getVariables())});
+	// 	server.send({state.getConnectionByName(name), value.fill_with(state.getVariables())});
 	// }
 	std::cout<<"Score Board" <<std::endl;
-	List& winners = boost::get<List>(boost::get<Map>(spec.getVariables())["winners"]);
+	List& winners = boost::get<List>(boost::get<Map>(state.getVariables())["winners"]);
 	bool IsAscending;
 	std::string scorestring;
 	vector<std::pair<std::string, int>> scoreBoard;
@@ -290,35 +379,35 @@ void ScoresRule::run(PseudoServer& server, Configuration& spec)
 
 	 }
 	 for(auto item:scoreBoard){
-		 server.send({spec.getConnectionByName(item.first), scorestring});
+		 server.send({state.getConnectionByName(item.first), scorestring });
 
 	 }
 	 
 }
 
-void ForEachRule::run(PseudoServer& server, Configuration& spec)
+void ForEachRule::run(Server& server, GameState& state)
 {
-	Getter getter(list, spec.getVariables());
+	Getter getter(list, state.getVariables());
 	GetterResult result = getter.get();
 	List temp;
 	List& elements = result.needs_to_be_saved ? temp = std::move(boost::get<List>(result.result)), temp : boost::get<List>(result.result);
-	Map& toplevel = boost::get<Map>(spec.getVariables());
+	Map& toplevel = boost::get<Map>(state.getVariables());
 	for (Variable& element : elements) {
 		toplevel[element_name] = &element;
 		//PrintTheThing p;
-		//boost::apply_visitor(p, spec.getVariables());
+		//boost::apply_visitor(p, state.getVariables());
 		for (const auto& ptr : subrules) {
-			ptr->run(server, spec);
+			ptr->run(server, state);
 		}
 	}
 }
 
-void WhenRule::run(PseudoServer& server, Configuration& spec)
+void WhenRule::run(Server& server, GameState& state)
 {
 	for(Case& current_case : cases) {
-		if (current_case.condition.evaluate(spec.getVariables())) {
+		if (current_case.condition.evaluate(state.getVariables())) {
 			for (const auto& ptr : current_case.subrules) {
-				ptr->run(server, spec);
+				ptr->run(server, state);
 			}
 			break;
 		}
@@ -326,21 +415,21 @@ void WhenRule::run(PseudoServer& server, Configuration& spec)
 }
 
 
-void InputChoiceRule::run(PseudoServer& server, Configuration& spec){ //STILL WRONG - SHOULD NOT HARD CODE THIS
-	Getter getter(to, spec.getVariables());
+void InputChoiceRule::run(Server& server, GameState& state){ //STILL WRONG - SHOULD NOT HARD CODE THIS
+	Getter getter(to, state.getVariables());
 	GetterResult result = getter.get();
 	Map& p = boost::get<Map>(result.result);
 	const std::string& name = boost::get<std::string>(p["name"]);
-	server.send({spec.getConnectionByName(name), prompt.fill_with(spec.getVariables())});	
-	// List& players = boost::get<List>(boost::get<Map>(spec.getVariables())["players"]);
+	server.send({state.getConnectionByName(name), prompt.fill_with(state.getVariables()) });	
+	// List& players = boost::get<List>(boost::get<Map>(state.getVariables())["players"]);
 	// const std::string& name = boost::get<std::string>(boost::get<Map>(players.front())["name"]); 
-	// server.send({spec.getConnectionByName(name), prompt.fill_with(spec.getVariables())});
-	List& weapons = boost::get<List>(boost::get<Map>(spec.getVariables())["weapons"]);
+	// server.send({state.getConnectionByName(name), prompt.fill_with(state.getVariables())});
+	List& weapons = boost::get<List>(boost::get<Map>(state.getVariables())["weapons"]);
 	vector<std::string> weaponCheck; //vector to check if the choice is valid
 	for(auto weapon:weapons){
 		const std::string& weaponName = boost::get<std::string>(boost::get<Map>(weapon)["name"]);
 		weaponCheck.push_back(weaponName);
-		server.send({spec.getConnectionByName(name), weaponName});
+		server.send({state.getConnectionByName(name), weaponName });
 	}
 	std::string choice;	
 	std::cin >> choice;
@@ -351,33 +440,33 @@ void InputChoiceRule::run(PseudoServer& server, Configuration& spec){ //STILL WR
 
 	if (isValid){
 		//NEED SOMEHOW SAVE THE CHOICE
-		server.send({spec.getConnectionByName(name), choice});
+		server.send({state.getConnectionByName(name), choice });
 	} else {
 		std::cout << "Please enter valid choice" << std::endl;
 	}
 }
 
-void InputTextRule::run(PseudoServer& server, Configuration& spec){
-	Getter getter(to, spec.getVariables());
+void InputTextRule::run(Server& server, GameState& state){
+	Getter getter(to, state.getVariables());
 	GetterResult result = getter.get();
 	Map& p = boost::get<Map>(result.result);
 	const std::string& name = boost::get<std::string>(p["name"]);
-	server.send({spec.getConnectionByName(name), prompt.fill_with(spec.getVariables())});
+	server.send({state.getConnectionByName(name), prompt.fill_with(state.getVariables()) });
 
 	std::string text;
 	std::cin >> text;
 	//NEED SOMEHOW SAVE THE TEXT
-	server.send({spec.getConnectionByName(name), text});
+	server.send({state.getConnectionByName(name), text});
 }
 
 
-void InputVoteRule::run(PseudoServer& server, Configuration& spec){
+void InputVoteRule::run(Server& server, GameState& state){
 	//TODO
 }
 
-void DealRule::run(PseudoServer& server, Configuration& spec){ //ONLY WORKS FOR INTEGER COUNT :(
-	List& fromList = boost::get<List>(boost::get<Map>(spec.getVariables())[from]);
-	List& toList = boost::get<List>(boost::get<Map>(spec.getVariables())[to]);
+void DealRule::run(Server& server, GameState& state){ //ONLY WORKS FOR INTEGER COUNT :(
+	List& fromList = boost::get<List>(boost::get<Map>(state.getVariables())[from]);
+	List& toList = boost::get<List>(boost::get<Map>(state.getVariables())[to]);
 	for(int i = 0; i < count; i++){
 		if(fromList.empty()){
 			break;
@@ -410,16 +499,16 @@ nlohmann::json CropSection(const nlohmann::json& j,std::string name){
 }
 
 
-void AddRule::run(PseudoServer& server, Configuration& spec)
+void AddRule::run(Server& server, GameState& state)
 {
-	Getter getter(to, spec.getVariables());
+	Getter getter(to, state.getVariables());
 	GetterResult result = getter.get();
 	assert(!result.needs_to_be_saved);
 	int& integer = boost::get<int>(result.result);
 	integer += value;
 }
 
-void TimerRule::run(PseudoServer& server, Configuration& spec) {
+void TimerRule::run(Server& server, GameState& state) {
 	// Todo: An "exact" timer will pad the execution time to the given duration
 	std::cout << mode << std::endl;
 	std::clock_t start;
@@ -437,8 +526,12 @@ void TimerRule::run(PseudoServer& server, Configuration& spec) {
 		else if( (timer>duration) && (mode == "track")) {
 			std::cout << "!!flag" << std::endl;
 		}
-		ptr->run(server, spec);
+		ptr->run(server, state);
 	}
+}
+
+void PauseRule::run(Server& server, GameState& state) {
+	std::this_thread::sleep_for(std::chrono::seconds(duration));
 }
 
 class TEST : public boost::static_visitor<>
@@ -476,85 +569,87 @@ public:
     }
 };
 
-int main(int argc, char** argv) {
-	if (argc < 2) {
-		std::cerr << "Usage:\n  " << argv[0] << "<server config>\n"
-				<< "  e.g. " << argv[0] << " ../configs/server/congfig1.json\n";
-		return 1;
-	}
+// main is in gameserver.cpp
 
-	// Variable a = "a";
-	// boost::apply_visitor(TEST(), a);
-	// a = Query{"b"};
-	// boost::apply_visitor(TEST(), a);
-	// return 0;
+// int main(int argc, char** argv) {
+// 	if (argc < 2) {
+// 		std::cerr << "Usage:\n  " << argv[0] << "<server config>\n"
+// 				<< "  e.g. " << argv[0] << " ../configs/server/congfig1.json\n";
+// 		return 1;
+// 	}
 
-	std::ifstream serverconfig{argv[1]};
-	if (serverconfig.fail())
-    {
-        std::cout << "cannot open the configuration file" << std::endl;
-        return 0;
-    }
-	nlohmann::json j = nlohmann::json::parse(serverconfig);
+// 	// Variable a = "a";
+// 	// boost::apply_visitor(TEST(), a);
+// 	// a = Query{"b"};
+// 	// boost::apply_visitor(TEST(), a);
+// 	// return 0;
 
-	std::vector<Configuration> configurations;
-	std::vector<Player> players;
-	for (const std::string& name : {"a", "b"})
-		players.emplace_back(name, Connection());
+// 	std::ifstream serverconfig{argv[1]};
+// 	if (serverconfig.fail())
+//     {
+//         std::cout << "cannot open the configuration file" << std::endl;
+//         return 0;
+//     }
+// 	nlohmann::json j = nlohmann::json::parse(serverconfig);
 
-	configurations.reserve(j["games"].size());
+// 	std::vector<Configuration> configurations;
+// 	std::vector<Player> players;
+// 	for (const std::string& name : {"a", "b"})
+// 		players.emplace_back(name, Connection());
 
-	for ([[maybe_unused]] const auto& [ key, gamespecfile]: j["games"].items())
-	{
-		std::ifstream gamespecstream{std::string(gamespecfile)};
-		if (gamespecstream.fail())
-		{
-			std::cout << "cannot open the game configuration file " << gamespecfile << std::endl;
-			return 0;
-		}
-		nlohmann::json gamespec = nlohmann::json::parse(gamespecstream);
-		configurations.emplace_back(gamespec);
-		std::cout << "\nTranslated game " << key << "\n\n";
-    }
+// 	configurations.reserve(j["games"].size());
 
-    // test that moving the players out of configurations works
-    // in the future populating the players list would be done inside GameSession
-    for (auto& configuration : configurations) {
-    	Map& map = boost::get<Map>(configuration.getVariables());
-        List& player_list = boost::get<List>(map["players"]);
-        for (const Player& player : players) {
-        	std::cout << "harro" << std::endl;
-        	// this needs to be handled differently in GameSession
-        	//Map player_map = boost::get<Map>(buildVariables(j["per-player"]));
-        	Map player_map = Map();
-        	player_map["name"] = player.name;
-        	PlayerMap& players_map = configuration.getPlayersMap();
-        	players_map[player.name] = player.connection;
-        	player_list.push_back(player_map);
-        }
-    }
+// 	for ([[maybe_unused]] const auto& [key, gamespecfile]: j["games"].items())
+// 	{
+// 		std::ifstream gamespecstream{std::string(gamespecfile)};
+// 		if (gamespecstream.fail())
+// 		{
+// 			std::cout << "cannot open the game configuration file " << gamespecfile << std::endl;
+// 			return 0;
+// 		}
+// 		nlohmann::json gamespec = nlohmann::json::parse(gamespecstream);
+// 		configurations.emplace_back(gamespec);
+// 		std::cout << "\nTranslated game " << key << "\n\n";
+//     }
 
-	// TEST
-	Variable& variables = configurations.front().getVariables();
-	PrintTheThing p;
-	boost::apply_visitor(p, variables);
+//     // test that moving the players out of configurations works
+//     // in the future populating the players list would be done inside GameSession
+//     // for (auto& configuration : configurations) {
+//     // 	Map& map = boost::get<Map>(configuration.getVariables());
+//     //     List& player_list = boost::get<List>(map["players"]);
+//     //     for (const Player& player : players) {
+//     //     	std::cout << "harro" << std::endl;
+//     //     	// this needs to be handled differently in GameSession
+//     //     	//Map player_map = boost::get<Map>(buildVariables(j["per-player"]));
+//     //     	Map player_map = Map();
+//     //     	player_map["name"] = player.name;
+//     //     	PlayerMap& players_map = configuration.getPlayersMap();
+//     //     	players_map[player.name] = player.connection;
+//     //     	player_list.push_back(player_map);
+//     //     }
+//     // }
 
-	std::cout << "\nStarting a test\n\n";
-	PseudoServer server;
-	std::thread t1 = configurations.front().launchGameDetached(server);
-	// std::thread t2 = configurations.back().launchGameDetached(server);
-	t1.join();
-	// t2.join();
-	//PseudoServer server;
-	//configurations.back().launchGame(server);
-	// for(Configuration& c : configurations) {
-	// 	std::cout << "\nGame " << c.getName() << "\n\n";
-	// 	c.launchGame(server);
-	// }
-	std::cout << "\nFinished\n";
+// 	// TEST
+// 	Variable& variables = configurations.front().getVariables();
+// 	PrintTheThing p;
+// 	boost::apply_visitor(p, variables);
 
-	return 0;
-};
+// 	std::cout << "\nStarting a test\n\n";
+// 	Server server;
+// 	std::thread t1 = configurations.front().launchGameDetached(server);
+// 	// std::thread t2 = configurations.back().launchGameDetached(server);
+// 	t1.join();
+// 	// t2.join();
+// 	//Server server;
+// 	//configurations.back().launchGame(server);
+// 	// for(Configuration& c : configurations) {
+// 	// 	std::cout << "\nGame " << c.getName() << "\n\n";
+// 	// 	c.launchGame(server);
+// 	// }
+// 	std::cout << "\nFinished\n";
+
+// 	return 0;
+// };
 
 
 

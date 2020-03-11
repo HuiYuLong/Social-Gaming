@@ -17,36 +17,43 @@
 #include <algorithm>
 #include <sstream>
 #include <vector>
-#include "common.h"
+#include <optional>
+#include <mutex>
 
 
 namespace networking {
 
-
 /**
- * Since the server should be able to handle multiple games,
- * some identifier is needed to distinguish different connections.
- * Each game corresponds to a session, and each connection of the game belongs to that session.
+ *  An identifier for a Client connected to a Server. The ID of a Connection is
+ *  guaranteed to be unique across all actively connected Client instances.
  */
-struct GameSession {
+struct Connection {
   uintptr_t id;
-  Connection gameOwner;
-  std::string invite_code;
-  std::vector<Connection> players;
-  std::ostringstream communication;
-
-  GameSession(Connection gameOwner, std::string_view invite_code):
-    id(reinterpret_cast<uintptr_t>(this)),
-    gameOwner(gameOwner),
-    invite_code(invite_code)
-    { players.push_back(gameOwner); }
 
   bool
-  operator==(GameSession other) const {
+  operator==(Connection other) const {
     return id == other.id;
   }
 };
 
+struct ConnectionHash {
+  size_t
+  operator()(Connection c) const {
+    return std::hash<decltype(c.id)>{}(c.id);
+  }
+};
+
+using Name2Connection = std::unordered_map<std::string, Connection>;
+
+
+/**
+ *  A Message containing text that can be sent to or was recieved from a given
+ *  Connection.
+ */
+struct Message {
+  Connection connection;
+  std::string text;
+};
 
 /** A compilation firewall for the server. */
 class ServerImpl;
@@ -107,19 +114,19 @@ public:
   /**
    *  Send a list of messages to their respective Clients.
    */
-  void send(const std::deque<Message>& messages);
+  void send(const Message& message);
 
   /**
    *  Receive Message instances from Client instances. This returns all Message
    *  instances collected by previous calls to Server::update() and not yet
    *  received.
    */
-  [[nodiscard]] std::deque<Message> receive();
+  [[nodiscard]] std::optional<std::string> receive(Connection);
 
   /**
    *  Disconnect the Client specified by the given Connection.
    */
-  void disconnect(Connection connection);
+  void disconnect(Connection connection, bool handleDisconnect = true);
 
 private:
   friend class ServerImpl;
@@ -131,8 +138,8 @@ private:
   class ConnectionHandler {
   public:
     virtual ~ConnectionHandler() = default;
-    virtual void handleConnect(Connection, std::string_view) = 0;
-    virtual void handleDisconnect(Connection) = 0;
+    virtual void handleConnect(Connection, std::string_view, Server&) = 0;
+    virtual void handleDisconnect(Connection, Server&) = 0;
   };
 
   template <typename C, typename D>
@@ -143,8 +150,8 @@ private:
         onDisconnect{std::move(onDisconnect)}
         { }
     ~ConnectionHandlerImpl() override = default;
-    void handleConnect(Connection c, std::string_view target)    override { onConnect(c, target);    }
-    void handleDisconnect(Connection c) override { onDisconnect(c); }
+    void handleConnect(Connection c, std::string_view target, Server& server)    override { onConnect(c, target, server);    }
+    void handleDisconnect(Connection c, Server& server) override { onDisconnect(c, server); }
   private:
     C onConnect;
     D onDisconnect;
@@ -155,6 +162,8 @@ private:
 
   std::unique_ptr<ConnectionHandler> connectionHandler;
   std::unique_ptr<ServerImpl,ServerImplDeleter> impl;
+
+  static std::mutex lock;
 };
 
 

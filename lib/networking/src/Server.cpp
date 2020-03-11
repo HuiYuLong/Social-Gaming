@@ -78,12 +78,12 @@ public:
       connection{reinterpret_cast<uintptr_t>(this)},
       serverImpl{serverImpl},
       streamBuf{},
-      websocket{std::move(socket)},
-      readBuffer{serverImpl.incoming}
+      websocket{std::move(socket)}
       { }
 
   void start(boost::beast::http::request<boost::beast::http::string_body>& request);
   void send(std::string outgoing);
+  std::optional<std::string> receive();
   void disconnect();
 
   [[nodiscard]] Connection getConnection() const noexcept { return connection; }
@@ -99,7 +99,7 @@ private:
   boost::beast::flat_buffer streamBuf;
   boost::beast::websocket::stream<boost::asio::ip::tcp::socket> websocket;
 
-  std::deque<Message> &readBuffer;
+  std::deque<std::string> readBuffer;
   std::deque<std::string> writeBuffer;
 };
 
@@ -107,7 +107,6 @@ private:
 
 using networking::Connection;
 using networking::Channel;
-using networking::GameSession;
 
 void
 Channel::start(boost::beast::http::request<boost::beast::http::string_body>& request) {
@@ -153,6 +152,17 @@ Channel::send(std::string outgoing) {
 }
 
 
+std::optional<std::string>
+Channel::receive() {
+  if (readBuffer.empty()) {
+    return std::nullopt;
+  }
+  std::string received = std::move(readBuffer.front());
+  readBuffer.pop_front();
+  return received;
+}
+
+
 void
 Channel::afterWrite(std::error_code errorCode, std::size_t size) {
   if (errorCode) {
@@ -182,7 +192,7 @@ Channel::readMessage() {
     [this, self] (auto errorCode, std::size_t size) {
       if (!errorCode) {
         auto message = boost::beast::buffers_to_string(streamBuf.data());
-        readBuffer.push_back({connection, std::move(message)});
+        readBuffer.push_back(std::move(message));
         streamBuf.consume(streamBuf.size());
         this->readMessage();
       } else if (!disconnected) {
@@ -352,8 +362,10 @@ ServerImpl::listenForConnections() {
 void
 ServerImpl::registerChannel(Channel& channel, boost::beast::string_view target) {
   auto connection = channel.getConnection();
+  server.lock.lock();
   channels[connection] = channel.shared_from_this();
-  server.connectionHandler->handleConnect(connection, std::string_view{target.data(), target.size()});
+  server.lock.unlock();
+  server.connectionHandler->handleConnect(connection, std::string_view{target.data(), target.size()}, server);
 }
 
 
@@ -375,6 +387,8 @@ ServerImplDeleter::operator()(ServerImpl* serverImpl) {
 // Core Server
 /////////////////////////////////////////////////////////////////////////////
 
+std::mutex Server::lock;
+
 void
 Server::update() {
   try {
@@ -386,30 +400,30 @@ Server::update() {
 }
 
 
-std::deque<Message>
-Server::receive() {
-  std::deque<Message> oldIncoming;
-  std::swap(oldIncoming, impl->incoming);
-  return oldIncoming;
+std::optional<std::string>
+Server::receive(Connection connection) {
+  std::lock_guard lg(lock);
+  return impl->channels.at(connection)->receive();
 }
 
 
 void
-Server::send(const std::deque<Message>& messages) {
-  for (auto& message : messages) {
-    auto found = impl->channels.find(message.connection);
-    if (impl->channels.end() != found) {
-      found->second->send(message.text);
-    }
-  }
+Server::send(const Message& message) {
+  std::lock_guard lg(lock);
+  impl->channels.at(message.connection)->send(message.text);
 }
 
 
 void
-Server::disconnect(Connection connection) {
+Server::disconnect(Connection connection, bool handleDisconnect) {
+  std::lock_guard lg(lock);
   auto found = impl->channels.find(connection);
   if (impl->channels.end() != found) {
-    connectionHandler->handleDisconnect(connection);
+    if (handleDisconnect) {
+      lock.unlock();
+      connectionHandler->handleDisconnect(connection, *this);
+      lock.lock();
+    }
     found->second->disconnect();
     impl->channels.erase(found);
   }

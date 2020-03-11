@@ -14,76 +14,45 @@
 #include <thread>
 #include <regex>
 
-#include "common.h"
+#include "Server.h"
 #include "variables.h"
 
-using networking::Message;
+#ifndef TRANSLATOR_H
+#define TRANSLATOR_H
+
 using networking::Connection;
+using networking::Name2Connection;
+using networking::Server;
 
 // For testing the interpreter
 // It will be replaced by an actual server implementation in the future
 // which will have the same interface
-#include <mutex>
-class PseudoServer
-{
-	static std::mutex lock;
-public:
-	void send(Message message)
-	{
-		std::lock_guard lg(lock);
-		std::cout << message.text << std::endl;
-	}
+// #include <mutex>
+// using networking::Message;
+// using networking::Connection;
+// class PseudoServer
+// {
+// 	static std::mutex lock;
+// public:
+// 	void send(Message message)
+// 	{
+// 		std::lock_guard lg(lock);
+// 		std::cout << message.text << std::endl;
+// 	}
 
-	Message receive(Connection connection)
-	{
-		std::lock_guard lg(lock);
-		std::string input;
-		std::cin >> input;
-		return Message{connection, input};
-	}
-};
-
-std::mutex PseudoServer::lock;
+// 	Message receive(Connection connection)
+// 	{
+// 		std::lock_guard lg(lock);
+// 		std::string input;
+// 		std::cin >> input;
+// 		return Message{connection, input};
+// 	}
+// };
 
 // Converts JSON objects into Variable objects
-Variable buildVariables(const nlohmann::json& json)
-{
-    if (json.is_boolean()) {
-        //std::cout << json << std::endl;
-        return (Variable) (bool) json;
-    }
-    else if (json.is_number()) {
-        //std::cout << json << std::endl;
-        return (Variable) (int) json;
-    }
-    else if (json.is_string()) {
-        //std::cout << json << std::endl;
-        return (Variable) (std::string) json;
-    }
-    else if (json.is_object()) {
-        Map map;
-        for(const auto&[key, value]: json.items()) {
-            //std::cout << key << std::endl;
-            map[key] = buildVariables(value);
-        }
-        return (Variable) map;
-    }
-    else if (json.is_array()) {
-        List list;
-        for(const auto&[key, value]: json.items()) {
-            //std::cout << key << std::endl;
-            list.push_back(buildVariables(value));
-        }
-        return (Variable) list;
-    }
-    else {
-        std::cout << "Invalid JSON variable type" << std::endl;
-        std::terminate();
-    }
-}
+Variable buildVariables(const nlohmann::json& json);
 
-
-class Configuration;
+class GameState;
 
 // The base class for all the rules in the game configuration
 // The derived rules only need to define the run method that implements all their logic
@@ -91,7 +60,7 @@ class Rule {
 public:
     virtual ~Rule() {};
 
-    virtual void run(PseudoServer& server, Configuration& spec) = 0;
+    virtual void run(Server& server, GameState& state) = 0;
 };
 
 using RuleList = std::vector<std::unique_ptr<Rule>>;
@@ -105,58 +74,22 @@ public:
     RuleTree(const nlohmann::json& gameConfig);
     RuleList& getRules();
 
-    // Run the rules in a separate thread
-    std::thread spawnDetached(PseudoServer& server, Configuration& spec)
-    {
-        return std::thread([this, &server, &spec] {
-            for (const auto& ptr : rules) {
-                ptr->run(server, spec);
-            }
-        });
-    }
-
     // Just run the rules (kept for debugging purposes)
-    void spawn(PseudoServer& server, Configuration& spec)
-    {
-        for (const auto& ptr : rules) {
-            ptr->run(server, spec);
-        }
-    }
+    void launchGame(Server& server, GameState& state);
 };
 
-// This class is only used in the Configuration constructor to pass the information about the players
-struct Player
-{
-    // The in-game name of a player that can be referenced from the game spec
-    std::string name;
 
-    // A unique identifier of each player needed by the Server to send and receive messages
-    Connection connection;
-
-    Player(const std::string& name, Connection connection): name(name), connection(connection) {}
-};
-
-// Contains the game configuration
+// Contains the game configuration independent of a particular game instance
 class Configuration {
 public:
 	Configuration(const nlohmann::json& config):
         name(config["configuration"]["name"]),
-        playerCountMin(config["configuration"]["player count"]["min"]),
-        playerCountMax(config["configuration"]["player count"]["max"]),
-        variables(Map()),
+        player_count_min(config["configuration"]["player count"]["min"]),
+        player_count_max(config["configuration"]["player count"]["max"]),
+        core_variables(Map()),
         rules(config["rules"])
     {
-        // no way to know if there are how many ppl are in at the beginning
-        // if (players.size() < playerCountMin) {
-        //     std::cout << "Too few players" << std::endl;
-        //     std::terminate();
-        // }
-        // if (players.size() > playerCountMax) {
-        //     std::cout << "Too many players" << std::endl;
-        //     std::terminate();
-        // }
-
-        Map& map = boost::get<Map>(variables);
+        Map& map = boost::get<Map>(core_variables);
         // Put "setup" variables into "configuration" submap
         map["configuration"] = Map();
         Map& configuration = boost::get<Map>(map["configuration"]);
@@ -174,36 +107,64 @@ public:
         // Add players
         // We should leave the map creation here for now, just populate later
         map["players"] = List();
-        List& player_list = boost::get<List>(map["players"]);
-        for(const Player& player: players) {
-            Map player_map = boost::get<Map>(buildVariables(config["per-player"]));
-            player_map["name"] = player.name;
-            name2conection[player.name] = player.connection;
-            player_list.push_back(player_map);
-        }
-        // Add audience list
+        // List& player_list = boost::get<List>(map["players"]);
+        // for(const Player& player: players) {
+        //     Map player_map = boost::get<Map>(buildVariables(config["per-player"]));
+        //     player_map["name"] = player.name;
+        //     name2conection[player.name] = player.connection;
+        //     player_list.push_back(player_map);
+        // }
+        per_player = buildVariables(config["per-player"]);
+        // Add the audience list
         if (config["configuration"]["audience"])
         {
             map["audience"] = List();
+            per_audience = buildVariables(config["per-audience"]);
         }
     }
 
 	const std::string& getName() const { return name; }
-	size_t getPlayerCountMin() const { return playerCountMin; }
-	size_t getPlayerCountMax() const { return playerCountMax; }
-    Variable& getVariables() { return variables; }
-    Connection getConnectionByName(const std::string& name) { return name2conection.at(name); }
-    void launchGame(PseudoServer& server) { rules.spawn(server, *this); }
-    std::thread launchGameDetached(PseudoServer& server) { return rules.spawnDetached(server, *this); }
+	size_t getPlayerCountMin() const { return player_count_min; }
+	size_t getPlayerCountMax() const { return player_count_max; }
+    const Variable& getVariables() const { return core_variables; } 
+    const Variable& getPerPlayer() const { return per_player; }
+    const Variable& getPerAudience() const { return per_audience; }
+    void launchGame(Server& server, GameState& state) { rules.launchGame(server, state); }
+    //std::thread launchGameDetached(Server& server) { return rules.spawnDetached(server, *this); }
 
 private:
 	std::string name;
-	size_t playerCountMin;
-	size_t playerCountMax;
-    Variable variables;
+	size_t player_count_min;
+	size_t player_count_max;
+    Variable core_variables;
+    Variable per_player;
+    Variable per_audience;
     RuleTree rules;
-    using Name2Connection = std::unordered_map<std::string, Connection>;
-    Name2Connection name2conection;
+};
+
+class GameState {
+public:
+    GameState(const Configuration& conf, const Name2Connection& name2connection)
+    :   toplevel(conf.getVariables()),      // copy
+        name2connection(name2connection)    // copy
+    {
+        Map& toplevelmap = boost::get<Map>(toplevel);
+        List& players = boost::get<List>(toplevelmap["players"]);
+        for ([[maybe_unused]] const auto& [name, connection]: name2connection) {
+            players.emplace_back(conf.getPerPlayer());
+            Map& playermap = boost::get<Map>(players.back());
+            playermap["name"] = name;
+        }
+        PrintTheThing p;
+        boost::apply_visitor(p, toplevel);
+    }
+
+    Variable& getVariables() { return toplevel; }
+    Connection getConnectionByName(const std::string& name) { return name2connection.at(name); }
+    // getIterators() ?
+private:
+    Variable toplevel;
+    Name2Connection name2connection;
 };
 
 // The job of the Condition class is to prepare a function that corresponds
@@ -274,10 +235,6 @@ public:
     bool evaluate(Variable& toplevel) { return clause(toplevel); }
 };
 
-std::regex Condition::equality_regex("\\s*(\\S+)\\s*==\\s*(\\S+)\\s*");
-std::regex Condition::decimal_regex("\\d+");
-//std::regex Condition::variable_regex("(\\w+(\\(\\w+\\)))?\\w+(\\(\\w+\\)))?");
-
 struct Case
 { 
     Case(const nlohmann::json& case_);
@@ -327,6 +284,7 @@ public:
                 out << value.text;
             }
         }
+        out << "\n\n";
         return out.str();
     }
 };
@@ -341,7 +299,7 @@ private:
 public:
     AddRule(const nlohmann::json& rule);
 
-    void run(PseudoServer& server, Configuration& spec) override;
+    void run(Server& server, GameState& state) override;
 
 };
 
@@ -353,8 +311,17 @@ private:
 public:
     TimerRule(const nlohmann::json& rule);
 
-    void run(PseudoServer& server, Configuration& spec) override;
+    void run(Server& server, GameState& state) override;
 
+};
+
+class PauseRule : public Rule {
+private:
+    int duration;
+public:
+    PauseRule(const nlohmann::json& rule);
+
+    void run(Server& server, GameState& state) override;
 };
 
 class InputChoiceRule : public Rule{
@@ -366,7 +333,7 @@ private:
 public:
     InputChoiceRule(const nlohmann::json& rule);
 
-    void run(PseudoServer& server, Configuration& spec) override;
+    void run(Server& server, GameState& state) override;
 
 };
 
@@ -378,7 +345,7 @@ private:
 public:
     InputTextRule(const nlohmann::json& rule);
 
-    void run(PseudoServer& server, Configuration& spec) override;
+    void run(Server& server, GameState& state) override;
 };
 
 class InputVoteRule : public Rule{
@@ -390,7 +357,7 @@ private:
 public:
     InputVoteRule(const nlohmann::json& rule);
 
-    void run(PseudoServer& server, Configuration& spec) override;
+    void run(Server& server, GameState& state) override;
 
 };
 
@@ -402,7 +369,7 @@ private:
 public:
     MessageRule(const nlohmann::json& rule);
 
-    void run(PseudoServer& server, Configuration& spec) override;
+    void run(Server& server, GameState& state) override;
 
 };
 
@@ -413,7 +380,7 @@ private:
 public:
     GlobalMessageRule(const nlohmann::json& rule);
 
-    void run(PseudoServer& server, Configuration& spec) override;
+    void run(Server& server, GameState& state) override;
 };
 
 class ScoresRule: public Rule{
@@ -424,7 +391,7 @@ private:
 public:
     ScoresRule(const nlohmann::json& rule);
 
-    void run(PseudoServer& server, Configuration& spec) override;
+    void run(Server& server, GameState& state) override;
 
 };
 
@@ -437,7 +404,7 @@ private:
 public:
     ExtendRule(const nlohmann::json& rule);
     
-    void run(PseudoServer& server, Configuration& spec) override;
+    void run(Server& server, GameState& state) override;
 
 };
 
@@ -448,7 +415,7 @@ private:
 public:
     ReverseRule(const nlohmann::json& rule);
     
-    void run(PseudoServer& server, Configuration& spec) override;
+    void run(Server& server, GameState& state) override;
 
 };
 
@@ -458,7 +425,7 @@ private:
 public:
     ShuffleRule(const nlohmann::json& rule);
     
-    void run(PseudoServer& server, Configuration& spec) override;
+    void run(Server& server, GameState& state) override;
 
 };
 
@@ -470,7 +437,7 @@ private:
 public:
     SortRule(const nlohmann::json& rule);
     
-    void run(PseudoServer& server, Configuration& spec) override;
+    void run(Server& server, GameState& state) override;
 
 };
 
@@ -482,7 +449,7 @@ private:
 public:
     DealRule(const nlohmann::json& rule);
 
-    void run(PseudoServer& server, Configuration& spec) override;
+    void run(Server& server, GameState& state) override;
 
 };
 
@@ -493,7 +460,7 @@ private:
 public:
     DiscardRule(const nlohmann::json& rule);
 
-    void run(PseudoServer& server, Configuration& spec) override;
+    void run(Server& server, GameState& state) override;
 };
 
 class ListAttributesRule : public Rule {
@@ -502,7 +469,7 @@ private:
 public:
     ListAttributesRule(const nlohmann::json& rule);
     
-    void run(PseudoServer& server, Configuration& spec) override;
+    void run(Server& server, GameState& state) override;
 
 };
 
@@ -516,7 +483,7 @@ public:
     ForEachRule(const nlohmann::json& rule);
     // ~ForEachRule() override;
 
-    void run(PseudoServer& server, Configuration& spec) override;
+    void run(Server& server, GameState& state) override;
 
 };
 
@@ -526,7 +493,7 @@ private:
     RuleList subrules;
 public:
     LoopRule(const nlohmann::json& rule);
-    void run(PseudoServer& server, Configuration& spec) override;
+    void run(Server& server, GameState& state) override;
 
 };
   
@@ -536,7 +503,7 @@ private:
 public:
     InParallelRule(const nlohmann::json& rule);
 
-    void run(PseudoServer& server, Configuration& spec) override;
+    void run(Server& server, GameState& state) override;
 
 };
 
@@ -548,7 +515,7 @@ private:
 public:
     ParallelForRule(const nlohmann::json& rule);
 
-    void run(PseudoServer& server, Configuration& spec) override;    
+    void run(Server& server, GameState& state) override;    
 
 };
 
@@ -561,7 +528,7 @@ private:
 public:
     SwitchRule(const nlohmann::json& rule);
 
-    void run(PseudoServer& server, Configuration& spec) override;
+    void run(Server& server, GameState& state) override;
 
 };
 
@@ -571,48 +538,9 @@ private:
 public:
     WhenRule(const nlohmann::json& rule);
 
-    void run(PseudoServer& server, Configuration& spec) override;
+    void run(Server& server, GameState& state) override;
 };
 
-std::unordered_map<std::string, std::function<std::unique_ptr<Rule>(const nlohmann::json&)>> rulemap = {
-
-        //Control Structures
-		{"foreach", [](const nlohmann::json& rule) { return std::make_unique<ForEachRule>(rule); }},
-        {"loop", [](const nlohmann::json&rule) {return std::make_unique<LoopRule>(rule);}},
-        // {"inparallel", [](const nlohmann::json&rule) {return std::make_unique<InParallelRule>(rule);}},
-        // {"parallelfor", [](const nlohmann::json&rule) {return std::make_unique<ParallelForRule>(rule);}},
-        //{"switch", [](const nlohmann::json&rule) {return std::make_unique<SwitchRule>(rule);}},
-        {"when", [](const nlohmann::json& rule) { return std::make_unique<WhenRule>(rule); }},
-
-        //List Operations
-        {"extend", [](const nlohmann::json& rule) {return std::make_unique<ExtendRule>(rule); }}, 
-        {"reverse", [](const nlohmann::json& rule) {return std::make_unique<ReverseRule>(rule); }},
-        {"shuffle", [](const nlohmann::json& rule) {return std::make_unique<ShuffleRule>(rule); }},
-        {"sort",[](const nlohmann::json& rule) {return std::make_unique<SortRule>(rule);}},
-        //{"deal",[](const nlohmann::json& rule) {return std::make_unique<DealRule>(rule);}},
-        {"discard", [](const nlohmann::json& rule) {return std::make_unique<DiscardRule>(rule); }}, 
-        {"deal",[](const nlohmann::json& rule) {return std::make_unique<DealRule>(rule);}},
-        //{"discard", [](const nlohmann::json& rule) {return std::make_unique<DiscardRule>(rule); }}, 
-
-        //Arithmetic Operations
-        {"add", [](const nlohmann::json& rule) {return std::make_unique<AddRule>(rule); }},
-
-        //Timing
-        {"timer", [](const nlohmann::json& rule) {return std::make_unique<TimerRule>(rule); }},
-
-        //Human Input 
-        {"input-choice", [](const nlohmann::json& rule) {return std::make_unique<InputChoiceRule>(rule); }},
-        {"input-text", [](const nlohmann::json& rule) {return std::make_unique<InputTextRule>(rule); }},
-        {"input-vote", [](const nlohmann::json& rule) {return std::make_unique<InputVoteRule>(rule); }},
-
-        //Output
-        {"message", [](const nlohmann::json& rule) { return std::make_unique<MessageRule>(rule); }},
-        {"global-message", [](const nlohmann::json& rule) { return std::make_unique<GlobalMessageRule>(rule); }},
-        {"scores", [](const nlohmann::json& rule) {return std::make_unique<ScoresRule>(rule); }}
-        
-      
-};
-
-
+#endif // TRANLATOR_H
 
 

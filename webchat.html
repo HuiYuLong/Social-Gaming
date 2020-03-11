@@ -27,58 +27,66 @@
         $('#messages').scrollTop($('#messages')[0].scrollHeight);
       }
 
-      // Endpoints are considered the same if the only difference between them is the ending '/' symbol
-      // It seems like this is how websockets think
-      function sameEndpoint(url1, url2) {
-        if (url1.slice(-1) == '/') {
-          url1 = url1.slice(0, -1);
-        }
-        if (url2.slice(-1) == '/') {
-          url2 = url2.slice(0, -1);
-        }
-        return url1 == url2;
-      }
-
       var ws = null;
       var uriPieces = window.location.href.split('/');
-      var wsLocation = 'ws://' + uriPieces[2];
-      var changeEndpoint = false;
-      $('#uri:text').val(wsLocation);
-      
-      $('#connect').click(function() {
-        if (ws == null) {
-          ws = new WebSocket(uri.value);
-        }
-        else if (!sameEndpoint(ws.url, uri.value)) {
-          changeEndpoint = true;
-          ws.close();
-          return;
-        }
-        else {
-          appendText("Already connected!\n\n");
-          return;
-        }
+      var wsLocation = 'ws://' + uriPieces[2] + '/';
+      var invite_code_length = 40;
+      // $('#uri:text').val(wsLocation);
+
+      function setUpWebSocket() {
         ws.onopen = function(ev) {
           appendText("Connected!\n\n");
         };
         ws.onclose = function(ev) {
           ws = null;
-          if (changeEndpoint) {
-            changeEndpoint = false;
-            appendText("Changing session...\n\n");
-            $('#connect').click();
-          }
-          else {
-            appendText("Disconnected!\n\n");
-          }
+          appendText("Disconnected!\n\n");
         };
         ws.onmessage = function(ev) {
-          appendText(ev.data + "\n\n");
+          appendText(ev.data);
         };
         ws.onerror = function(ev) {
           appendText("[error]\n\n");
           console.log(ev);
         };
+      }
+
+      // From here: https://stackoverflow.com/questions/1349404/generate-random-string-characters-in-javascript
+      // dec2hex :: Integer -> String
+      // i.e. 0-255 -> '00'-'ff'
+      function dec2hex (dec) {
+        return ('0' + dec.toString(16)).substr(-2)
+      }
+
+      // generateId :: Integer -> String
+      function generateId (len) {
+        var arr = new Uint8Array((len || 40) / 2)
+        window.crypto.getRandomValues(arr)
+        return Array.from(arr, dec2hex).join('')
+      }
+
+      $('#create').click(function() {
+        if (ws != null) {
+          appendText("Already connnected!\n\n");
+          return;
+        }
+        var new_invite_code = generateId(invite_code_length)
+        ws = new WebSocket(wsLocation + new_invite_code);
+        appendText("Your invite code: " + new_invite_code + "\n\n");
+        invite_code.value = new_invite_code;
+        setUpWebSocket();
+      });
+      
+      $('#join').click(function() {
+        if (ws != null) {
+          appendText("Already connnected!\n\n");
+          return;
+        }
+        if (invite_code.value.length != invite_code_length) {
+          appendText("Invalid invite code!\n\n");
+          return;
+        }
+        ws = new WebSocket(wsLocation + invite_code.value);
+        setUpWebSocket()
       });
 
       $('#disconnect').click(function () {
@@ -102,10 +110,11 @@
 
 <body>
 
-  <h1>Web Chat</h1>
+  <h1>Social Gaming Platform</h1>
 
-  Chat Server: <input id="uri" size="40">
-  <button id="connect">Connect</button>
+  Invite Code: <input id="invite_code" size="40" placeholder="Invite code">
+  <button id="join">Join</button>
+  <button id="create">Create Game</button>
   <button id="disconnect">Disconnect</button><br />
 
   <pre id="messages"></pre>

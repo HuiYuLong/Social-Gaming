@@ -14,6 +14,7 @@ find_package(Threads REQUIRED)
 
 target_link_libraries(gameserver
   PRIVATE networking
+  PRIVATE translator
   PRIVATE Threads::Threads
   PRIVATE nlohmann_json::nlohmann_json
 )
