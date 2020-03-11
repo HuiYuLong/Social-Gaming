@@ -417,7 +417,7 @@ Server::disconnect(Connection connection, bool handleDisconnect) {
   auto found = impl->channels.find(connection);
   if (impl->channels.end() != found) {
     if (handleDisconnect) {
-      connectionHandler->handleDisconnect(connection);
+      connectionHandler->handleDisconnect(connection, *this);
     }
     found->second->disconnect();
     impl->channels.erase(found);

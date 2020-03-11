@@ -3,6 +3,7 @@
     "indexhtml": "webchat.html",
     "games": [
         "configs/games/simple.json",
-        "configs/games/not_so_simple.json"
+        "configs/games/not_so_simple.json",
+        "configs/games/rounds.json"
     ]
 }

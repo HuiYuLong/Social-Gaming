@@ -1,0 +1,52 @@
+{
+  "configuration": {
+    "name": "Rounds",
+    "player count": {"min": 1, "max": 4},
+    "audience": false,
+    "setup": {
+      "Rounds": 10
+    }
+  },
+
+  "constants": {
+    "weapons": [
+      { "name": "Rock",     "beats": "Scissors"},
+      { "name": "Paper",    "beats": "Rock"},
+      { "name": "Scissors", "beats": "Paper"}
+    ]
+  },
+
+  "variables": {
+    "winners": [
+      { "name": "a"},
+      { "name": "b"},
+      { "name": "c"}
+
+    ]
+  },
+
+  "per-player": {
+    "wins": 0,
+    "lose": 2
+  },
+
+  "per-audience": {},
+
+
+    "rules": [
+      { "rule": "foreach",
+        "list": "configuration.Rounds.upfrom(1)",
+        "element": "round",
+        "rules": [
+  
+          { "rule": "global-message",
+            "value": "Round {round}. Choose your weapon!"
+          }
+        ]
+      },
+
+      { "rule": "global-message",
+        "value": "Done! Winners: {winners}"
+      }
+    ]
+}

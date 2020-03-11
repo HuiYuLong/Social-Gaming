@@ -150,11 +150,13 @@ public:
     {
         Map& toplevelmap = boost::get<Map>(toplevel);
         List& players = boost::get<List>(toplevelmap["players"]);
-        for (const auto& [name, connection]: name2connection) {
+        for ([[maybe_unused]] const auto& [name, connection]: name2connection) {
             players.emplace_back(conf.getPerPlayer());
-            Map playermap = boost::get<Map>(players.back());
+            Map& playermap = boost::get<Map>(players.back());
             playermap["name"] = name;
         }
+        PrintTheThing p;
+        boost::apply_visitor(p, toplevel);
     }
 
     Variable& getVariables() { return toplevel; }
@@ -282,6 +284,7 @@ public:
                 out << value.text;
             }
         }
+        out << "\n\n";
         return out.str();
     }
 };

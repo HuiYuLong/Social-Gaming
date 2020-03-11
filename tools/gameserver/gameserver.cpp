@@ -34,19 +34,21 @@ using json = nlohmann::json;
  */
 struct GameSession {
   uintptr_t id;
-  Connection gameOwner;
+  Connection game_owner;
   std::string invite_code;
   std::vector<Connection> players;
   std::unique_ptr<GameState> game_state;
   Name2Connection name2connection;
   Configuration* configuration;
+  bool detached;
 
-  GameSession(Connection gameOwner, std::string_view invite_code):
+  GameSession(Connection game_owner, std::string_view invite_code):
     id(reinterpret_cast<uintptr_t>(this)),
-    gameOwner(gameOwner),
+    game_owner(game_owner),
     invite_code(invite_code),
-    configuration(nullptr)
-    { players.push_back(gameOwner); }
+    configuration(nullptr),
+    detached(false)
+    { players.push_back(game_owner); }
 
   bool
   operator==(const GameSession& other) const {
@@ -55,10 +57,10 @@ struct GameSession {
 
   std::string register_username(const std::string& name, Connection connection) {
     if(name.size() == 0) {
-      return "Invalid command";
+      return "Invalid command\n\n";
     }
     if (name2connection.find(name) != name2connection.end()) {
-      return "This name is already used";
+      return "This name is already used\n\n";
     }
     auto found = std::find_if(name2connection.begin(), name2connection.end(), [connection](const std::pair<std::string, Connection>& iter) {
       return connection == iter.second;
@@ -67,29 +69,29 @@ struct GameSession {
       name2connection.erase(found);
     }
     name2connection[name] = connection;
-    return "Changed the username to " + name;
+    return "Changed the username to " + name + "\n\n";
   }
 
   std::pair<std::string, bool> validate() {
     if (configuration == nullptr) {
-      return {"Please /select a game from the list\n", false};
+      return {"Please /select a game from the list\n\n", false};
     }
-    if (players.size() <= configuration->getPlayerCountMax()) {
+    if (players.size() > configuration->getPlayerCountMax()) {
       std::ostringstream ostream;
       ostream << "Too many players for this game. You need to evict "
-        << configuration->getPlayerCountMax() - players.size() << " player(s)" << std::endl;
+        << configuration->getPlayerCountMax() - players.size() << " player(s)\n\n";
       return {ostream.str(), false};
     }
-    if (players.size() >= configuration->getPlayerCountMin()) {
+    if (players.size() < configuration->getPlayerCountMin()) {
       std::ostringstream ostream;
       ostream << "This game requires at least " << configuration->getPlayerCountMin() << "people to play, but only "
-        << players.size() << " are present in the lobby" << std::endl;
+        << players.size() << " are present in the lobby\n\n";
       return {ostream.str(), false};
     }
     if (players.size() != name2connection.size()) {
-      return {"Some of the players haven't named themselves yet", false};
+      return {"Some of the players haven't named themselves yet\n\n", false};
     }
-    return {"Starting the game...\n", true};
+    return {"Starting the game...\n\n", true};
   }
 
   void operator()(Server& server) {
@@ -112,7 +114,7 @@ const std::string welcoming_message = "Welcome to the Social Game Engine!\n\n\
 /select &lt;game&gt; - choose a game to play from the list below\n\
 /start - when you are ready\n\
 /quit - if you need to leave\n\
-/shutdown - close the game\n";
+/shutdown - close the game\n\n\n";
 
 void
 onConnect(Connection c, std::string_view target, Server& server) {
@@ -124,6 +126,9 @@ onConnect(Connection c, std::string_view target, Server& server) {
     gameSession->players.push_back(c);
     sessionMap[c] = gameSession.get();
     std::cout << "Session " << gameSession->id << " joined by " << c.id << std::endl;
+    for(Connection connection : gameSession->players) {
+      server.send({connection, "Player " + std::to_string(connection.id) + " has joined the lobby\n\n"});
+    }
   }
   else {
     gameSessions.emplace_back(std::make_unique<GameSession>(c, target));
@@ -136,17 +141,21 @@ onConnect(Connection c, std::string_view target, Server& server) {
   for (size_t i = 0u, end = configurations.size(); i < end; i++) {
     ostream << '\t' << i << ". " << configurations[i].getName() << "\n";
   }
+  ostream << "\n\n";
   server.send({c, welcoming_message});
   server.send({c, ostream.str()});
 }
 
 
 void
-onDisconnect(Connection c) {
+onDisconnect(Connection c, Server& server) {
   // remove the connection from the session
   auto session = sessionMap.at(c);
   sessionMap.erase(c);
-  std::cout << "Session " << session->id << " has lost connection " << c.id << std::endl; 
+  std::cout << "Session " << session->id << " has lost connection " << c.id << std::endl;
+  for(Connection connection : session->players) {
+    server.send({connection, "Player " + std::to_string(connection.id) + " has left\n\n"});
+  }
   session->players.erase(std::remove(std::begin(session->players), std::end(session->players), c), std::end(session->players));
   if(session->players.empty())
   {
@@ -215,6 +224,9 @@ main(int argc, char* argv[]) {
     }
 
     for (const auto& session: gameSessions) {
+      if(session->detached) {
+        continue;
+      }
       for(auto it = session->players.begin(); it != session->players.end(); ) {
         Connection connection = *it;
         auto received = server.receive(connection);
@@ -223,6 +235,7 @@ main(int argc, char* argv[]) {
 
           if(message_text.size() > 0 && message_text[0] == '/') {
             if (message_text == "/quit") {
+              buffer << "Player " << connection.id << " has left the lobby\n\n";
               it = session->players.erase(it);
               sessionMap.erase(connection);
               server.disconnect(connection, false);
@@ -234,12 +247,12 @@ main(int argc, char* argv[]) {
               std::string response = session->register_username(name, connection);
               server.send({connection, response});
             }
-
-            if(connection == session->gameOwner) {
+            else if(connection == session->game_owner) {
               if (message_text == "/shutdown") {
-                for (Connection player : session->players) {
-                  sessionMap.erase(player);
-                  server.disconnect(player, false);
+                for (Connection connection : session->players) {
+                  server.send({connection, "This session has been shut down by the game owner\n\n"});
+                  sessionMap.erase(connection);
+                  server.disconnect(connection, false);
                   std::cout << "Session " << session->id << " has lost connection " << connection.id << std::endl; 
                 }
                 session->players.clear();
@@ -252,24 +265,28 @@ main(int argc, char* argv[]) {
                 });
                 if (game != configurations.end()) {
                   session->configuration = &(*game);
-                  server.send({connection, "Successfully changed the game to " + game->getName()});
+                  server.send({connection, "Successfully changed the game to " + game->getName() + "\n\n"});
                 }
                 else {
-                  server.send({connection, "Could not find a game with the given name"});
+                  server.send({connection, "Could not find a game with the given name\n\n"});
                 }
               }
-              else if (message_text.compare(0, 6, "/start") == 0) {
+              else if (message_text == "/start") {
                 auto [notice, good_to_go] = session->validate();
-                buffer << "bot> " << notice << "\n";
+                buffer << notice;
                 if(good_to_go) {
+                  session->detached = true;
                   std::cout << "Session " << session->id << " is set free" << std::endl;
                   std::thread t(std::ref(*session), std::ref(server));
                   t.detach();
                 }
               }
             }
+            else {
+              server.send({connection, "Invalid command or insufficient permissions\n\n"});
+            }
           }
-          buffer << connection.id << "> " << message_text << "\n";
+          buffer << connection.id << "> " << message_text << "\n\n";
         }
         ++it;
       }

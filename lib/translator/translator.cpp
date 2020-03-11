@@ -248,7 +248,7 @@ void GlobalMessageRule::run(Server& server, GameState& state)
 	List& players = boost::get<List>(boost::get<Map>(state.getVariables())["players"]);
 	for (Variable& player : players) {
 		const std::string& name = boost::get<std::string>(boost::get<Map>(player)["name"]);
-		server.send({state.getConnectionByName(name), value.fill_with(state.getVariables())});
+		server.send({state.getConnectionByName(name), value.fill_with(state.getVariables()) });
 	}
 }
 
@@ -257,7 +257,7 @@ void MessageRule::run(Server& server, GameState& state) {
 	Map& toplevel = boost::get<Map>(state.getVariables());
 	toplevel[to] = &players.front(); //pick first player in the list for now, might be changed in the future
 	const std::string& name = boost::get<std::string>(boost::get<Map>(players.front())["name"]); 
-	server.send({state.getConnectionByName(name), value.fill_with(state.getVariables())});
+	server.send({state.getConnectionByName(name), value.fill_with(state.getVariables()) });
 }
 
 //List Operation
@@ -376,7 +376,7 @@ void ScoresRule::run(Server& server, GameState& state)
 
 	 }
 	 for(auto item:scoreBoard){
-		 server.send({state.getConnectionByName(item.first), scorestring});
+		 server.send({state.getConnectionByName(item.first), scorestring });
 
 	 }
 	 
@@ -417,7 +417,7 @@ void InputChoiceRule::run(Server& server, GameState& state){ //STILL WRONG - SHO
 	GetterResult result = getter.get();
 	Map& p = boost::get<Map>(result.result);
 	const std::string& name = boost::get<std::string>(p["name"]);
-	server.send({state.getConnectionByName(name), prompt.fill_with(state.getVariables())});	
+	server.send({state.getConnectionByName(name), prompt.fill_with(state.getVariables()) });	
 	// List& players = boost::get<List>(boost::get<Map>(state.getVariables())["players"]);
 	// const std::string& name = boost::get<std::string>(boost::get<Map>(players.front())["name"]); 
 	// server.send({state.getConnectionByName(name), prompt.fill_with(state.getVariables())});
@@ -426,7 +426,7 @@ void InputChoiceRule::run(Server& server, GameState& state){ //STILL WRONG - SHO
 	for(auto weapon:weapons){
 		const std::string& weaponName = boost::get<std::string>(boost::get<Map>(weapon)["name"]);
 		weaponCheck.push_back(weaponName);
-		server.send({state.getConnectionByName(name), weaponName});
+		server.send({state.getConnectionByName(name), weaponName });
 	}
 	std::string choice;	
 	std::cin >> choice;
@@ -437,7 +437,7 @@ void InputChoiceRule::run(Server& server, GameState& state){ //STILL WRONG - SHO
 
 	if (isValid){
 		//NEED SOMEHOW SAVE THE CHOICE
-		server.send({state.getConnectionByName(name), choice});
+		server.send({state.getConnectionByName(name), choice });
 	} else {
 		std::cout << "Please enter valid choice" << std::endl;
 	}
@@ -448,7 +448,7 @@ void InputTextRule::run(Server& server, GameState& state){
 	GetterResult result = getter.get();
 	Map& p = boost::get<Map>(result.result);
 	const std::string& name = boost::get<std::string>(p["name"]);
-	server.send({state.getConnectionByName(name), prompt.fill_with(state.getVariables())});
+	server.send({state.getConnectionByName(name), prompt.fill_with(state.getVariables()) });
 
 	std::string text;
 	std::cin >> text;

@@ -42,7 +42,7 @@
           appendText("Disconnected!\n\n");
         };
         ws.onmessage = function(ev) {
-          appendText(ev.data + "\n\n");
+          appendText(ev.data);
         };
         ws.onerror = function(ev) {
           appendText("[error]\n\n");

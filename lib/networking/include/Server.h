@@ -139,7 +139,7 @@ private:
   public:
     virtual ~ConnectionHandler() = default;
     virtual void handleConnect(Connection, std::string_view, Server&) = 0;
-    virtual void handleDisconnect(Connection) = 0;
+    virtual void handleDisconnect(Connection, Server&) = 0;
   };
 
   template <typename C, typename D>
@@ -151,7 +151,7 @@ private:
         { }
     ~ConnectionHandlerImpl() override = default;
     void handleConnect(Connection c, std::string_view target, Server& server)    override { onConnect(c, target, server);    }
-    void handleDisconnect(Connection c) override { onDisconnect(c); }
+    void handleDisconnect(Connection c, Server& server) override { onDisconnect(c, server); }
   private:
     C onConnect;
     D onDisconnect;
