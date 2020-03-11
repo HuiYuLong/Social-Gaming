@@ -94,9 +94,14 @@ struct GameSession {
     return {"Starting the game...\n\n", true};
   }
 
+  // runs in parallel
   void operator()(Server& server) {
+    detached = true;
+    std::cout << "Session " << id << " is set free" << std::endl;
     game_state = std::make_unique<GameState>(*configuration, this->name2connection);
     configuration->launchGame(server, *game_state);
+    detached = false;
+    std::cout << "Session's " << id << " thread is finished" << std::endl;
   }
 };
 
@@ -275,8 +280,6 @@ main(int argc, char* argv[]) {
                 auto [notice, good_to_go] = session->validate();
                 buffer << notice;
                 if(good_to_go) {
-                  session->detached = true;
-                  std::cout << "Session " << session->id << " is set free" << std::endl;
                   std::thread t(std::ref(*session), std::ref(server));
                   t.detach();
                 }
