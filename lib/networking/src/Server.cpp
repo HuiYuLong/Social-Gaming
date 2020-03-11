@@ -362,7 +362,9 @@ ServerImpl::listenForConnections() {
 void
 ServerImpl::registerChannel(Channel& channel, boost::beast::string_view target) {
   auto connection = channel.getConnection();
+  server.lock.lock();
   channels[connection] = channel.shared_from_this();
+  server.lock.unlock();
   server.connectionHandler->handleConnect(connection, std::string_view{target.data(), target.size()}, server);
 }
 
@@ -414,10 +416,13 @@ Server::send(const Message& message) {
 
 void
 Server::disconnect(Connection connection, bool handleDisconnect) {
+  std::lock_guard lg(lock);
   auto found = impl->channels.find(connection);
   if (impl->channels.end() != found) {
     if (handleDisconnect) {
+      lock.unlock();
       connectionHandler->handleDisconnect(connection, *this);
+      lock.lock();
     }
     found->second->disconnect();
     impl->channels.erase(found);

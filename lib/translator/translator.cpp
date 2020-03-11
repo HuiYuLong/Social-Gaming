@@ -72,6 +72,7 @@ std::unordered_map<std::string, std::function<std::unique_ptr<Rule>(const nlohma
 
         //Timing
         {"timer", [](const nlohmann::json& rule) {return std::make_unique<TimerRule>(rule); }},
+		{"pause", [](const nlohmann::json& rule) {return std::make_unique<PauseRule>(rule); }},
 
         //Human Input 
         {"input-choice", [](const nlohmann::json& rule) {return std::make_unique<InputChoiceRule>(rule); }},
@@ -169,6 +170,8 @@ TimerRule::TimerRule(const nlohmann::json& rule): duration(rule["duration"]), mo
 		subrules.push_back(rulemap[it.value()["rule"]](it.value()));
     }
 }
+
+PauseRule::PauseRule(const nlohmann::json& rule): duration(rule["duration"]) { }
 
 
 //**** Human Input ****//
@@ -525,6 +528,10 @@ void TimerRule::run(Server& server, GameState& state) {
 		}
 		ptr->run(server, state);
 	}
+}
+
+void PauseRule::run(Server& server, GameState& state) {
+	std::this_thread::sleep_for(std::chrono::seconds(duration));
 }
 
 class TEST : public boost::static_visitor<>

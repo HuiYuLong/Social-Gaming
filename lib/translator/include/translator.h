@@ -126,9 +126,9 @@ public:
 	const std::string& getName() const { return name; }
 	size_t getPlayerCountMin() const { return player_count_min; }
 	size_t getPlayerCountMax() const { return player_count_max; }
-    Variable& getVariables() { return core_variables; }
-    Variable& getPerPlayer() { return per_player; }
-    Variable& getPerAudience() { return per_audience; }
+    const Variable& getVariables() const { return core_variables; } 
+    const Variable& getPerPlayer() const { return per_player; }
+    const Variable& getPerAudience() const { return per_audience; }
     void launchGame(Server& server, GameState& state) { rules.launchGame(server, state); }
     //std::thread launchGameDetached(Server& server) { return rules.spawnDetached(server, *this); }
 
@@ -144,9 +144,9 @@ private:
 
 class GameState {
 public:
-    GameState(Configuration& conf, Name2Connection& name2connection)
-    :   toplevel(conf.getVariables()),
-        name2connection(name2connection)
+    GameState(const Configuration& conf, const Name2Connection& name2connection)
+    :   toplevel(conf.getVariables()),      // copy
+        name2connection(name2connection)    // copy
     {
         Map& toplevelmap = boost::get<Map>(toplevel);
         List& players = boost::get<List>(toplevelmap["players"]);
@@ -164,7 +164,7 @@ public:
     // getIterators() ?
 private:
     Variable toplevel;
-    Name2Connection& name2connection;
+    Name2Connection name2connection;
 };
 
 // The job of the Condition class is to prepare a function that corresponds
@@ -313,6 +313,15 @@ public:
 
     void run(Server& server, GameState& state) override;
 
+};
+
+class PauseRule : public Rule {
+private:
+    int duration;
+public:
+    PauseRule(const nlohmann::json& rule);
+
+    void run(Server& server, GameState& state) override;
 };
 
 class InputChoiceRule : public Rule{

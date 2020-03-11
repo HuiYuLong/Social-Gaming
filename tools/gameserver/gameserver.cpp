@@ -51,28 +51,41 @@ struct GameSession {
     { players.push_back(game_owner); }
 
   bool
-  operator==(const GameSession& other) const {
+  operator==(const GameSession& other) const
+  {
     return id == other.id;
   }
 
-  std::string register_username(const std::string& name, Connection connection) {
+  std::string
+  register_username(const std::string& name, Connection connection)
+  {
     if(name.size() == 0) {
       return "Invalid command\n\n";
     }
     if (name2connection.find(name) != name2connection.end()) {
       return "This name is already used\n\n";
     }
+    remove_username_of(connection);
+    name2connection[name] = connection;
+    return "Changed the username to " + name + "\n\n";
+  }
+
+  bool
+  remove_username_of(Connection connection)
+  {
     auto found = std::find_if(name2connection.begin(), name2connection.end(), [connection](const std::pair<std::string, Connection>& iter) {
       return connection == iter.second;
     });
     if(found != name2connection.end()) {
       name2connection.erase(found);
+      return true;
     }
-    name2connection[name] = connection;
-    return "Changed the username to " + name + "\n\n";
+    return false;
   }
 
-  std::pair<std::string, bool> validate() {
+  std::pair<std::string, bool>
+  validate()
+  {
     if (configuration == nullptr) {
       return {"Please /select a game from the list\n\n", false};
     }
@@ -95,11 +108,18 @@ struct GameSession {
   }
 
   // runs in parallel
-  void operator()(Server& server) {
+  void
+  operator()(Server& server)
+  {
     detached = true;
     std::cout << "Session " << id << " is set free" << std::endl;
     game_state = std::make_unique<GameState>(*configuration, this->name2connection);
-    configuration->launchGame(server, *game_state);
+    try {
+      configuration->launchGame(server, *game_state);
+    }
+    catch (std::out_of_range& e) {
+      std::cout << "One of the players has disconnected while the game was on" << std::endl;
+    }
     detached = false;
     std::cout << "Session's " << id << " thread is finished" << std::endl;
   }
@@ -162,6 +182,7 @@ onDisconnect(Connection c, Server& server) {
     server.send({connection, "Player " + std::to_string(connection.id) + " has left\n\n"});
   }
   session->players.erase(std::remove(std::begin(session->players), std::end(session->players), c), std::end(session->players));
+  session->remove_username_of(c);
   if(session->players.empty())
   {
     std::cout << "No players left. Shutting down session " << session->id << std::endl;
@@ -242,6 +263,7 @@ main(int argc, char* argv[]) {
             if (message_text == "/quit") {
               buffer << "Player " << connection.id << " has left the lobby\n\n";
               it = session->players.erase(it);
+              session->remove_username_of(connection);
               sessionMap.erase(connection);
               server.disconnect(connection, false);
               std::cout << "Session " << session->id << " has lost connection " << connection.id << std::endl; 
