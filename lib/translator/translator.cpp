@@ -65,8 +65,6 @@ std::unordered_map<std::string, std::function<std::unique_ptr<Rule>(const nlohma
         //{"deal",[](const nlohmann::json& rule) {return std::make_unique<DealRule>(rule);}},
         {"discard", [](const nlohmann::json& rule) {return std::make_unique<DiscardRule>(rule); }}, 
         {"deal",[](const nlohmann::json& rule) {return std::make_unique<DealRule>(rule);}},
-        //{"discard", [](const nlohmann::json& rule) {return std::make_unique<DiscardRule>(rule); }}, 
-
         //Arithmetic Operations
         {"add", [](const nlohmann::json& rule) {return std::make_unique<AddRule>(rule); }},
 
@@ -152,8 +150,6 @@ ExtendRule::ExtendRule(const nlohmann::json& rule): list(rule["list"]), target(r
 	std::cout << "Extend: " << list << std::endl;
 	std::cout << "Extend: " << target << std::endl;
 }
-//
-
 
 //**** Arithmetic Operations ****//
 AddRule::AddRule(const nlohmann::json& rule): to(rule["to"]), value(rule["value"]) { std::cout << "Add " << value << std::endl; }
