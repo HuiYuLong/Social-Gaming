@@ -142,6 +142,8 @@ private:
     RuleTree rules;
 };
 
+
+// Each game session's private game state that holds the variable tree and the mapping of in-game names to connections
 class GameState {
 public:
     GameState(const Configuration& conf, const Name2Connection& name2connection)
