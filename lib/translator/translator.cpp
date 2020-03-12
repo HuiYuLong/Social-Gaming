@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <random>
 #include <ctime>
+
 using namespace std;
 
 Variable buildVariables(const nlohmann::json& json)
@@ -251,12 +252,18 @@ void GlobalMessageRule::run(Server& server, GameState& state)
 	}
 }
 
-void MessageRule::run(Server& server, GameState& state) {
-	List& players = boost::get<List>(boost::get<Map>(state.getVariables())["players"]);
-	Map& toplevel = boost::get<Map>(state.getVariables());
-	toplevel[to] = &players.front(); //pick first player in the list for now, might be changed in the future
-	const std::string& name = boost::get<std::string>(boost::get<Map>(players.front())["name"]); 
+void MessageRule::run(Server& server, GameState& state) { //IT'S WORKING
+	Getter getter(to, state.getVariables());
+	GetterResult result = getter.get();
+	Map& p = boost::get<Map>(result.result);
+	const std::string& name = boost::get<std::string>(p["name"]);
 	server.send({state.getConnectionByName(name), value.fill_with(state.getVariables()) });
+
+	// List& players = boost::get<List>(boost::get<Map>(state.getVariables())["players"]);
+	// Map& toplevel = boost::get<Map>(state.getVariables());
+	// toplevel[to] = &players.front(); //pick first player in the list for now, might be changed in the future
+	// const std::string& name = boost::get<std::string>(boost::get<Map>(players.front())["name"]); 
+	// server.send({state.getConnectionByName(name), value.fill_with(state.getVariables()) });
 }
 
 //List Operation
@@ -411,48 +418,90 @@ void WhenRule::run(Server& server, GameState& state)
 }
 
 
-void InputChoiceRule::run(Server& server, GameState& state){ //STILL WRONG - SHOULD NOT HARD CODE THIS
-	Getter getter(to, state.getVariables());
-	GetterResult result = getter.get();
-	Map& p = boost::get<Map>(result.result);
+void InputChoiceRule::run(Server& server, GameState& state){ //IT'S WORKING
+	//Send message to the player
+	Getter getterTo(to, state.getVariables());
+	GetterResult resultTo = getterTo.get();
+	Map& p = boost::get<Map>(resultTo.result);
 	const std::string& name = boost::get<std::string>(p["name"]);
-	server.send({state.getConnectionByName(name), prompt.fill_with(state.getVariables()) });	
-	// List& players = boost::get<List>(boost::get<Map>(state.getVariables())["players"]);
-	// const std::string& name = boost::get<std::string>(boost::get<Map>(players.front())["name"]); 
-	// server.send({state.getConnectionByName(name), prompt.fill_with(state.getVariables())});
-	List& weapons = boost::get<List>(boost::get<Map>(state.getVariables())["weapons"]);
-	vector<std::string> weaponCheck; //vector to check if the choice is valid
-	for(auto weapon:weapons){
-		const std::string& weaponName = boost::get<std::string>(boost::get<Map>(weapon)["name"]);
-		weaponCheck.push_back(weaponName);
-		server.send({state.getConnectionByName(name), weaponName });
+	server.send({state.getConnectionByName(name), prompt.fill_with(state.getVariables()) });
+	
+	//send Choice list to the player
+	if(choices.find(".name")!= string::npos){ //might have a better way to do this, but it works
+		choices.erase(choices.size()-5, 5);
 	}
-	std::string choice;	
-	std::cin >> choice;
-	auto isValid = std::any_of(weaponCheck.begin(), weaponCheck.end(), [&choice](auto &item){
-		return item == choice;
-	});
+	List& choiceList = boost::get<List>(boost::get<Map>(state.getVariables())[choices]);
+	vector<std::string> choiceCheck; //vector to check if the choice valid
+	for(auto choice:choiceList){
+		const std::string choiceName = boost::get<std::string>(boost::get<Map>(choice)["name"]);
+		choiceCheck.push_back(choiceName);
+		server.send({state.getConnectionByName(name), choiceName + "\t"});
+	}	
+	server.send({state.getConnectionByName(name), "\n"});
+	
+	//read user input
+	bool isReceived = false;
+	bool isValid = false;
+	std::string input = "";
+	while(!isValid){
+		isReceived = false;
+		while(!isReceived){
+			Connection connection = state.getConnectionByName(name);
+			auto received = server.receive(connection);
+			if(received.has_value()){
+				input = std::move(received.value());
+				server.send({connection,input});
+				isReceived = true;
+			}
+		}
+		isValid = std::any_of(choiceCheck.begin(), choiceCheck.end(), [&input](auto &item){
+			return (input.compare(item) == 0);
+		});
 
-
-	if (isValid){
-		//NEED SOMEHOW SAVE THE CHOICE
-		server.send({state.getConnectionByName(name), choice });
-	} else {
-		std::cout << "Please enter valid choice" << std::endl;
+		if(!isValid){
+			server.send({state.getConnectionByName(name),"Please input correct choice!"});
+		}
 	}
+	
+	Getter getterResult(this->result, state.getVariables());
+	GetterResult resultResult = getterResult.get();
+	std::string& resultString = boost::get<std::string>(resultResult.result);
+	resultString = input;
+
+	//for testing
+	// PrintTheThing p2;
+    // boost::apply_visitor(p2, state.getVariables());
 }
 
-void InputTextRule::run(Server& server, GameState& state){
+void InputTextRule::run(Server& server, GameState& state){ //IT'S WORKING
 	Getter getter(to, state.getVariables());
 	GetterResult result = getter.get();
 	Map& p = boost::get<Map>(result.result);
 	const std::string& name = boost::get<std::string>(p["name"]);
 	server.send({state.getConnectionByName(name), prompt.fill_with(state.getVariables()) });
 
-	std::string text;
-	std::cin >> text;
-	//NEED SOMEHOW SAVE THE TEXT
-	server.send({state.getConnectionByName(name), text});
+	bool isReceived = false;
+	std::string input = "";
+
+	while(!isReceived){
+		Connection connection = state.getConnectionByName(name);
+		auto received = server.receive(connection);
+		if(received.has_value()){
+			input = std::move(received.value());
+			server.send({connection,input});
+			isReceived = true;
+		}
+	}
+
+	Getter getterResult(this->result, state.getVariables());
+	GetterResult resultResult = getterResult.get();
+	std::string& resultString = boost::get<std::string>(resultResult.result);
+	resultString = input;
+
+	//for testing
+	// PrintTheThing p2;
+    // boost::apply_visitor(p2, state.getVariables());
+
 }
 
 
