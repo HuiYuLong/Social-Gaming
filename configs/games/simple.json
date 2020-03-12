@@ -17,47 +17,35 @@
     },
   
     "variables": {
-      "player":[
-        { "name": "a"}]
-      ,
       "winners": [
         { "name": "a"},
         { "name": "b"},
         { "name" : "c"}
-
-      ],
-      "losers": [
       ]
     },
   
     "per-player": {
       "wins": 0,
-      "lose": 2
+      "lose": 2,
+      "weapon": "empty"
     },
   
     "per-audience": {},
   
     "rules": [
 
-            { "rule": "timer",
-              "duration": 0,
-              "mode": "exact",
-              "rules": [
-                {
-                  "rule": "deal",
-                  "from": "winners",
-                  "to": "losers",
-                  "count": 2
-                },
-                {
-                  "rule": "deal",
-                  "from": "winners",
-                  "to": "losers",
-                  "count": 2
-                }
-              ]
-            }
+      { "rule": "foreach",
+        "list": "players",
+        "element": "player",
+        "rules": [
+          {
+            "rule": "input-text",
+            "to": "player",
+            "prompt": "{player.name}, type your message",
+            "result": "player.weapon"
+          }
         
-      
+        ]
+      } 
     ]
 }
