@@ -458,10 +458,6 @@ void InputChoiceRule::run(Server& server, GameState& state){ //IT'S WORKING
 				isReceived = true;
 			}
 		}
-		for(auto item:choiceCheck){
-			std::cout << item << "	";
-		}
-		std::cout << "\n";
 		isValid = std::any_of(choiceCheck.begin(), choiceCheck.end(), [&input](auto &item){
 			return (input.compare(item) == 0);
 		});
