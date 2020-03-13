@@ -10,6 +10,10 @@ set_target_properties(gameserver
                       PREFIX ""
 )
 
+
+FIND_PACKAGE( Boost 1.68.0 COMPONENTS program_options REQUIRED )
+INCLUDE_DIRECTORIES( ${Boost_INCLUDE_DIR} )
+
 find_package(Threads REQUIRED)
 
 target_link_libraries(gameserver
