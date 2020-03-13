@@ -63,10 +63,8 @@ std::unordered_map<std::string, std::function<std::unique_ptr<Rule>(const nlohma
         {"reverse", [](const nlohmann::json& rule) {return std::make_unique<ReverseRule>(rule); }},
         {"shuffle", [](const nlohmann::json& rule) {return std::make_unique<ShuffleRule>(rule); }},
         {"sort",[](const nlohmann::json& rule) {return std::make_unique<SortRule>(rule);}},
-        //{"deal",[](const nlohmann::json& rule) {return std::make_unique<DealRule>(rule);}},
         {"discard", [](const nlohmann::json& rule) {return std::make_unique<DiscardRule>(rule); }}, 
         {"deal",[](const nlohmann::json& rule) {return std::make_unique<DealRule>(rule);}},
-        //{"discard", [](const nlohmann::json& rule) {return std::make_unique<DiscardRule>(rule); }}, 
 
         //Arithmetic Operations
         {"add", [](const nlohmann::json& rule) {return std::make_unique<AddRule>(rule); }},
@@ -276,14 +274,14 @@ void ExtendRule::run(Server& server, GameState& state) {
 	cout<<"Extend begin\n";
 	Target.insert(Target.end(), ExtendList.begin(), ExtendList.end());
 
-	// for(auto weapon:Target){
-	// 	const std::string& weaponName = boost::get<std::string>(boost::get<Map>(weapon)["name"]);
-	// 	cout<<weaponName<<endl;
-	// 	const std::string& beatName = boost::get<std::string>(boost::get<Map>(weapon)["beats"]);
+	for(auto weapon:Target){
+		const std::string& weaponName = boost::get<std::string>(boost::get<Map>(weapon)["name"]);
+		cout<<weaponName<<endl;
+		const std::string& beatName = boost::get<std::string>(boost::get<Map>(weapon)["beats"]);
 		
-	// 	cout<<weaponName<<" beat "<<beatName<<endl;
-	// 	// server.send({state.getConnectionByName(name), weaponName});
-	// }
+		cout<<weaponName<<" beat "<<beatName<<endl;
+		// server.send({state.getConnectionByName(name), weaponName});
+	}
 
 }
 void ReverseRule::run(Server& server, GameState& state) {
@@ -582,8 +580,8 @@ void InputVoteRule::run(Server& server, GameState& state){
 	}
 
 	//for testing
-	PrintTheThing p2;
-    boost::apply_visitor(p2, state.getVariables());
+	// PrintTheThing p2;
+    // boost::apply_visitor(p2, state.getVariables());
 }
 
 void DealRule::run(Server& server, GameState& state){ //ONLY WORKS FOR INTEGER COUNT :(
