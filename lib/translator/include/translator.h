@@ -352,7 +352,7 @@ private:
     ruleType to; 
     Text prompt; 
     ruleType choices;
-    Text result;
+    ruleType result;
 public:
     InputVoteRule(const nlohmann::json& rule);
 
