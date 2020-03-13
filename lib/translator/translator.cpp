@@ -193,8 +193,6 @@ MessageRule::MessageRule(const nlohmann::json& rule): to(rule["to"]), value(rule
 	std::cout << "message: " << rule["value"] << std::endl; 
 }
 
-
-
 RuleTree::RuleTree(const nlohmann::json& gameConfig)
 {
     for (const auto& it: gameConfig.items())

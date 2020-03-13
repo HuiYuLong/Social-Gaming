@@ -15,6 +15,9 @@ using ::testing::AtLeast;
 // ASSERT_*() will stop other tests from running
 
 // ... should we instantiate a server here?
+// nick sumner's recommendation is that we should move the Server out of run() method
+// TODO: research the way that we could move the server out of run()
+
 
 class MockAddRule : public AddRule {
 public:
@@ -27,7 +30,7 @@ TEST(MyDumbTest, TestFalse) {
 }
 
 // TEST(JunhosDumbRuleTest, Test1) {
-// 	//MockAddRule mockAddRule = std::make_unique<MockAddRule>() 
-
+// 	MockAddRule mockAddRule = std::make_unique<MockAddRule>(server, state);
+// 	mockAddRule 
 // }
 
