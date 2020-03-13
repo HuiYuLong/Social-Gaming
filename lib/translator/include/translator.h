@@ -13,7 +13,6 @@
 #include <boost/algorithm/string.hpp>
 #include <thread>
 #include <regex>
-
 #include "Server.h"
 #include "variables.h"
 
