@@ -81,8 +81,6 @@ std::unordered_map<std::string, std::function<std::unique_ptr<Rule>(const nlohma
         {"message", [](const nlohmann::json& rule) { return std::make_unique<MessageRule>(rule); }},
         {"global-message", [](const nlohmann::json& rule) { return std::make_unique<GlobalMessageRule>(rule); }},
         {"scores", [](const nlohmann::json& rule) {return std::make_unique<ScoresRule>(rule); }}
-        
-      
 };
 
 //**** Control Structures ****//
@@ -240,7 +238,7 @@ void LoopRule::run(Server& server, GameState& state) {
 			ptr->run(server, state);
 		}
 	}
-}
+}	
 
 void GlobalMessageRule::run(Server& server, GameState& state)
 {

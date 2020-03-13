@@ -6,7 +6,16 @@ add_executable(runAllTests exampleText.cpp
   # Place each file name on a separate line.
 )
 
-target_link_libraries(runAllTests gmock gtest gtest_main)
+find_package(Threads REQUIRED)
+
+target_link_libraries(runAllTests
+ PRIVATE gmock
+ PRIVATE gtest
+ PRIVATE gtest_main
+ PRIVATE networking
+ PRIVATE translator
+ PRIVATE Threads::Threads
+ PRIVATE nlohmann_json::nlohmann_json)
 
 add_test(NAME AllTests COMMAND runAllTests)
 
