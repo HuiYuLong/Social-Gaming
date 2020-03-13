@@ -14,3 +14,8 @@ SET(CMAKE_CXX_FLAGS -pthread)
 target_link_libraries(translator
   PRIVATE nlohmann_json::nlohmann_json
   PRIVATE networking)
+
+target_link_libraries(translator
+  PRIVATE nlohmann_json::nlohmann_json
+  
+  PRIVATE networking)

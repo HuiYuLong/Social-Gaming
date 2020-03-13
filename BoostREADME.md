@@ -17,8 +17,8 @@ cd boost_1_68_0/
 
 Get the required libraries, main ones are icu for boost::regex support:
 
-sudo apt-get update
-sudo apt-get install build-essential g++ python-dev autotools-dev libicu-dev build-essential libbz2-dev libboost-all-dev
+    sudo apt-get update
+    sudo apt-get install build-essential g++ python-dev autotools-dev libicu-dev build-essential libbz2-dev libboost-all-dev
 
 Boost's bootstrap setup:
 
