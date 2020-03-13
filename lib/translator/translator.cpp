@@ -262,12 +262,6 @@ void MessageRule::run(Server& server, GameState& state) { //IT'S WORKING
 	Map& p = boost::get<Map>(result.result);
 	const std::string& name = boost::get<std::string>(p["name"]);
 	server.send({state.getConnectionByName(name), value.fill_with(state.getVariables()) });
-
-	// List& players = boost::get<List>(boost::get<Map>(state.getVariables())["players"]);
-	// Map& toplevel = boost::get<Map>(state.getVariables());
-	// toplevel[to] = &players.front(); //pick first player in the list for now, might be changed in the future
-	// const std::string& name = boost::get<std::string>(boost::get<Map>(players.front())["name"]); 
-	// server.send({state.getConnectionByName(name), value.fill_with(state.getVariables()) });
 }
 
 //List Operation
@@ -282,14 +276,14 @@ void ExtendRule::run(Server& server, GameState& state) {
 	cout<<"Extend begin\n";
 	Target.insert(Target.end(), ExtendList.begin(), ExtendList.end());
 
-	for(auto weapon:Target){
-		const std::string& weaponName = boost::get<std::string>(boost::get<Map>(weapon)["name"]);
-		cout<<weaponName<<endl;
-		const std::string& beatName = boost::get<std::string>(boost::get<Map>(weapon)["beats"]);
+	// for(auto weapon:Target){
+	// 	const std::string& weaponName = boost::get<std::string>(boost::get<Map>(weapon)["name"]);
+	// 	cout<<weaponName<<endl;
+	// 	const std::string& beatName = boost::get<std::string>(boost::get<Map>(weapon)["beats"]);
 		
-		cout<<weaponName<<" beat "<<beatName<<endl;
-		// server.send({state.getConnectionByName(name), weaponName});
-	}
+	// 	cout<<weaponName<<" beat "<<beatName<<endl;
+	// 	// server.send({state.getConnectionByName(name), weaponName});
+	// }
 
 }
 void ReverseRule::run(Server& server, GameState& state) {
@@ -510,7 +504,86 @@ void InputTextRule::run(Server& server, GameState& state){ //IT'S WORKING
 
 
 void InputVoteRule::run(Server& server, GameState& state){
-	//TODO
+	//Send message to the player/audience list
+	List& players = boost::get<List>(boost::get<Map>(state.getVariables())[to]);
+	for (Variable& player : players) {
+		const std::string& name = boost::get<std::string>(boost::get<Map>(player)["name"]);
+		server.send({state.getConnectionByName(name), prompt.fill_with(state.getVariables()) });
+	}
+	//defining list or list name
+	if(choices.find(".name")!= string::npos){ //might have a better way to do this, but it works
+		choices.erase(choices.size()-5, 5);
+	}
+	List& choiceList = boost::get<List>(boost::get<Map>(state.getVariables())[choices]);
+	vector<std::string> choiceCheck; //vector to check if the choice valid
+	//construct choice check vector
+	for(auto choice:choiceList){
+		const std::string choiceName = boost::get<std::string>(boost::get<Map>(choice)["name"]);
+		choiceCheck.push_back(choiceName);
+	}
+	//send choice list to player/audience list
+	for (Variable& player : players) {
+		const std::string& name = boost::get<std::string>(boost::get<Map>(player)["name"]);
+		for(auto choice:choiceCheck){
+			server.send({state.getConnectionByName(name), choice + "\t"});
+		}
+		server.send({state.getConnectionByName(name), "\n"});
+	}
+	
+	//construct vote list
+	Getter getterResult(this->result, state.getVariables());
+	GetterResult resultResult = getterResult.get();
+	List& voteList = boost::get<List>(resultResult.result);
+	voteList.clear();  //remove everything in current voteList
+	for(auto choice:choiceCheck){
+		Map voteMap;
+		int count = 0;
+		voteMap["count"] = count;
+		std::string choiceName = choice;
+		voteMap["name"] = choiceName;
+		voteList.emplace_back(voteMap);
+	}
+	
+	//read user input
+	for (Variable& player : players) {
+		bool isReceived = false;
+		bool isValid = false;
+		std::string input = "";
+		const std::string& name = boost::get<std::string>(boost::get<Map>(player)["name"]);
+		while(!isValid){ //read user input till it's a valid choice
+			isReceived = false;
+			while(!isReceived){
+				Connection connection = state.getConnectionByName(name);
+				auto received = server.receive(connection);
+				if(received.has_value()){
+					input = std::move(received.value());
+					server.send({connection,input+"\n"});
+					isReceived = true;
+				}
+			}
+			isValid = std::any_of(choiceCheck.begin(), choiceCheck.end(), [&input](auto &item){
+				return (input.compare(item) == 0);
+			});
+
+			if(!isValid){
+				server.send({state.getConnectionByName(name),"Please input correct choice!\n"});
+			}
+		}
+
+		//modify vote count
+		for(Variable& vote:voteList){
+			const std::string& name = boost::get<std::string>(boost::get<Map>(vote)["name"]);
+			int& count = boost::get<int>(boost::get<Map>(vote)["count"]);
+			if(input.compare(name) == 0){
+				count++;
+				break;
+			}
+		}
+	}
+
+	//for testing
+	PrintTheThing p2;
+    boost::apply_visitor(p2, state.getVariables());
 }
 
 void DealRule::run(Server& server, GameState& state){ //ONLY WORKS FOR INTEGER COUNT :(
@@ -525,16 +598,8 @@ void DealRule::run(Server& server, GameState& state){ //ONLY WORKS FOR INTEGER C
 		toList.emplace_back(temp);
 	}
 	//for testing
-	for (auto item:fromList){
-		const std::string& name = boost::get<std::string>(boost::get<Map>(item)["name"]);
-		std::cout << name << "	";
-	}
-	std::cout << std::endl;
-	 for (auto item:toList){
-		const std::string& name = boost::get<std::string>(boost::get<Map>(item)["name"]);
-		std::cout << name << "	";
-	}
-	std::cout << std::endl;
+	// PrintTheThing p2;
+    // boost::apply_visitor(p2, state.getVariables());
 }
 //Helper functions
 //Crop The big JSON file into short target secction with input name
