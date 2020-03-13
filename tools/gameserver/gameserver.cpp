@@ -229,6 +229,7 @@ main(int argc, char* argv[]) {
 			std::cout << "Could not open the game configuration file " << gamespecfile << std::endl;
 			return 1;
 		}
+    
 		json gamespec = json::parse(gamespecstream);
 		configurations.emplace_back(gamespec);
 		std::cout << "\nTranslated game " << gamespecfile << "\n\n";
@@ -236,8 +237,6 @@ main(int argc, char* argv[]) {
 
   unsigned short port = serverspec["port"];
   Server server{port, getHTTPMessage(serverspec["indexhtml"]), onConnect, onDisconnect};
-
-
 
   std::ostringstream buffer;
   while (true) {

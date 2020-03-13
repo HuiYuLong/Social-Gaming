@@ -328,7 +328,7 @@ private:
     ruleType to;
     Text prompt;
     ruleType choices; 
-    Text result;
+    ruleType result;
 public:
     InputChoiceRule(const nlohmann::json& rule);
 
@@ -340,7 +340,7 @@ class InputTextRule : public Rule{
 private:
     ruleType to; 
     Text prompt;
-    Text result; 
+    ruleType result; 
 public:
     InputTextRule(const nlohmann::json& rule);
 
