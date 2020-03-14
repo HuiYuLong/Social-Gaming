@@ -95,8 +95,21 @@ GetterResult Getter::processList(Variable& varlist)
     }
     else if(current_query.compare(0, 8, "elements") == 0)
     { 
-        // TODO
-        return {varlist, true};
+        List tmp;
+        auto next = it;
+        ++next;
+        const auto& next_query = *next;
+        // get the key value (ie. name)
+        std::size_t found = next_query.rfind('(');
+        if(found==std::string::npos) {
+            std::transform(list.begin(), list.end(), std::back_inserter(tmp),
+                [&next_query] (const Variable& item) {
+                    return boost::get<Map>(item).at(next_query);
+                });
+        }
+
+        returned = tmp;
+        return {returned, true};
     }
     else
     {
