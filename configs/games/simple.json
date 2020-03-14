@@ -18,21 +18,23 @@
   
     "variables": {
       "player":[
-        { "name": "a"}]
+        { "name": "a", "weapon": "Rock"}
+      ]
       ,
       "winners": [
-        { "name": "a"},
-        { "name": "b"},
-        { "name" : "c"}
+        { "name": "apple", "job": "a"},
+        { "name": "banana", "job": "b"},
+        { "name" : "cat", "job": "c"},
+        { "name" : "duck", "job": "d"}
 
       ],
-      "losers": [
+      "vote": [
       ]
     },
   
     "per-player": {
       "wins": 0,
-      "lose": 2
+      "weapon": "empty"
     },
   
     "per-audience": {},
@@ -40,20 +42,14 @@
     "rules": [
 
             { "rule": "timer",
-              "duration": 0,
+              "duration": 3,
               "mode": "exact",
               "rules": [
-                {
-                  "rule": "deal",
-                  "from": "winners",
-                  "to": "losers",
-                  "count": 2
+                { "rule": "global-message",
+                  "value": "Winners: {winners.elements.name}"
                 },
-                {
-                  "rule": "deal",
-                  "from": "winners",
-                  "to": "losers",
-                  "count": 2
+                { "rule": "global-message",
+                  "value": "Players: {player.elements.weapon}"
                 }
               ]
             }
