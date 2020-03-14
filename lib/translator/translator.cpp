@@ -618,24 +618,41 @@ void AddRule::run(Server& server, GameState& state)
 }
 
 void TimerRule::run(Server& server, GameState& state) {
-	// Todo: An "exact" timer will pad the execution time to the given duration
 	std::cout << mode << std::endl;
 	std::clock_t start;
     start = std::clock();
 	bool flag = false;
-
+	std::cout << "before " << std::endl;
 	float timer = float(std::clock()-start)/CLOCKS_PER_SEC;
-	for (const auto& ptr : subrules) {
+	// typedef std::unique_ptr<int> ptr;
+	// while(auto const& ptr != subrules.end()) {
+	for(auto const& ptr:subrules) {
 		timer = float(std::clock()-start)/CLOCKS_PER_SEC;
-		if( (timer>duration) && (mode == "exact")) {
-			std::cout << "times up!" << std::endl;
-			// TODO: send a msg to the server to stop the rest of the rules
-			return;
+		std::cout << "enter subrules" << std::endl;
+		if(mode == "exact") {
+			if(timer>duration) {
+				std::cout << "times up!" << std::endl;
+				// TODO: send a msg to the server to stop the rest of the rules
+				return;
+			}
+			else if( (timer<duration) && (ptr==NULL)) {
+				// keep executing until time > the given duration
+				std::cout << "prt is null" << std::endl;
+				while(timer<duration);
+				return;
+			}
 		}
 		else if( (timer>duration) && (mode == "track")) {
 			std::cout << "!!flag" << std::endl;
 		}
+		else if( (timer>duration) && (mode == "atmost")) {
+			// TODO: send a msg to the server to stop the rest of the rules
+			std::cout << "times up!" << std::endl;
+			return;
+		}
+
 		ptr->run(server, state);
+		// ptr++;
 	}
 }
 

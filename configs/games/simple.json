@@ -17,10 +17,15 @@
     },
   
     "variables": {
+      "player":[
+        { "name": "a", "weapon": "Rock"}
+      ]
+      ,
       "winners": [
-        { "name": "a"},
-        { "name": "b"},
-        { "name" : "c"}
+        { "name": "apple", "job": "a"},
+        { "name": "banana", "job": "b"},
+        { "name" : "cat", "job": "c"},
+        { "name" : "duck", "job": "d"}
 
       ],
       "vote": [
@@ -35,12 +40,19 @@
     "per-audience": {},
   
     "rules": [
-      { "rule": "input-vote",
-        "to": "players",
-        "prompt": "All players, choose your vote!",
-        "choices": "weapons.name",
-        "result": "vote"
-      }
+
+            { "rule": "timer",
+              "duration": 3,
+              "mode": "exact",
+              "rules": [
+                { "rule": "global-message",
+                  "value": "Winners: {winners.elements.name}"
+                },
+                { "rule": "global-message",
+                  "value": "Players: {player.elements.weapon}"
+                }
+              ]
+            }
         
       
     ]
