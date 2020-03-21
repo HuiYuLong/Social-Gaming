@@ -97,7 +97,7 @@ public:
    *  in response to standard HTTP requests for any path ending in `index.html`.
    */
 
-  Server();
+  Server() {};
 
   template <typename C, typename D>
   Server(unsigned short port,
