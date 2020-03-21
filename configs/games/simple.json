@@ -49,7 +49,7 @@
                   "value": "Winners: {winners.elements.name}"
                 },
                 { "rule": "global-message",
-                  "value": "Players: {player.elements.weapon}"
+                  "value": "!players.elements.weapon.contains(weapon.name)"
                 }
               ]
             }
