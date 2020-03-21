@@ -1,0 +1,47 @@
+{
+    "configuration": {
+      "name": "Simple",
+      "player count": {"min": 1, "max": 4},
+      "audience": false,
+      "setup": {
+        "Rounds": 10
+      }
+    },
+  
+    "constants": {
+      "weapons": [
+        { "name": "Rock",     "beats": "Scissors"},
+        { "name": "Paper",    "beats": "Rock"},
+        { "name": "Scissors", "beats": "Paper"}
+      ]
+    },
+  
+    "variables": {
+      "player":[
+        { "name": "a", "weapon": "Rock"}
+      ]
+      ,
+      "winners": [
+        { "name": "apple", "job": "a"},
+        { "name": "banana", "job": "b"},
+        { "name" : "cat", "job": "c"},
+        { "name" : "duck", "job": "d"}
+
+      ],
+      "vote": [
+      ]
+    },
+  
+    "per-player": {
+      "wins": 0,
+      "weapon": "empty"
+    },
+  
+    "per-audience": {},
+  
+    "rules": [
+      { "rule": "global-message",
+        "value": "harro"
+      }
+    ]
+}
