@@ -4,6 +4,7 @@
 #include "translator.h"
 #include <nlohmann/json.hpp>
 #include <vector>
+#include <iostream>
 
 using ::testing::AtLeast;
 
@@ -13,26 +14,21 @@ using networking::Message;
 using networking::ConnectionHash;
 using json = nlohmann::json;
 
+using Name2Connection = std::unordered_map<std::string, Connection>;
+
 class PseudoServer : public Server {
 public:
 	PseudoServer()  {};
 	void send(const Message& message) {
-		this->messages.push_back(message); // just check if the correct message was pushed to Server
+		this->messages.push_back(message); // just check if the correct message was pushed to msg vector
+	}
+	int getMsgVectorSize() {
+		return this->messages.size();
 	}
 
 private:
 	std::vector<Message> messages;
 };
-
-
-// void GlobalMessageRule::run(Server& server, GameState& state)
-// {
-// 	List& players = boost::get<List>(boost::get<Map>(state.getVariables())["players"]);
-// 	for (Variable& player : players) {
-// 		const std::string& name = boost::get<std::string>(boost::get<Map>(player)["name"]);
-// 		server.send({state.getConnectionByName(name), value.fill_with(state.getVariables()) });
-// 	}
-// }
 
 class MockGlobalMessageRule : public GlobalMessageRule {
 public:
@@ -44,14 +40,10 @@ public:
 	MOCK_METHOD2(run, void(Server& server, GameState& state));
 };
 
-// TEST(MyDumbTest, TestFalse) {
-//     EXPECT_FALSE(3*2 == 5);
-//     ASSERT_TRUE(true);
-// }
-
 TEST(RuleTests, GlobalMessageRuleTest) {
 
 	// initialize environment
+	// rule take in Server and GameState
 
 	std::vector<Configuration> configurations;
 
@@ -74,18 +66,25 @@ TEST(RuleTests, GlobalMessageRuleTest) {
 		std::cout << "\nTranslated game " << gamespecfile << "\n\n";
 	}
 
-  //Server server{port, getHTTPMessage(serverspec["indexhtml"]), onConnect, onDisconnect};
-  //PseudoServer pseudoServer{port, getHTTPMessage(serverspec["indexhtml"]), onConnect, onDisconnect};
-  //PseudoServer pseudoServer{randPortNum, randStr, onConnect, onDisconnect};
 	PseudoServer pseudoServer;
 	Server& server = pseudoServer;
+	Name2Connection name2connection; // maps string to connection
 
+	Connection player1 = Connection{1};
+	Connection player2 = Connection{2};
 
-	EXPECT_FALSE(3*2 == 5);
-	ASSERT_TRUE(true);
+	name2connection.insert({"player1", player1});
+	name2connection.insert({"player2", player2});
+
+	std::unique_ptr<GameState> game_state = std::make_unique<GameState>(configurations[0], name2connection);
+
+	configurations[0].launchGame(server, *game_state);
+
+	std::cout << "\n" << configurations.size() << std::endl; 
+
+	// EXPECT_FALSE(3*2 == 5);
+	// ASSERT_TRUE(true);
 }
-
-
 
 // Test Example
 // "MyDumbTest" is the test group name
