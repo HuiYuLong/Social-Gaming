@@ -1,0 +1,7 @@
+{
+    "port": 4000,
+    "indexhtml": "../webchat.html",
+    "games": [
+        "../configs/games/testing.json"
+    ]
+}
