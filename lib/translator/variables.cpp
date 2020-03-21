@@ -85,8 +85,33 @@ GetterResult Getter::processList(Variable& varlist)
     }
     else if(current_query.compare(0, 8, "contains") == 0)
     {
-        // TODO
-        return {varlist, true};
+        // still struggling...
+        // current query is the same as in json
+        // 1. extract strings in contains(...) and convert it
+        // 2. extract string before contains and conver it
+        // 3. compare them and return true/false
+        // Variable check = bool(boost::get<int>(check));
+        bool check = false;
+        List tmp;        
+        std::smatch match;
+        std::regex contain ("\\((.*?)\\)");
+        std::regex_search (current_query,match,contain);
+
+        std::string m = match[1]; // weapon.name
+        // for testing
+        // std::transform(list.begin(), list.end(), std::back_inserter(tmp),
+        //     [&m] (const Variable& item) {
+        //         return boost::get<Map>(item);
+        //     });
+        
+        // if has !, reverse the logic
+        std::size_t hasExcl = current_query.find("!");
+        if(hasExcl==std::string::npos) {
+            if(check == false) {check == true;}
+            else {check == false;}
+        }
+        returned = check;
+        return {returned, true};
     }
     else if(current_query.compare(0, 7, "collect") == 0)
     {
