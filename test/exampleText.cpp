@@ -49,13 +49,13 @@ public:
 //     ASSERT_TRUE(true);
 // }
 
-TEST(RuleTest, GlobalMessageRuleTest) {
+TEST(RuleTests, GlobalMessageRuleTest) {
 
 	// initialize environment
 
 	std::vector<Configuration> configurations;
 
-	std::ifstream serverconfig{"../configs/server/testing.json"};
+	std::ifstream serverconfig{"../configs/server/ruleTestConfig.json"};
  	if (serverconfig.fail()) {
  		std::cout << "Could not open the rule testing configuration file" << std::endl;
   }
