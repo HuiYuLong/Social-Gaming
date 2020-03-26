@@ -77,7 +77,6 @@ public:
     void launchGame(Server& server, GameState& state);
 };
 
-
 // Contains the game configuration independent of a particular game instance
 class Configuration {
 public:
