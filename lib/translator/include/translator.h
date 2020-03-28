@@ -258,7 +258,7 @@ public:
     Text(const std::string& value)
     {
         size_t previous_match = 0u;
-        std::regex r("\\{([a-z.]+)\\}");
+        std::regex r("\\{([a-z.\\(\\)]+)\\}");
         for(std::sregex_iterator i = std::sregex_iterator(value.begin(), value.end(), r);
             i != std::sregex_iterator();
             ++i)

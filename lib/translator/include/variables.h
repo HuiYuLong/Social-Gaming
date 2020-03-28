@@ -1,5 +1,4 @@
 #include <boost/variant.hpp>
-#include <boost/tokenizer.hpp>
 #include <boost/function.hpp>
 #include <boost/algorithm/string/join.hpp>
 #include <iostream>
@@ -36,8 +35,57 @@ using List = std::vector<Variable>;
 using Map = std::unordered_map<std::string, Variable>;
 using Pointer = Variable*;
 
+class QueryTokensIterator
+{
+    const std::string& query_string;
+    size_t last_pos;
 
-using tokenizer = boost::tokenizer<boost::char_separator<char> >;
+public:
+    QueryTokensIterator(const Query& query): query_string(query.query), last_pos(0u) {}
+
+    QueryTokensIterator(const std::string& query): query_string(query), last_pos(0u) {}
+
+    std::string_view produceToken(size_t separator_pos)
+    {
+        if (separator_pos <= last_pos) {
+            std::cout << "Tokenizer error: empty token" << std::endl;
+            std::terminate();
+        }
+        std::string_view token{query_string.data() + last_pos, separator_pos - last_pos};
+        last_pos = separator_pos + 1;
+        return token;
+    }
+
+    std::string_view getNext()
+    {
+        for(size_t pos = last_pos; pos < query_string.size(); ++pos)
+        {
+            if (query_string[pos] == '.') {
+                return produceToken(pos);
+            }
+            if (query_string[pos] == '(') {
+                do {
+                    pos++;
+                    if(pos == query_string.size()) {
+                        std::cout << "Tokenizer error: function call doesn't have a closing bracket" << std::endl;
+                        std::terminate();
+                    }
+                } while (query_string[pos] != ')');
+                pos++;
+                if (pos == query_string.size() || query_string[pos] == '.') {
+                    return produceToken(pos);
+                }
+                else {
+                    std::cout << "Tokenizer error: function call not followed by a separator" << std::endl;
+                    std::terminate();
+                }
+            }
+        }
+        return produceToken(query_string.size());
+    }
+
+    bool hasNext() { return last_pos < query_string.size(); }
+};
 
 // I tried to use a visitor to access the variables by their names
 // but I couldn't return references to variants from it
@@ -163,10 +211,8 @@ struct GetterResult
 class Getter
 {
     thread_local static Variable returned;
-    static boost::char_separator<char> dot;
     Variable& toplevel;
-    tokenizer tokens;
-    tokenizer::iterator it;
+    QueryTokensIterator iterator;
 public:
     Getter(const std::string& untokenizer_query, Variable& toplevel);
     GetterResult get();
