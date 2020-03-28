@@ -17,9 +17,8 @@
     },
   
     "variables": {
-      "player":[
+      "player":
         { "name": "a", "weapon": "Rock"}
-      ]
       ,
       "winners": [
         { "name": "apple", "job": "a"},
@@ -40,17 +39,8 @@
     "per-audience": {},
   
     "rules": [
-
-            { "rule": "timer",
-              "duration": 3,
-              "mode": "exact",
-              "rules": [
-                { "rule": "global-message",
-                  "value": "player.contains(weapon.name)"
-                }
-              ]
-            }
-        
-      
+      { "rule": "global-message",
+        "value": "Result: {weapons.elements.name.contains(player.weapon)}"
+      }
     ]
 }

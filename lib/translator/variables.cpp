@@ -1,5 +1,8 @@
 #include "variables.h"
 #include <boost/regex.hpp>
+#include <boost/convert.hpp>
+#include <boost/convert/strtol.hpp>
+// #include <charconv> //cannot include for some reason
 
 bool operator==(const Query& q1, const Query& q2)
 {
@@ -7,8 +10,6 @@ bool operator==(const Query& q1, const Query& q2)
 }
 
 thread_local Variable Getter::returned;
-
-boost::char_separator<char> Getter::dot(".");
 
 using Callmap = std::vector<boost::function<GetterResult(Getter*, Variable&)>>;
 
@@ -36,8 +37,8 @@ Callmap callmap = {
         return getter->processQuery(query); }
 };
 
-Getter::Getter(const std::string& untokenizer_query, Variable& toplevel):
-    tokens(untokenizer_query, dot), it(tokens.begin()), toplevel(toplevel) {}
+Getter::Getter(const std::string& untokenized_query, Variable& toplevel):
+    iterator(untokenized_query), toplevel(toplevel) {}
 
 GetterResult Getter::processBoolean(Variable& boolean)
 {
@@ -49,35 +50,35 @@ GetterResult Getter::processInteger(Variable& integer)
 {
     std::cout << "processing the interrrrrger" <<std::endl;
     // Return the integer if it is the last token in the query
-    if (it == tokens.end()) {
+    if (!iterator.hasNext()) {
         return {integer, false};
     }
-    auto next = it;
-    ++next;
-    // If the integer has a method call, process it
-    if (next == tokens.end())
+    const std::string_view current_query = iterator.getNext();
+    if(current_query.compare(0, 6, "upfrom") == 0)
     {
-        const std::string& current_query = *it;
-        if(current_query.compare(0, 6, "upfrom") == 0)
+        size_t opening_bracket = current_query.rfind('(');
+        size_t closing_bracket = current_query.rfind(')');
+        std::string_view argument = current_query.substr(opening_bracket + 1, closing_bracket - opening_bracket - 1);
+        // int upfrom;
+        // if(auto [p, ec] = std::from_chars(argument.data(), argument.data()+argument.size(), upfrom); ec != std::errc()) {
+        //     std::cout << "Error in upfrom(int): invalid argument" << std::endl;
+        //     std::terminate();
+        // }
+        auto value = boost::convert<int>(argument, boost::cnv::strtol());
+        if (!value.has_value())
         {
-            size_t opening_bracket = current_query.rfind('(');
-            size_t closing_bracket = current_query.rfind(')');
-            int from = std::stoi(current_query.substr(opening_bracket + 1, closing_bracket - opening_bracket - 1));
-            returned = List(boost::get<int>(integer) - from + 1, 0);
-            List& upfrom = boost::get<List>(returned);
-            //upfrom.reserve(integer - from + 1);
-            std::iota(upfrom.begin(), upfrom.end(), from);
-            return {returned, true};
-        }
-        else
-        {
-            std::cout << "Unrecognized integer attribute" << std::endl;
+            std::cout << "Error in upfrom(int): invalid argument" << std::endl;
             std::terminate();
         }
+        int upfrom = value.get();
+        returned = List(boost::get<int>(integer) - upfrom + 1, 0);
+        List& upfrom_list = boost::get<List>(returned);
+        std::iota(upfrom_list.begin(), upfrom_list.end(), upfrom);
+        return {returned, true};
     }
     else
     {
-        std::cout << "Ill-formed variable access" << std::endl;
+        std::cout << "Unrecognized integer attribute" << std::endl;
         std::terminate();
     }
 }
@@ -85,15 +86,19 @@ GetterResult Getter::processInteger(Variable& integer)
 GetterResult Getter::processString(Variable& string)
 {
     std::cout << "Processing the stringgggg" << std::endl;
+    if(iterator.hasNext()) {
+        std::cout << "Error: strings have no attributes" << std::endl;
+        std::terminate();
+    }
     return {string, false};
 }
 
 GetterResult Getter::processList(Variable& varlist)
 {
     std::cout << "processing the listt *****************" << std::endl;
-    if (it == tokens.end())
+    if (!iterator.hasNext())
         return {varlist, false};
-    const auto& current_query = *it;
+    const auto current_query = iterator.getNext();
     List& list = boost::get<List>(varlist);
     if(current_query.compare(0, 4, "size") == 0)
     {
@@ -104,23 +109,21 @@ GetterResult Getter::processList(Variable& varlist)
     }
     else if(current_query.compare(0, 8, "contains") == 0)
     {
+        std::cout << "in contains()" << std::endl;
         // TODO
         size_t opening_bracket = current_query.rfind('(');
         size_t closing_bracket = current_query.rfind(')');
-        Variable from = current_query.substr(opening_bracket + 1, closing_bracket - opening_bracket - 1);
+        std::string_view contains_what = current_query.substr(opening_bracket + 1, closing_bracket - opening_bracket - 1);
 
-        // GetterResult r = processQuery(from);
-        List tmp = boost::get<List>(from);
+        Getter subgetter(std::string{contains_what}, toplevel);
+        // Might need to save it if it's temporary
+        const Variable& contained_variable = subgetter.get().result;
 
-        std::cout << "*************NO WAY*************" << std::endl;
-        std::transform(list.begin(), list.end(), std::back_inserter(tmp),
-            [] (const Variable& item) {
-                return boost::get<Map>(item);
-            });
-        returned = tmp;
-        // returned = boost::get<std::string>(r);
-        // GetterResult r = processList(varlist);
-        // returned = boost::get<std::string>(r.result);
+        Equal equal(toplevel);
+        bool contains = std::any_of(list.begin(), list.end(), [contained_variable, equal](const Variable& element) {
+            return equal(contained_variable, element);
+        });
+        returned = contains;
 
         return {returned, true};
     }
@@ -130,24 +133,26 @@ GetterResult Getter::processList(Variable& varlist)
         std::cout << "NO22222 *****************" << std::endl;
         return {varlist, true};
     }
-    else if(current_query.compare(0, 8, "elements") == 0)
+    else if(current_query == "elements")
     { 
-        std::cout << "YES *****************" << std::endl;
-        List tmp;
-        auto next = it;
-        ++next;
-        const auto& next_query = *next;
-        // get the key value (ie. name)
-        std::size_t found = next_query.rfind('(');
-        if(found==std::string::npos) {
-            std::transform(list.begin(), list.end(), std::back_inserter(tmp),
-                [&next_query] (const Variable& item) {
-                    return boost::get<Map>(item).at(next_query);
-                });
+        std::cout << "in elements" << std::endl;
+        List elements_list;
+        elements_list.reserve(list.size());
+        if(!iterator.hasNext()) {
+            std::cout << "Invalid query: \"elements\" must be followed by an attribute name" << std::endl;
+            std::terminate();
         }
-
-        returned = tmp;
-        return {returned, true};
+        const auto attribute = iterator.getNext();
+        std::transform(list.begin(), list.end(), std::back_inserter(elements_list), [&attribute] (const Variable& item) {
+            return boost::get<Map>(item).at(std::string{attribute});
+        });
+        if(!iterator.hasNext()) {
+            returned = std::move(elements_list);
+            return {returned, true};
+        }
+        Variable temp = std::move(elements_list);
+        GetterResult result = processList(temp);
+        return {result.result, true};   // ensure that needs_to_be_saved is true
     }
     else
     {
@@ -159,11 +164,11 @@ GetterResult Getter::processList(Variable& varlist)
 GetterResult Getter::processMap(Variable& varmap)
 {
     std::cout << "Processing the mapppppppp" << std::endl;
-    if (it == tokens.end()) {
+    if (!iterator.hasNext()) {
         return {varmap, false};
     }
     Map& map = boost::get<Map>(varmap);
-    Variable& next = map.at(*(it++));
+    Variable& next = map.at(std::string{iterator.getNext()});
     return callmap[next.which()](this, next);
 }
 
