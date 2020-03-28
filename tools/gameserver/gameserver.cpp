@@ -17,6 +17,7 @@
 #include <vector>
 #include <nlohmann/json.hpp>
 #include <thread>
+#include  <random>
 
 using networking::Server;
 using networking::Connection;
@@ -29,6 +30,15 @@ using json = nlohmann::json;
 
 // All game configurations available on the server
 std::vector<Configuration> configurations;
+
+template<typename Iter>
+std::string select_random_animal() {
+    static std::vector<std::string> random_animals = {"Alligator", "Anteater", "Armadillo", "Auroch", "Axolotl", "Badger", "Bat", "Bear", "Beaver", "Buffalo", "Camel", "Capybara", "Chameleon", "Cheetah", "Chinchilla", "Chipmunk", "Chupacabra", "Cormorant", "Coyote", "Crow", "Dingo", "Dinosaur", "Dog", "Dolphin", "Duck", "Elephant", "Ferret", "Fox", "Frog", "Giraffe", "Gopher", "Grizzly", "Hedgehog", "Hippo", "Hyena", "Ibex", "Ifrit", "Iguana", "Jackal", "Kangaroo", "Koala", "Kraken", "Lemur", "Leopard", "Liger", "Lion", "Llama", "Loris", "Manatee", "Mink", "Monkey", "Moose", "Narwhal", "Nyan Cat", "Orangutan", "Otter", "Panda", "Penguin", "Platypus", "Pumpkin", "Python", "Quagga", "Rabbit", "Raccoon", "Rhino", "Sheep", "Shrew", "Skunk", "Squirrel", "Tiger", "Turtle", "Walrus", "Wolf", "Wolverine", "Wombat"};
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+    static std::uniform_int_distribution<> dis(0, random_animals.size() - 1);
+    return random_animals[dis(gen)];
+}
 
 /**
  * Since the server should be able to handle multiple games,
@@ -173,12 +183,7 @@ std::unordered_map<Connection, GameSession*, ConnectionHash> sessionMap;
 // Publicly available collection of sessions
 std::vector<std::unique_ptr<GameSession>> gameSessions;
 
-const std::string welcoming_message = "Welcome to the Social Game Engine!\n\n\
-/username &lt;name&gt; - choose yourself an in-game name\n\
-/select &lt;game&gt; - choose a game to play from the list below\n\
-/start - when you are ready\n\
-/quit - if you need to leave\n\
-/shutdown - close the game\n\n\n";
+std::string welcoming_message;
 
 // Called by the server when a user connects
 // Creates a new game session if the player connects to a target that has not been registered,
@@ -204,14 +209,7 @@ onConnect(Connection c, std::string_view target, Server& server) {
     std::cout << "Session " << gameSessions.back()->id << " created by " << c.id << std::endl;
   }
 
-  std::ostringstream ostream;
-  ostream << "Available games:\n\n";
-  for (size_t i = 0u, end = configurations.size(); i < end; i++) {
-    ostream << '\t' << i << ". " << configurations[i].getName() << "\n";
-  }
-  ostream << "\n\n";
   server.send({c, welcoming_message});
-  server.send({c, ostream.str()});
 }
 
 // Called by the server when the user disconnects
@@ -271,6 +269,13 @@ main(int argc, char* argv[]) {
 
 	configurations.reserve(serverspec["games"].size());
 
+  std::ostringstream ostream;
+  ostream << "Welcome to the Social Game Engine!\n\n\
+/username &lt;name&gt; - choose yourself an in-game name\n\
+/select &lt;game&gt; - choose a game to play from the list below\n\
+/start - when you are ready\n\
+/quit - if you need to leave\n\
+/shutdown - close the game\n\n\nAvailable games:\n\n";
   for ([[maybe_unused]] const auto& [key, gamespecfile]: serverspec["games"].items())
 	{
 		std::ifstream gamespecstream{std::string(gamespecfile)};
@@ -281,8 +286,11 @@ main(int argc, char* argv[]) {
     
 		json gamespec = json::parse(gamespecstream);
 		configurations.emplace_back(gamespec);
+    ostream << '\t' << key + 1 << ". " << configurations.back().getName() << "\n";
 		std::cout << "\nTranslated game " << gamespecfile << "\n\n";
   }
+  ostream << "\n\n";
+  welcoming_message = ostream.str();
 
   unsigned short port = serverspec["port"];
   Server server{port, getHTTPMessage(serverspec["indexhtml"]), onConnect, onDisconnect};
