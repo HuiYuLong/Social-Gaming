@@ -34,12 +34,21 @@ using json = nlohmann::json;
  */
 struct GameSession {
   uintptr_t id;
+  // The person who created the game
   Connection game_owner;
+  // Created on the client, passed as the url target and accepted in the onConnect function 
   std::string invite_code;
+  // Connections of players in this game session
   std::vector<Connection> players;
+  // Part of the job of the game session is to set up the game state that is used by the interpreter
   std::unique_ptr<GameState> game_state;
+  // Mapping of in-game player names to their connections created with the /username command
+  // Will be passed to the interpreter through the game state so the interpreter can send and receive messages via the server
   Name2Connection name2connection;
+  // Currently /selected game configuration
   Configuration* configuration;
+  // When the session is detached, the gameserver stops handling the messages of the players
+  // and the control of this session is passed to a separate thread that runs the game
   bool detached;
 
   GameSession(Connection game_owner, std::string_view invite_code):
@@ -56,6 +65,7 @@ struct GameSession {
     return id == other.id;
   }
 
+  // Adds the username to the name2connection mapping
   std::string
   register_username(const std::string& name, Connection connection)
   {
@@ -70,6 +80,7 @@ struct GameSession {
     return "Changed the username to " + name + "\n\n";
   }
 
+  // Removes the username of a given connectionfrom name2connection 
   bool
   remove_username_of(Connection connection)
   {
@@ -83,6 +94,8 @@ struct GameSession {
     return false;
   }
 
+  // Indicates whether all the necessary fields of the game session are set up properly
+  // and the game session is ready to start the game
   std::pair<std::string, bool>
   validate()
   {
@@ -107,7 +120,7 @@ struct GameSession {
     return {"Starting the game...\n\n", true};
   }
 
-  // runs in parallel
+  // Runs the game in a separate thread
   void
   operator()(Server& server)
   {
@@ -117,7 +130,7 @@ struct GameSession {
     try {
       configuration->launchGame(server, *game_state);
     }
-    catch (std::out_of_range& e) {
+    catch (std::out_of_range& e) {  // out of range exception should be caused by the channels' at() method in the server's receive() or send() methods if the user has disconnected
       std::cout << "One of the players has disconnected while the game was on" << std::endl;
     }
     detached = false;
@@ -125,13 +138,13 @@ struct GameSession {
   }
 };
 
-/**
- *  Publicly available collection of sessions
- */
+// Map that allows to find each player's session based on the connection
 std::unordered_map<Connection, GameSession*, ConnectionHash> sessionMap;
 
+// Publicly available collection of sessions
 std::vector<std::unique_ptr<GameSession>> gameSessions;
 
+// All game configurations available on the server
 std::vector<Configuration> configurations;
 
 const std::string welcoming_message = "Welcome to the Social Game Engine!\n\n\
@@ -141,6 +154,10 @@ const std::string welcoming_message = "Welcome to the Social Game Engine!\n\n\
 /quit - if you need to leave\n\
 /shutdown - close the game\n\n\n";
 
+// Called by the server when a user connects
+// Creates a new game session if the player connects to a target that has not been registered,
+// otherwise adds the player to the existing game session
+// Also, sends the welcoming message with the instructions on using the game engine
 void
 onConnect(Connection c, std::string_view target, Server& server) {
   auto gameSessionIter = std::find_if(gameSessions.begin(), gameSessions.end(), [target](std::unique_ptr<GameSession>& gameSession) {
@@ -171,7 +188,9 @@ onConnect(Connection c, std::string_view target, Server& server) {
   server.send({c, ostream.str()});
 }
 
-
+// Called by the server when the user disconnects
+// Remove the player from the sessionMap and the session's players list and name2connection mapping
+// If no players are left in the session, it will be removed
 void
 onDisconnect(Connection c, Server& server) {
   // remove the connection from the session
@@ -191,6 +210,7 @@ onDisconnect(Connection c, Server& server) {
 }
 
 
+// Prepares the default HTTP response of the server
 std::string
 getHTTPMessage(const std::string& htmlLocation) {
   std::ifstream infile{htmlLocation};
@@ -205,6 +225,9 @@ getHTTPMessage(const std::string& htmlLocation) {
 }
 
 
+// Creates the server and the game configuratons based on the server configuration file
+// Implements the pre-game lobby where the players can select a game to play, provide
+// their usernames and just chat
 int
 main(int argc, char* argv[]) {
   if (argc < 2) {
@@ -238,6 +261,8 @@ main(int argc, char* argv[]) {
   unsigned short port = serverspec["port"];
   Server server{port, getHTTPMessage(serverspec["indexhtml"]), onConnect, onDisconnect};
 
+
+  // The game server main loop
   std::ostringstream buffer;
   while (true) {
     try {
@@ -249,9 +274,12 @@ main(int argc, char* argv[]) {
     }
 
     for (const auto& session: gameSessions) {
+      // If the session runs a game in a separate thread, don't handle it's massages
       if(session->detached) {
         continue;
       }
+      // Go over each player's messages, send them to other players in the session
+      // or handle their /-commands
       for(auto it = session->players.begin(); it != session->players.end(); ) {
         Connection connection = *it;
         auto received = server.receive(connection);
@@ -315,6 +343,7 @@ main(int argc, char* argv[]) {
         ++it;
       }
 
+      // Sessions withput players are considered shut down
       if(session->players.empty())
       {
         std::cout << "No players left. Shutting down session " << session->id << std::endl;
@@ -322,6 +351,7 @@ main(int argc, char* argv[]) {
         continue;
       }
 
+      // Send the collected messages to everyone in the session
       for(Connection connection: session->players) {
         server.send({connection, buffer.str()});
       }
