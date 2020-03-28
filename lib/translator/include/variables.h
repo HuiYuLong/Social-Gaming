@@ -17,6 +17,8 @@ struct Query
     std::string query;
 
     Query(std::string_view str): query(str) {}
+
+    Query(std::string&& str): query(str) {}
 };
 
 bool operator==(const Query& q1, const Query& q2);
@@ -37,13 +39,13 @@ using Pointer = Variable*;
 
 class QueryTokensIterator
 {
-    const std::string& query_string;
+    std::string query_string;
     size_t last_pos;
 
 public:
     QueryTokensIterator(const Query& query): query_string(query.query), last_pos(0u) {}
 
-    QueryTokensIterator(const std::string& query): query_string(query), last_pos(0u) {}
+    QueryTokensIterator(const std::string&& query): query_string(query), last_pos(0u) {}
 
     std::string_view produceToken(size_t separator_pos)
     {
@@ -214,7 +216,7 @@ class Getter
     Variable& toplevel;
     QueryTokensIterator iterator;
 public:
-    Getter(const std::string& untokenizer_query, Variable& toplevel);
+    Getter(const Query& untokenizer_query, Variable& toplevel);
     GetterResult get();
     GetterResult processBoolean(Variable& boolean);
     GetterResult processInteger(Variable& integer);
@@ -366,7 +368,7 @@ public:
     template <typename U>
     bool operator()(const Query& query, const U& rhs) const
     {
-        Getter getter(query.query, toplevel);
+        Getter getter(query, toplevel);
         U& value = boost::get<U>(getter.get().result);
         return value == rhs;
     }
@@ -379,9 +381,9 @@ public:
 
     bool operator()(const Query& query1, const Query& query2) const
     {
-        Getter getter1(query1.query, toplevel);
+        Getter getter1(query1, toplevel);
         Variable lhs = getter1.get().result;    // save the first one
-        Getter getter2(query2.query, toplevel);
+        Getter getter2(query2, toplevel);
         Variable& rhs = getter2.get().result;   // take a reference to the second one
         return boost::apply_visitor(*this, lhs, rhs);
     }

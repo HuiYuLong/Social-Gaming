@@ -221,7 +221,7 @@ public:
                 // Interpret as a boolean variable
                 Query query = Query(condition_str);
                 clause = [query, negated] (Variable& toplevel) {
-                    Getter getter(query.query, toplevel);
+                    Getter getter(query, toplevel);
                     return negated ^ boost::get<bool>(getter.get().result);
                 };
             }
@@ -276,7 +276,7 @@ public:
         std::ostringstream out;
         for (const Value& value : values) {
             if (value.needs_to_be_replaced) {
-                Getter getter(value.text, toplevel);
+                Getter getter(Query(value.text), toplevel);
                 Variable& result = getter.get().result;
                 out << boost::apply_visitor(StringConverter(), result);
             }
@@ -294,7 +294,7 @@ using ruleType = std::string;
 
 class AddRule : public Rule{
 private:
-    std::string to;
+    Query to;
     int value;
 public:
     AddRule(const nlohmann::json& rule);
@@ -326,10 +326,10 @@ public:
 
 class InputChoiceRule : public Rule{
 private:
-    ruleType to;
+    Query to;
     Text prompt;
     ruleType choices; 
-    ruleType result;
+    Query result;
 public:
     InputChoiceRule(const nlohmann::json& rule);
 
@@ -339,9 +339,9 @@ public:
 
 class InputTextRule : public Rule{
 private:
-    ruleType to; 
+    Query to; 
     Text prompt;
-    ruleType result; 
+    Query result; 
 public:
     InputTextRule(const nlohmann::json& rule);
 
@@ -350,10 +350,10 @@ public:
 
 class InputVoteRule : public Rule{
 private:
-    ruleType to; 
+    Query to; 
     Text prompt; 
     ruleType choices;
-    ruleType result;
+    Query result;
 public:
     InputVoteRule(const nlohmann::json& rule);
 
@@ -363,7 +363,7 @@ public:
 
 class MessageRule : public Rule{
 private:
-    ruleType to; 
+    Query to; 
     Text value;
 
 public:
@@ -475,7 +475,7 @@ public:
 
 class ForEachRule : public Rule {
 private:
-    ruleType list;
+    Query list;
     ruleType element_name;
     RuleList subrules;
 

@@ -496,7 +496,9 @@ void InputTextRule::run(Server& server, GameState& state){ //IT'S WORKING
 
 void InputVoteRule::run(Server& server, GameState& state){
 	//Send message to the player/audience list
-	List& players = boost::get<List>(boost::get<Map>(state.getVariables())[to]);
+	Getter getter(to, state.getVariables());
+	Variable& varplayers = getter.get().result;
+	List& players = boost::get<List>(varplayers);
 	for (Variable& player : players) {
 		const std::string& name = boost::get<std::string>(boost::get<Map>(player)["name"]);
 		server.send({state.getConnectionByName(name), prompt.fill_with(state.getVariables()) });

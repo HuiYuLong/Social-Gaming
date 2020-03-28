@@ -23,8 +23,8 @@ Callmap callmap = {
     [](Getter* getter, Variable& query) { return getter->processQuery(query); }
 };
 
-Getter::Getter(const std::string& untokenized_query, Variable& toplevel):
-    iterator(untokenized_query), toplevel(toplevel) {}
+Getter::Getter(const Query& query, Variable& toplevel):
+    iterator(query), toplevel(toplevel) {}
 
 GetterResult Getter::processBoolean(Variable& boolean)
 {
@@ -96,7 +96,7 @@ GetterResult Getter::processList(Variable& varlist)
         size_t closing_bracket = current_query.rfind(')');
         std::string_view contains_what = current_query.substr(opening_bracket + 1, closing_bracket - opening_bracket - 1);
 
-        Getter subgetter(std::string{contains_what}, toplevel);
+        Getter subgetter(Query{contains_what}, toplevel);
         // Might need to save it if it's temporary
         const Variable& contained_variable = subgetter.get().result;
 
@@ -156,10 +156,10 @@ GetterResult Getter::processPointer(Variable& varptr)
     return callmap[ptr->which()](this, *ptr);
 }
 
-GetterResult Getter::processQuery(Variable& query)
+GetterResult Getter::processQuery(Variable& varquery)
 {
-    const std::string& query_string = boost::get<Query>(query).query;
-    Getter subgetter(query_string, toplevel);
+    const Query& query = boost::get<Query>(varquery);
+    Getter subgetter(query, toplevel);
     return subgetter.get();
 }
 
