@@ -120,22 +120,28 @@ struct GameSession {
     return {"Starting the game...\n\n", true};
   }
 
-  // Runs the game in a separate thread
-  void
-  operator()(Server& server)
+  std::string start(Server& server)
   {
-    detached = true;
-    std::cout << "Session " << id << " is set free" << std::endl;
-    game_state = std::make_unique<GameState>(*configuration, this->name2connection);
-    try {
-      configuration->launchGame(server, *game_state);
+    auto [notice, good_to_go] = validate();
+    if(good_to_go) {
+      game_state = std::make_unique<GameState>(*configuration, name2connection);
+      std::thread t([this, &server]() {
+        detached = true;
+        std::cout << "Session " << id << " is set free" << std::endl;
+        try {
+          configuration->launchGame(server, *game_state);
+        }
+        catch (std::out_of_range& e) {  // out of range exception should be caused by the channels' at() method in the server's receive() or send() methods if the user has disconnected
+          std::cout << "One of the players has disconnected while the game was on" << std::endl;
+        }
+        detached = false;
+        std::cout << "Session's " << id << " thread is finished" << std::endl;
+      });
+      t.detach();
     }
-    catch (std::out_of_range& e) {  // out of range exception should be caused by the channels' at() method in the server's receive() or send() methods if the user has disconnected
-      std::cout << "One of the players has disconnected while the game was on" << std::endl;
-    }
-    detached = false;
-    std::cout << "Session's " << id << " thread is finished" << std::endl;
+    return notice;
   }
+
 };
 
 // Map that allows to find each player's session based on the connection
@@ -326,12 +332,7 @@ main(int argc, char* argv[]) {
                 }
               }
               else if (message_text == "/start") {
-                auto [notice, good_to_go] = session->validate();
-                buffer << notice;
-                if(good_to_go) {
-                  std::thread t(std::ref(*session), std::ref(server));
-                  t.detach();
-                }
+                buffer << session->start(server);
               }
             }
             else {
