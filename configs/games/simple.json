@@ -46,10 +46,7 @@
               "mode": "exact",
               "rules": [
                 { "rule": "global-message",
-                  "value": "Winners: {winners.elements.name}"
-                },
-                { "rule": "global-message",
-                  "value": "Players: {player.elements.weapon}"
+                  "value": "player.contains(weapon.name)"
                 }
               ]
             }
