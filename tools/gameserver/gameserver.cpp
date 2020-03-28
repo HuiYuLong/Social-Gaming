@@ -31,13 +31,12 @@ using json = nlohmann::json;
 // All game configurations available on the server
 std::vector<Configuration> configurations;
 
-template<typename Iter>
 std::string select_random_animal() {
     static std::vector<std::string> random_animals = {"Alligator", "Anteater", "Armadillo", "Auroch", "Axolotl", "Badger", "Bat", "Bear", "Beaver", "Buffalo", "Camel", "Capybara", "Chameleon", "Cheetah", "Chinchilla", "Chipmunk", "Chupacabra", "Cormorant", "Coyote", "Crow", "Dingo", "Dinosaur", "Dog", "Dolphin", "Duck", "Elephant", "Ferret", "Fox", "Frog", "Giraffe", "Gopher", "Grizzly", "Hedgehog", "Hippo", "Hyena", "Ibex", "Ifrit", "Iguana", "Jackal", "Kangaroo", "Koala", "Kraken", "Lemur", "Leopard", "Liger", "Lion", "Llama", "Loris", "Manatee", "Mink", "Monkey", "Moose", "Narwhal", "Nyan Cat", "Orangutan", "Otter", "Panda", "Penguin", "Platypus", "Pumpkin", "Python", "Quagga", "Rabbit", "Raccoon", "Rhino", "Sheep", "Shrew", "Skunk", "Squirrel", "Tiger", "Turtle", "Walrus", "Wolf", "Wolverine", "Wombat"};
     static std::random_device rd;
     static std::mt19937 gen(rd());
     static std::uniform_int_distribution<> dis(0, random_animals.size() - 1);
-    return random_animals[dis(gen)];
+    return "Anonymous " + random_animals[dis(gen)];
 }
 
 /**
@@ -51,13 +50,13 @@ struct GameSession {
   Connection game_owner;
   // Created on the client, passed as the url target and accepted in the onConnect function 
   std::string invite_code;
-  // Connections of players in this game session
-  std::vector<Connection> players;
+  // // Connections of players in this game session
+  // std::vector<Connection> players;
   // Part of the job of the game session is to set up the game state that is used by the interpreter
   std::unique_ptr<GameState> game_state;
   // Mapping of in-game player names to their connections created with the /username command
   // Will be passed to the interpreter through the game state so the interpreter can send and receive messages via the server
-  Name2Connection name2connection;
+  std::unordered_map<Connection, std::string, ConnectionHash> players;
   // Currently /selected game configuration
   Configuration* configuration;
   // When the session is detached, the gameserver stops handling the messages of the players
@@ -70,7 +69,7 @@ struct GameSession {
     invite_code(invite_code),
     configuration(nullptr),
     detached(false)
-    { players.push_back(game_owner); }
+    { }
 
   bool
   operator==(const GameSession& other) const
@@ -80,16 +79,18 @@ struct GameSession {
 
   // Adds the username to the name2connection mapping
   std::string
-  register_username(const std::string& name, Connection connection)
+  change_username(const std::string& name, Connection connection)
   {
     if(name.size() == 0) {
       return "Don't be shy, enter a real name\n\n";
     }
-    if (name2connection.find(name) != name2connection.end()) {
+    auto found = std::find_if(players.begin(), players.end(), [&name](const std::pair<Connection, std::string> iter) {
+      return name == iter.second;
+    });
+    if (found != players.end()) {
       return "This name is already used\n\n";
     }
-    remove_username_of(connection);
-    name2connection[name] = connection;
+    players.at(connection) = name;
     return "Changed the username to " + name + "\n\n";
   }
 
@@ -109,19 +110,19 @@ struct GameSession {
     }
   }
 
-  // Removes the username of a given connectionfrom name2connection 
-  bool
-  remove_username_of(Connection connection)
-  {
-    auto found = std::find_if(name2connection.begin(), name2connection.end(), [connection](const std::pair<std::string, Connection>& iter) {
-      return connection == iter.second;
-    });
-    if(found != name2connection.end()) {
-      name2connection.erase(found);
-      return true;
-    }
-    return false;
-  }
+  // // Removes the username of a given connectionfrom name2connection 
+  // bool
+  // remove_username(Connection connection)
+  // {
+  //   auto found = std::find_if(name2connection.begin(), name2connection.end(), [connection](const std::pair<std::string, Connection>& iter) {
+  //     return connection == iter.second;
+  //   });
+  //   if(found != name2connection.end()) {
+  //     name2connection.erase(found);
+  //     return true;
+  //   }
+  //   return false;
+  // }
 
   // Indicates whether all the necessary fields of the game session are set up properly
   // and the game session is ready to start the game
@@ -143,9 +144,6 @@ struct GameSession {
         << players.size() << " are present in the lobby\n\n";
       return {ostream.str(), false};
     }
-    if (players.size() != name2connection.size()) {
-      return {"Some of the players haven't named themselves yet\n\n", false};
-    }
     return {"Starting the game...\n\n", true};
   }
 
@@ -154,7 +152,12 @@ struct GameSession {
   {
     auto [notice, good_to_go] = validate();
     if(good_to_go) {
-      game_state = std::make_unique<GameState>(*configuration, name2connection);
+      Name2Connection name2connection;
+      name2connection.reserve(players.size());
+      for (const auto& [connection, name] : players) {
+        name2connection.emplace(name, connection);
+      }
+      game_state = std::make_unique<GameState>(*configuration, std::move(name2connection));
       std::thread t([this, &server]() {
         detached = true;
         std::cout << "Session " << id << " is set free" << std::endl;
@@ -196,17 +199,19 @@ onConnect(Connection c, std::string_view target, Server& server) {
   });
   if (gameSessionIter != gameSessions.end()) {
     auto& gameSession = *gameSessionIter;
-    gameSession->players.push_back(c);
+    std::string new_name = select_random_animal();
+    gameSession->players.emplace(c, new_name);
     sessionMap[c] = gameSession.get();
-    std::cout << "Session " << gameSession->id << " joined by " << c.id << std::endl;
-    for(Connection connection : gameSession->players) {
-      server.send({connection, "Player " + std::to_string(connection.id) + " has joined the lobby\n\n"});
+    std::cout << "Session " << gameSession->id << " joined by " << new_name << std::endl;
+    for(const auto& [connection, _] : gameSession->players) {
+      server.send({connection, new_name + " has joined the lobby\n\n"});
     }
   }
   else {
-    gameSessions.emplace_back(std::make_unique<GameSession>(c, target));
-    sessionMap[c] = gameSessions.back().get();
-    std::cout << "Session " << gameSessions.back()->id << " created by " << c.id << std::endl;
+    GameSession* gameSession = gameSessions.emplace_back(std::make_unique<GameSession>(c, target)).get();
+    gameSession->players.emplace(c, "Game Owner");
+    sessionMap[c] = gameSession;
+    std::cout << "Session " << gameSessions.back()->id << " created by Game Owner" << std::endl;
   }
 
   server.send({c, welcoming_message});
@@ -220,12 +225,11 @@ onDisconnect(Connection c, Server& server) {
   // remove the connection from the session
   auto session = sessionMap.at(c);
   sessionMap.erase(c);
-  std::cout << "Session " << session->id << " has lost connection " << c.id << std::endl;
-  for(Connection connection : session->players) {
-    server.send({connection, "Player " + std::to_string(connection.id) + " has left\n\n"});
+  std::cout << "Session " << session->id << " has lost connection with " << session->players.at(c) << std::endl;
+  for(const auto& [connection, name] : session->players) {
+    server.send({connection, name + " has left\n\n"});
   }
-  session->players.erase(std::remove(std::begin(session->players), std::end(session->players), c), std::end(session->players));
-  session->remove_username_of(c);
+  session->players.erase(c);
   if(session->players.empty())
   {
     std::cout << "No players left. Shutting down session " << session->id << std::endl;
@@ -315,33 +319,33 @@ main(int argc, char* argv[]) {
       // Go over each player's messages, send them to other players in the session
       // or handle their /-commands
       for(auto it = session->players.begin(); it != session->players.end(); ) {
-        Connection connection = *it;
+        Connection connection = it->first;
+        const std::string& player_name = it->second;
         auto received = server.receive(connection);
         if (received.has_value()) {
           std::string message_text = std::move(received.value());
 
           if(message_text.size() > 0 && message_text[0] == '/') {
             if (message_text == "/quit") {
-              buffer << "Player " << connection.id << " has left the lobby\n\n";
+              buffer << "Player " << player_name << " has left the lobby\n\n";
+              std::cout << "Session " << session->id << " has lost connection with " << player_name << std::endl;
               it = session->players.erase(it);
-              session->remove_username_of(connection);
               sessionMap.erase(connection);
-              server.disconnect(connection, false);
-              std::cout << "Session " << session->id << " has lost connection " << connection.id << std::endl; 
+              server.disconnect(connection, false); 
               continue;
             }
             if (message_text.compare(0, 10, "/username ") == 0) {
               std::string name = message_text.substr(10);
-              std::string response = session->register_username(name, connection);
+              std::string response = session->change_username(name, connection);
               server.send({connection, response});
             }
             else if(connection == session->game_owner) {
               if (message_text == "/shutdown") {
-                for (Connection connection : session->players) {
+                for (const auto& [connection, name] : session->players) {
                   server.send({connection, "This session has been shut down by the game owner\n\n"});
+                  std::cout << "Session " << session->id << " has lost connection with " << name << std::endl;
                   sessionMap.erase(connection);
-                  server.disconnect(connection, false);
-                  std::cout << "Session " << session->id << " has lost connection " << connection.id << std::endl; 
+                  server.disconnect(connection, false); 
                 }
                 session->players.clear();
                 break;
@@ -360,7 +364,7 @@ main(int argc, char* argv[]) {
               server.send({connection, "Invalid command or insufficient permissions\n\n"});
             }
           }
-          buffer << connection.id << "> " << message_text << "\n\n";
+          buffer << player_name << "> " << message_text << "\n\n";
         }
         ++it;
       }
@@ -374,7 +378,7 @@ main(int argc, char* argv[]) {
       }
 
       // Send the collected messages to everyone in the session
-      for(Connection connection: session->players) {
+      for(const auto& [connection, _] : session->players) {
         server.send({connection, buffer.str()});
       }
       buffer.str(""); // clear buffer
