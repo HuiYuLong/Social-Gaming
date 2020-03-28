@@ -27,6 +27,9 @@ using json = nlohmann::json;
 
 //Connection DISCONNECTED{reinterpret_cast<uintptr_t>(nullptr)};
 
+// All game configurations available on the server
+std::vector<Configuration> configurations;
+
 /**
  * Since the server should be able to handle multiple games,
  * some identifier is needed to distinguish different connections.
@@ -70,7 +73,7 @@ struct GameSession {
   register_username(const std::string& name, Connection connection)
   {
     if(name.size() == 0) {
-      return "Invalid command\n\n";
+      return "Don't be shy, enter a real name\n\n";
     }
     if (name2connection.find(name) != name2connection.end()) {
       return "This name is already used\n\n";
@@ -78,6 +81,22 @@ struct GameSession {
     remove_username_of(connection);
     name2connection[name] = connection;
     return "Changed the username to " + name + "\n\n";
+  }
+
+  std::string
+  register_configuration(const std::string& game_name)
+  {
+    auto game = std::find_if(configurations.begin(), configurations.end(),
+      [&game_name](const Configuration& conf) {
+      return game_name == conf.getName();
+    });
+    if (game != configurations.end()) {
+      configuration = &(*game);
+      return "Successfully changed the game to " + game->getName() + "\n\n";
+    }
+    else {
+      return "Could not find a game with the given name\n\n";
+    }
   }
 
   // Removes the username of a given connectionfrom name2connection 
@@ -120,7 +139,8 @@ struct GameSession {
     return {"Starting the game...\n\n", true};
   }
 
-  std::string start(Server& server)
+  std::string
+  start(Server& server)
   {
     auto [notice, good_to_go] = validate();
     if(good_to_go) {
@@ -133,6 +153,9 @@ struct GameSession {
         }
         catch (std::out_of_range& e) {  // out of range exception should be caused by the channels' at() method in the server's receive() or send() methods if the user has disconnected
           std::cout << "One of the players has disconnected while the game was on" << std::endl;
+        }
+        catch (std::exception& e) {
+          std::cout << "Warning: a game thread has exited with an exception" << std::endl;
         }
         detached = false;
         std::cout << "Session's " << id << " thread is finished" << std::endl;
@@ -149,9 +172,6 @@ std::unordered_map<Connection, GameSession*, ConnectionHash> sessionMap;
 
 // Publicly available collection of sessions
 std::vector<std::unique_ptr<GameSession>> gameSessions;
-
-// All game configurations available on the server
-std::vector<Configuration> configurations;
 
 const std::string welcoming_message = "Welcome to the Social Game Engine!\n\n\
 /username &lt;name&gt; - choose yourself an in-game name\n\
@@ -319,20 +339,13 @@ main(int argc, char* argv[]) {
                 break;
               }
               if (message_text.compare(0, 8, "/select ") == 0) {
-                auto game = std::find_if(configurations.begin(), configurations.end(),
-                  [game_name = std::move(message_text.substr(8))](const Configuration& conf) {
-                  return game_name == conf.getName();
-                });
-                if (game != configurations.end()) {
-                  session->configuration = &(*game);
-                  server.send({connection, "Successfully changed the game to " + game->getName() + "\n\n"});
-                }
-                else {
-                  server.send({connection, "Could not find a game with the given name\n\n"});
-                }
+                buffer << session->register_configuration(message_text.substr(8));
               }
               else if (message_text == "/start") {
                 buffer << session->start(server);
+              }
+              else {
+                server.send({connection, "Invalid command\n\n"});
               }
             }
             else {
