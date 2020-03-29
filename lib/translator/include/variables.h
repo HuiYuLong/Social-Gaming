@@ -1,10 +1,12 @@
 #include <boost/variant.hpp>
 #include <boost/function.hpp>
 #include <boost/algorithm/string/join.hpp>
+#include <nlohmann/json.hpp>
 #include <iostream>
 #include <numeric>
 #include <unordered_map>
 #include <algorithm>
+#include <regex>
 
 // using String = std::string;
 // using Integer = long;
@@ -227,6 +229,31 @@ public:
     GetterResult processQuery(Variable& varquery);
 };
 
+// The job of the Condition class is to prepare a function that corresponds
+// to a logical expression inside the game specification (like players.wins == 0)
+// During the game, you just need to call the evaluate method with the current variable tree
+// that automatically accesses all variables involved in the logical expression
+// and returns its result as a boolean variable
+class Condition 
+{
+    // The clause will take in a top-level variable map and return a boolean value
+    // Indicating whether the variables satisfy the clause
+    std::function<bool(Variable&)> clause;
+    static std::regex equality_regex;
+    static std::regex decimal_regex;
+  
+    Variable getOperand(const std::string& str);
+
+    void init(std::string_view condition);
+public:
+    Condition(std::string_view condition);
+
+    Condition(const nlohmann::json& condition);
+
+    // evaluate condition
+    bool evaluate(Variable& toplevel);
+};
+
 
 // Prints the variable to the standard output
 class PrintTheThing : public boost::static_visitor<>
@@ -357,42 +384,21 @@ class Equal
     Variable& toplevel;
 public:
 
-    Equal(Variable& toplevel): toplevel(toplevel) {}
+    Equal(Variable& toplevel);
 
     template <typename T, typename U>
-    bool operator()(const T& lhs, const U& rhs) const
-    {
-        return false; // cannot compare different types
-    }
+    bool operator()(const T& lhs, const U& rhs) const;
 
     template <typename U>
-    bool operator()(const Query& query, const U& rhs) const
-    {
-        Getter getter(query, toplevel);
-        U& value = boost::get<U>(getter.get().result);
-        return value == rhs;
-    }
+    bool operator()(const Query& query, const U& rhs) const;
 
     template <typename T>
-    bool operator()(const T& lhs, const Query& query) const
-    {
-       return this->operator()(query, lhs);
-    }
+    bool operator()(const T& lhs, const Query& query) const;
 
-    bool operator()(const Query& query1, const Query& query2) const
-    {
-        Getter getter1(query1, toplevel);
-        Variable lhs = getter1.get().result;    // save the first one
-        Getter getter2(query2, toplevel);
-        Variable& rhs = getter2.get().result;   // take a reference to the second one
-        return boost::apply_visitor(*this, lhs, rhs);
-    }
+    bool operator()(const Query& query1, const Query& query2) const;
 
     template <typename T>
-    bool operator()( const T & lhs, const T & rhs ) const
-    {
-        return lhs == rhs;
-    }
+    bool operator()( const T & lhs, const T & rhs ) const;
 
 };
 

@@ -44,10 +44,6 @@ Variable buildVariables(const nlohmann::json& json)
     }
 }
 
-std::regex Condition::equality_regex("\\s*(\\S+)\\s*==\\s*(\\S+)\\s*");
-std::regex Condition::decimal_regex("\\d+");
-//std::regex Condition::variable_regex("(\\w+(\\(\\w+\\)))?\\w+(\\(\\w+\\)))?");
-
 std::unordered_map<std::string, std::function<std::unique_ptr<Rule>(const nlohmann::json&)>> rulemap = {
 
         //Control Structures

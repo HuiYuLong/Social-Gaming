@@ -50,12 +50,24 @@
       "element": "round",
       "rules": [
 
+        { "rule": "global-message",
+          "value": "Weapons: {weapons}"
+        },
+
         { "rule": "shuffle",
           "list": "weapons"
         },
 
+        { "rule": "global-message",
+          "value": "Suffled: {weapons}"
+        },
+
         { "rule": "sort",
           "list": "weapons"
+        },
+
+        { "rule": "global-message",
+          "value": "Sorted: {weapons}"
         },
 
         { "rule": "global-message",
