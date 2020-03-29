@@ -127,12 +127,28 @@ GetterResult Getter::processList(Variable& varlist)
             std::cout << "Imvalid query: collect method requires two arguments" << std::endl;
             std::terminate();
         }
-        size_t second_argument_start = ++argument_separator;
+        size_t second_argument_start = argument_separator + 1u;
         while (current_query[second_argument_start] == ' ') { ++second_argument_start; }
         const auto element_name = current_query.substr(opening_bracket + 1u, argument_separator - opening_bracket - 1u);
-        const auto condition = current_query.substr(second_argument_start, closing_bracket - second_argument_start);
-
-        return {varlist, true};
+        const auto condition_str = current_query.substr(second_argument_start, closing_bracket - second_argument_start);
+        std::string element_name_as_string(element_name);
+        List collected_list;
+        collected_list.reserve(list.size());
+        Condition condition(condition_str);
+        Map& toplevel_map = boost::get<Map>(toplevel);
+        for (Variable& element : list) {
+            toplevel_map[element_name_as_string] = &element;
+            if (condition.evaluate(toplevel)) {
+                collected_list.push_back(element);
+            }
+        }
+        if(!iterator.hasNext()) {
+            returned = std::move(collected_list);
+            return {returned, true};
+        }
+        Variable temp = std::move(collected_list);
+        GetterResult result = processList(temp);
+        return {result.result, true};   // ensure that needs_to_be_saved is true
     }
     else if(current_query == "elements")
     { 
@@ -187,6 +203,11 @@ GetterResult Getter::processQuery(Variable& varquery)
 GetterResult Getter::get()
 {
     return callmap[toplevel.which()](this, toplevel);
+}
+
+void Getter::setQuery(Query query)
+{
+    iterator = QueryTokensIterator(query);
 }
 
 

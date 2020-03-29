@@ -219,6 +219,7 @@ class Getter
     QueryTokensIterator iterator;
 public:
     Getter(const Query& untokenizer_query, Variable& toplevel);
+    void setQuery(Query query);
     GetterResult get();
     GetterResult processBoolean(Variable& boolean);
     GetterResult processInteger(Variable& integer);

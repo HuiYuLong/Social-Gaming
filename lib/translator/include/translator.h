@@ -190,7 +190,7 @@ public:
     Text(const std::string& value)
     {
         size_t previous_match = 0u;
-        std::regex r("\\{([a-z.\\(\\)]+)\\}");
+        std::regex r("\\{(.+?)\\}");
         for(std::sregex_iterator i = std::sregex_iterator(value.begin(), value.end(), r);
             i != std::sregex_iterator();
             ++i)
@@ -331,8 +331,8 @@ public:
 
 class ExtendRule : public Rule {
 private:
-    ruleType target;
-    ruleType list;
+    Query target;
+    Query list;
 public:
     ExtendRule(const nlohmann::json& rule);
     
