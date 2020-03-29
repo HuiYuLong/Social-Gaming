@@ -11,6 +11,10 @@ bool operator==(const Query& q1, const Query& q2)
 
 thread_local Variable Getter::returned;
 
+std::regex Condition::equality_regex("\\s*(\\S+)\\s*==\\s*(\\S+)\\s*");
+std::regex Condition::decimal_regex("\\d+");
+//std::regex Condition::variable_regex("(\\w+(\\(\\w+\\)))?\\w+(\\(\\w+\\)))?");
+
 using Callmap = std::vector<boost::function<GetterResult(Getter*, Variable&)>>;
 
 Callmap callmap = {
@@ -101,7 +105,7 @@ GetterResult Getter::processList(Variable& varlist)
         const Variable& contained_variable = subgetter.get().result;
 
         Equal equal(toplevel);
-        bool contains = std::any_of(list.begin(), list.end(), [contained_variable, equal](const Variable& element) {
+        bool contains = std::any_of(list.begin(), list.end(), [&contained_variable, equal](const Variable& element) {
             return equal(contained_variable, element);
         });
         returned = contains;
@@ -110,8 +114,41 @@ GetterResult Getter::processList(Variable& varlist)
     }
     else if(current_query.compare(0, 7, "collect") == 0)
     {
-        // TODO
-        return {varlist, true};
+        size_t opening_bracket = 7u;
+        size_t closing_bracket = current_query.size() - 1u;
+        if (current_query.size() < 12u /*smallest possible: collect(x,y)*/
+            || current_query[opening_bracket] != '('
+            || current_query[closing_bracket] != ')') {
+                std::cout << "Invalid query: collect method call is ill-formed" << std::endl;
+                std::terminate();
+            }
+        size_t argument_separator = current_query.find(',', opening_bracket);
+        if(argument_separator == std::string::npos) {
+            std::cout << "Imvalid query: collect method requires two arguments" << std::endl;
+            std::terminate();
+        }
+        size_t second_argument_start = argument_separator + 1u;
+        while (current_query[second_argument_start] == ' ') { ++second_argument_start; }
+        const auto element_name = current_query.substr(opening_bracket + 1u, argument_separator - opening_bracket - 1u);
+        const auto condition_str = current_query.substr(second_argument_start, closing_bracket - second_argument_start);
+        std::string element_name_as_string(element_name);
+        List collected_list;
+        collected_list.reserve(list.size());
+        Condition condition(condition_str);
+        Map& toplevel_map = boost::get<Map>(toplevel);
+        for (Variable& element : list) {
+            toplevel_map[element_name_as_string] = &element;
+            if (condition.evaluate(toplevel)) {
+                collected_list.push_back(element);
+            }
+        }
+        if(!iterator.hasNext()) {
+            returned = std::move(collected_list);
+            return {returned, true};
+        }
+        Variable temp = std::move(collected_list);
+        GetterResult result = processList(temp);
+        return {result.result, true};   // ensure that needs_to_be_saved is true
     }
     else if(current_query == "elements")
     { 
@@ -167,3 +204,106 @@ GetterResult Getter::get()
 {
     return callmap[toplevel.which()](this, toplevel);
 }
+
+void Getter::setQuery(Query query)
+{
+    iterator = QueryTokensIterator(query);
+}
+
+
+Equal::Equal(Variable& toplevel): toplevel(toplevel) {}
+
+template <typename T, typename U>
+bool Equal::operator()(const T& lhs, const U& rhs) const
+{
+    return false; // cannot compare different types
+}
+
+template <typename U>
+bool Equal::operator()(const Query& query, const U& rhs) const
+{
+    Getter getter(query, toplevel);
+    U& value = boost::get<U>(getter.get().result);
+    return value == rhs;
+}
+
+template <typename T>
+bool Equal::operator()(const T& lhs, const Query& query) const
+{
+    return this->operator()(query, lhs);
+}
+
+bool Equal::operator()(const Query& query1, const Query& query2) const
+{
+    Getter getter1(query1, toplevel);
+    Variable lhs = getter1.get().result;    // save the first one
+    Getter getter2(query2, toplevel);
+    Variable& rhs = getter2.get().result;   // take a reference to the second one
+    return boost::apply_visitor(*this, lhs, rhs);
+}
+
+template <typename T>
+bool Equal::operator()( const T & lhs, const T & rhs ) const
+{
+    return lhs == rhs;
+}
+
+Variable Condition::getOperand(const std::string& str)
+{
+    if (std::regex_match(str, decimal_regex)) {
+        return std::stoi(str);
+    }
+    else {
+        // Assume it's a variable name
+        return Query(str);
+    }
+}
+
+void Condition::init(std::string_view condition)
+{
+    bool negated;
+    if (condition.at(0) == '!') {
+        negated = true;
+        condition = condition.substr(1);
+    }
+    std::match_results<std::string_view::const_iterator> match;
+    if (std::regex_match(condition.cbegin(), condition.cend(), match, equality_regex)) {
+        // Interpret as a comparison of two variables
+        clause = [first=getOperand(match.str(1)), second=getOperand(match.str(2)), negated] (Variable& toplevel) {
+            Equal equal(toplevel);
+            return negated ^ boost::apply_visitor(equal, first, second);
+        };
+    }
+    else {
+        // Interpret as a boolean variable
+        clause = [query = Query(condition), negated] (Variable& toplevel) {
+            Getter getter(query, toplevel);
+            return negated ^ boost::get<bool>(getter.get().result);
+        };
+    }
+}
+
+Condition::Condition(std::string_view condition)
+{
+    init(condition);
+}
+
+Condition::Condition(const nlohmann::json& condition)
+{
+    if (condition.is_boolean())
+    {
+        if (condition)
+            clause = [](Variable&) { return true; };
+        else
+            clause = [](Variable&) { return false; };
+    }
+    else
+    {
+        // Assume condition is given as a string
+        std::string condition_str = condition;
+        init(condition_str);
+    }
+}
+
+// evaluate condition
+bool Condition::evaluate(Variable& toplevel) { return clause(toplevel); }

@@ -167,74 +167,6 @@ private:
     Name2Connection name2connection;
 };
 
-// The job of the Condition class is to prepare a function that corresponds
-// to a logical expression inside the game specification (like players.wins == 0)
-// During the game, you just need to call the evaluate method with the current variable tree
-// that automatically accesses all variables involved in the logical expression
-// and returns its result as a boolean variable
-class Condition 
-{
-    // The clause will take in a top-level variable map and return a boolean value
-    // Indicating whether the variables satisfy the clause
-    std::function<bool(Variable&)> clause;
-    static std::regex equality_regex;
-    static std::regex decimal_regex;
-  
-    Variable getOperand(const std::string& str)
-    {
-        if (std::regex_match(str, decimal_regex)) {
-            return std::stoi(str);
-        }
-        else {
-            // Assume it's a variable name
-            return Query(str);
-        }
-    }
-public:
-    Condition(const nlohmann::json& condition)
-    {
-        if (condition.is_boolean())
-        {
-            if (condition)
-                clause = [](Variable&) { return true; };
-            else
-                clause = [](Variable&) { return false; };
-        }
-        else
-        {
-            // Condition is given as string
-            bool negated;
-            std::string condition_str = condition;
-            if (condition_str.at(0) == '!') {
-                negated = true;
-                condition_str = condition_str.substr(1);
-            }
-            std::smatch match;
-            if (std::regex_match(condition_str, match, equality_regex)) {
-                // Interpret as a comparison of two variables
-                clause = [first=getOperand(match.str(1)), second=getOperand(match.str(2)), negated] (Variable& toplevel) {
-                    Equal equal(toplevel);
-                    return negated ^ boost::apply_visitor(equal, first, second);
-                };
-            }
-            else {
-                // Interpret as a boolean variable
-                Query query = Query(condition_str);
-                clause = [query, negated] (Variable& toplevel) {
-                    Getter getter(query, toplevel);
-                    return negated ^ boost::get<bool>(getter.get().result);
-                };
-            }
-        }
-        
-    }
-
-    
-
-    // evaluate condition
-    bool evaluate(Variable& toplevel) { return clause(toplevel); }
-};
-
 struct Case
 { 
     Case(const nlohmann::json& case_);
@@ -258,7 +190,7 @@ public:
     Text(const std::string& value)
     {
         size_t previous_match = 0u;
-        std::regex r("\\{([a-z.\\(\\)]+)\\}");
+        std::regex r("\\{(.+?)\\}");
         for(std::sregex_iterator i = std::sregex_iterator(value.begin(), value.end(), r);
             i != std::sregex_iterator();
             ++i)
@@ -399,8 +331,8 @@ public:
 
 class ExtendRule : public Rule {
 private:
-    ruleType target;
-    ruleType list;
+    Query target;
+    Query list;
 public:
     ExtendRule(const nlohmann::json& rule);
     

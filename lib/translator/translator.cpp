@@ -44,10 +44,6 @@ Variable buildVariables(const nlohmann::json& json)
     }
 }
 
-std::regex Condition::equality_regex("\\s*(\\S+)\\s*==\\s*(\\S+)\\s*");
-std::regex Condition::decimal_regex("\\d+");
-//std::regex Condition::variable_regex("(\\w+(\\(\\w+\\)))?\\w+(\\(\\w+\\)))?");
-
 std::unordered_map<std::string, std::function<std::unique_ptr<Rule>(const nlohmann::json&)>> rulemap = {
 
         //Control Structures
@@ -145,8 +141,7 @@ DiscardRule::DiscardRule(const nlohmann::json& rule):from(rule["from"]), count(r
 }
 
 ExtendRule::ExtendRule(const nlohmann::json& rule): list(rule["list"]), target(rule["target"]) {
-	std::cout << "Extend: " << list << std::endl;
-	std::cout << "Extend: " << target << std::endl;
+	std::cout << "Extend: " << target.query << " with " << list.query << std::endl;
 }
 
 //**** Arithmetic Operations ****//
@@ -258,25 +253,18 @@ void MessageRule::run(Server& server, GameState& state) { //IT'S WORKING
 //List Operation
 
 void ExtendRule::run(Server& server, GameState& state) {
+	Getter getter(list, state.getVariables());
+	List& extension = boost::get<List>(getter.get().result);
 
-	List& ExtendList = boost::get<List>(boost::get<Map>(state.getVariables())[this->list]);
-	List& Target = boost::get<List>(boost::get<Map>(state.getVariables())[this->target]);
-	//it=Target.begin();
+	getter.setQuery(target);
+	GetterResult result = getter.get();
+	assert(!result.needs_to_be_saved);
+	List& target = boost::get<List>(result.result);
 	
-	//const std::string& name = boost::get<std::string>(boost::get<Map>(players.front())["name"]); 
-	cout<<"Extend begin\n";
-	Target.insert(Target.end(), ExtendList.begin(), ExtendList.end());
-
-	for(auto weapon:Target){
-		const std::string& weaponName = boost::get<std::string>(boost::get<Map>(weapon)["name"]);
-		cout<<weaponName<<endl;
-		const std::string& beatName = boost::get<std::string>(boost::get<Map>(weapon)["beats"]);
-		
-		cout<<weaponName<<" beat "<<beatName<<endl;
-		// server.send({state.getConnectionByName(name), weaponName});
-	}
-
+	target.reserve(target.size() + extension.size());
+	target.insert(target.end(), extension.begin(), extension.end());
 }
+
 void ReverseRule::run(Server& server, GameState& state) {
 	
 	std::string toReverse = this->list;
