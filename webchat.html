@@ -69,6 +69,7 @@
           appendText("Already connnected!\n\n");
           return;
         }
+        $('#messages').empty();
         var new_invite_code = generateId(invite_code_length)
         ws = new WebSocket(wsLocation + new_invite_code);
         appendText("Your invite code: " + new_invite_code + "\n\n");
@@ -85,6 +86,7 @@
           appendText("Invalid invite code!\n\n");
           return;
         }
+        $('#messages').empty();
         ws = new WebSocket(wsLocation + invite_code.value);
         setUpWebSocket()
       });
