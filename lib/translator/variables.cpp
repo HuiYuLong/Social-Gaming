@@ -9,6 +9,20 @@ bool operator==(const Query& q1, const Query& q2)
     return q1.query == q2.query;
 }
 
+std::ostream& operator<<(std::ostream& out, const Query& query)
+{
+    out << query.query;
+    return out;
+}
+
+Pointer getReference(Variable& variable)
+{
+    if (variable.which() == 5) {
+        return boost::get<Pointer>(variable);
+    }
+    return &variable;
+}
+
 thread_local Variable Getter::returned;
 
 std::regex Condition::equality_regex("\\s*(\\S+)\\s*==\\s*(\\S+)\\s*");
@@ -66,7 +80,7 @@ GetterResult Getter::processInteger(Variable& integer)
     }
     else
     {
-        std::cout << "Unrecognized integer attribute" << std::endl;
+        std::cout << "Unrecognized integer attribute " << current_query << std::endl;
         std::terminate();
     }
 }
@@ -106,10 +120,12 @@ GetterResult Getter::processList(Variable& varlist)
 
         Equal equal(toplevel);
         bool contains = std::any_of(list.begin(), list.end(), [&contained_variable, equal](const Variable& element) {
-            return equal(contained_variable, element);
+            return boost::apply_visitor(equal, contained_variable, element);
         });
         returned = contains;
-
+        // DEBUG
+        std::cout << "Contains: " << (contains ? "true" : "false") << std::endl;
+        // END DEBUG
         return {returned, true};
     }
     else if(current_query.compare(0, 7, "collect") == 0)
@@ -137,11 +153,19 @@ GetterResult Getter::processList(Variable& varlist)
         Condition condition(condition_str);
         Map& toplevel_map = boost::get<Map>(toplevel);
         for (Variable& element : list) {
-            toplevel_map[element_name_as_string] = &element;
+            Pointer element_reference = getReference(element);
+            toplevel_map[element_name_as_string] = element_reference;
+            // DEBUG
+            // PrintTheThing printer;
+            // boost::apply_visitor(printer, toplevel);
+            // END DEBUG
             if (condition.evaluate(toplevel)) {
-                collected_list.push_back(element);
+                collected_list.push_back(element_reference);
             }
         }
+        // DEBUG
+        std::cout << "Collected list: " << boost::apply_visitor(StringConverter(), (Variable) collected_list) << std::endl;
+        // END DEBUG
         if(!iterator.hasNext()) {
             returned = std::move(collected_list);
             return {returned, true};
@@ -159,7 +183,25 @@ GetterResult Getter::processList(Variable& varlist)
             std::terminate();
         }
         const auto attribute = iterator.getNext();
+        // Elements must be either maps or pointers to maps
+        // if (list.size() != 0u) {
+        //     std::function<Variable(const Variable&)> lambda;
+        //     if (list.at(0).which() == 5) { // pointer
+        //         lambda = [&attribute] (const Variable& item) {
+        //             return boost::get<Map>(*boost::get<Pointer>(item)).at(std::string{attribute});
+        //         };
+        //     }
+        //     else {
+        //         lambda = [&attribute] (const Variable& item) {
+        //             return boost::get<Map>(item).at(std::string{attribute});
+        //         };
+        //     }
+        //     std::transform(list.begin(), list.end(), std::back_inserter(elements_list), lambda);
+        // }
         std::transform(list.begin(), list.end(), std::back_inserter(elements_list), [&attribute] (const Variable& item) {
+            if (item.which() == 5) {    // the item is a pointer to the map
+                return boost::get<Map>(*boost::get<Pointer>(item)).at(std::string{attribute});
+            } // else item.which() == 4, the item is a map
             return boost::get<Map>(item).at(std::string{attribute});
         });
         if(!iterator.hasNext()) {
@@ -172,7 +214,7 @@ GetterResult Getter::processList(Variable& varlist)
     }
     else
     {
-        std::cout << "Unrecognized list attribute" << std::endl;
+        std::cout << "Unrecognized list attribute " << current_query << std::endl;
         std::terminate();
     }
 }
@@ -183,7 +225,7 @@ GetterResult Getter::processMap(Variable& varmap)
         return {varmap, false};
     }
     Map& map = boost::get<Map>(varmap);
-    Variable& next = map.at(std::string{iterator.getNext()});
+    Variable& next = create_if_not_exists ? map[std::string{iterator.getNext()}] : map.at(std::string{iterator.getNext()});
     return callmap[next.which()](this, next);
 }
 
@@ -200,8 +242,9 @@ GetterResult Getter::processQuery(Variable& varquery)
     return subgetter.get();
 }
 
-GetterResult Getter::get()
+GetterResult Getter::get(bool create_if_not_exists)
 {
+    this->create_if_not_exists = create_if_not_exists;
     return callmap[toplevel.which()](this, toplevel);
 }
 

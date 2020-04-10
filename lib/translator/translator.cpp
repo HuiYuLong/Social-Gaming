@@ -6,21 +6,19 @@
 #include <random>
 #include <ctime>
 
-using namespace std;
-
 Variable buildVariables(const nlohmann::json& json)
 {
     if (json.is_boolean()) {
         //std::cout << json << std::endl;
-        return (Variable) (bool) json;
+        return bool(json);
     }
     else if (json.is_number()) {
         //std::cout << json << std::endl;
-        return (Variable) (int) json;
+        return int(json);
     }
     else if (json.is_string()) {
         //std::cout << json << std::endl;
-        return (Variable) (std::string) json;
+        return std::string(json);
     }
     else if (json.is_object()) {
         Map map;
@@ -28,7 +26,7 @@ Variable buildVariables(const nlohmann::json& json)
             //std::cout << key << std::endl;
             map[key] = buildVariables(value);
         }
-        return (Variable) map;
+        return map;
     }
     else if (json.is_array()) {
         List list;
@@ -36,13 +34,32 @@ Variable buildVariables(const nlohmann::json& json)
             //std::cout << key << std::endl;
             list.push_back(buildVariables(value));
         }
-        return (Variable) list;
+        return list;
     }
     else {
         std::cout << "Invalid JSON variable type" << std::endl;
         std::terminate();
     }
 }
+
+template<class T>
+class ResolveQuery : public boost::static_visitor<T&>
+{
+	Variable& toplevel;
+public:
+	ResolveQuery(Variable& toplevel): toplevel(toplevel) {}
+
+	T& operator()(const Query& query) const
+	{
+		Getter getter(query, toplevel);
+		return boost::get<T>(getter.get().result);
+	}
+
+	T& operator()(T& value) const
+	{
+		return value;
+	}
+};
 
 std::unordered_map<std::string, std::function<std::unique_ptr<Rule>(const nlohmann::json&)>> rulemap = {
 
@@ -134,10 +151,16 @@ DealRule::DealRule(const nlohmann::json& rule): from(rule["from"]), to(rule["to"
 	std::cout << "Deal: " << "from " << from << " to " << to << std::endl;
 }
 
-DiscardRule::DiscardRule(const nlohmann::json& rule):from(rule["from"]), count(rule["count"]){
-	std::cout << "Discard Variable: " << from << std::endl;
+DiscardRule::DiscardRule(const nlohmann::json& rule): from(rule["from"]) {
+	auto json_count = rule["count"];
+	if (json_count.is_number()) {
+		count = int(json_count);
+	}
+	else {
+		count = Query(json_count);
+	}
+	std::cout << "Discard Variable: " << from.query << std::endl;
 	std::cout << "Variable Size: " << count << std::endl;
-
 }
 
 ExtendRule::ExtendRule(const nlohmann::json& rule): list(rule["list"]), target(rule["target"]) {
@@ -164,10 +187,17 @@ PauseRule::PauseRule(const nlohmann::json& rule): duration(rule["duration"]) { }
 
 
 //**** Human Input ****//
-//
-// Todo: InputChoice, InputText & InputVote
-//
-InputChoiceRule::InputChoiceRule(const nlohmann::json& rule): to(rule["to"]), prompt(rule["prompt"]), choices(rule["choices"]), result(rule["result"]){
+InputChoiceRule::InputChoiceRule(const nlohmann::json& rule): to(rule["to"]), prompt(rule["prompt"]), result(rule["result"]) {
+	if (auto timeout_it = rule.find("timeout"); timeout_it != rule.end()) {
+		timeout = *timeout_it;
+	}
+	auto json_choices = rule["choices"];
+	if (json_choices.is_array()) {
+		choices = boost::get<List>(buildVariables(json_choices));
+	}
+	else {
+		choices = Query(json_choices); // assume it's a variable name
+	}
 	std::cout << "Input Choice: " << rule["prompt"] << std::endl;
 }
 InputTextRule::InputTextRule(const nlohmann::json& rule): to(rule["to"]), prompt(rule["prompt"]), result(rule["result"]){
@@ -178,9 +208,9 @@ InputVoteRule::InputVoteRule(const nlohmann::json& rule): to(rule["to"]), prompt
 }
 
 //**** Output ****//
-ScoresRule::ScoresRule(const nlohmann::json& rule): score(rule["score"]) { 
+ScoresRule::ScoresRule(const nlohmann::json& rule): score_attribute(rule["score"]), ascending(rule["ascending"]) { 
 	std::cout << "Score Board: "  << std::endl; 
-	}
+}
 
 GlobalMessageRule::GlobalMessageRule(const nlohmann::json& rule): value(rule["value"]) { std::cout << "Global message: " << rule["value"] << std::endl; }
 
@@ -262,7 +292,15 @@ void ExtendRule::run(Server& server, GameState& state) {
 	List& target = boost::get<List>(result.result);
 	
 	target.reserve(target.size() + extension.size());
-	target.insert(target.end(), extension.begin(), extension.end());
+	for (Variable& element : extension) {
+		target.push_back(getReference(element));
+	}
+	// Apparently Rock, Paper, Scissors requires the winners array to contain references to the players array
+	// target.insert(target.end(), extension.begin(), extension.end());
+
+	// PrintTheThing printer;
+	// boost::apply_visitor(printer, state.getVariables());
+	// std::cout << "Extended list: " << boost::apply_visitor(StringConverter(), result.result) << std::endl;
 }
 
 void ReverseRule::run(Server& server, GameState& state) {
@@ -292,15 +330,21 @@ void ShuffleRule::run(Server& server, GameState& state) {
 }
 
 void DiscardRule::run(Server& server, GameState& state){
-	List& list = boost::get<List>(boost::get<Map>(state.getVariables())[std::string(from)]);
-	if(list.size() == count){
-		list.clear();
-		std::cout<<"winner list have been discarded" <<std::endl;
-	}else
-	{
-		std::cout<<"list size not equal to count" <<std::endl;
+	// DEBUG
+	// PrintTheThing printer;
+	// boost::apply_visitor(printer, state.getVariables());
+
+	Getter getter(from, state.getVariables());
+	GetterResult result = getter.get();
+	assert(!result.needs_to_be_saved);
+	List& list = boost::get<List>(result.result);
+	ResolveQuery<int> get_count(state.getVariables());
+	int actual_count = boost::apply_visitor(get_count, this->count);
+	if (actual_count < 0 || actual_count > list.size()) {
+		std::cout << "Discard Rule: invalid number of discarded elements" << std::endl;
+		std::terminate();
 	}
-	
+	list.resize(list.size() - actual_count);
 }
 
 bool sort_variant_ascending(Variable& lhs, Variable& rhs) {
@@ -326,43 +370,34 @@ void ScoresRule::run(Server& server, GameState& state)
 	// 	const std::string& name = boost::get<std::string>(boost::get<Map>(player)["name"]);
 	// 	server.send({state.getConnectionByName(name), value.fill_with(state.getVariables())});
 	// }
-	std::cout<<"Score Board" <<std::endl;
-	List& winners = boost::get<List>(boost::get<Map>(state.getVariables())["winners"]);
-	bool IsAscending;
-	std::string scorestring;
-	vector<std::pair<std::string, int>> scoreBoard;
+	std::cout<< "Score Board" <<std::endl;
+	List& players = boost::get<List>(boost::get<Map>(state.getVariables()).at("players"));
+	std::vector<std::pair<int, std::string>> score_board;
+	score_board.reserve(players.size());
 
-	 for (Variable& winner : winners) {
-		const std::string& name = boost::get<std::string>(boost::get<Map>(winner)["name"]);
-		const int win = boost::get<int>(boost::get<Map>(winner)["wins"]);
-		IsAscending = boost::get<bool>(boost::get<Map>(winner)["ascending"]);
-		//std::cout<<name<<": "<<wins<<std::endl;
-		scoreBoard.push_back(std::pair<std::string,int>(name,win));
-	 }
-	 if (!IsAscending){
+	std::transform(players.begin(), players.end(), std::back_inserter(score_board), [this](Variable& player) {
+		const std::string& name = boost::get<std::string>(boost::get<Map>(player).at("name"));
+		const int score = boost::get<int>(boost::get<Map>(player).at(score_attribute));
+		return std::make_pair(score, name);
+	});
+	if (ascending){
+		std::sort(score_board.begin(),score_board.end(), [](auto item1,auto item2){
+			return item1.first < item2.first;
+		});
+	}
+	else{
+		std::sort(score_board.begin(),score_board.end(), [](auto item1,auto item2){
+			return item1.first > item2.first;
+		});
+	}
 
-		 std::sort(scoreBoard.begin(),scoreBoard.end(), [](auto item1,auto item2){
-			 return item1.second > item2.second;
-		 });
-
-	 }else{
-		  std::sort(scoreBoard.begin(),scoreBoard.end(), [](auto item1,auto item2){
-			 return item1.second < item2.second;
-		 });
-
-	 }
-	 for(auto item:scoreBoard){
-		scorestring.append(item.first);
-		scorestring.append(": ");
-		scorestring.append(to_string(item.second));
-		scorestring.append("\n");
-
-	 }
-	 for(auto item:scoreBoard){
-		 server.send({state.getConnectionByName(item.first), scorestring });
-
-	 }
-	 
+	std::ostringstream buffer;
+	for(const auto& [score, name] : score_board) {
+		buffer << name << ": " << score << std::endl;
+	}
+	for(auto item: score_board) {
+		server.send({state.getConnectionByName(item.second), buffer.str() });
+	}
 }
 
 void ForEachRule::run(Server& server, GameState& state)
@@ -373,7 +408,7 @@ void ForEachRule::run(Server& server, GameState& state)
 	List& elements = result.needs_to_be_saved ? temp = std::move(boost::get<List>(result.result)), temp : boost::get<List>(result.result);
 	Map& toplevel = boost::get<Map>(state.getVariables());
 	for (Variable& element : elements) {
-		toplevel[element_name] = &element;
+		toplevel[element_name] = getReference(element);
 		//PrintTheThing p;
 		//boost::apply_visitor(p, state.getVariables());
 		for (const auto& ptr : subrules) {
@@ -394,60 +429,84 @@ void WhenRule::run(Server& server, GameState& state)
 	}
 }
 
+class Timer
+{
+	std::chrono::time_point<std::chrono::steady_clock> expected_end;
+public:
+	Timer(int timeout):
+		expected_end(std::chrono::steady_clock::now() + std::chrono::seconds(timeout)) { }
 
-void InputChoiceRule::run(Server& server, GameState& state){ //IT'S WORKING
-	//Send message to the player
-	Getter getterTo(to, state.getVariables());
-	GetterResult resultTo = getterTo.get();
-	Map& p = boost::get<Map>(resultTo.result);
-	const std::string& name = boost::get<std::string>(p["name"]);
-	server.send({state.getConnectionByName(name), prompt.fill_with(state.getVariables()) });
-	
-	//send Choice list to the player
-	if(choices.find(".name")!= string::npos){ //might have a better way to do this, but it works
-		choices.erase(choices.size()-5, 5);
+	bool hasnt_elapsed()
+	{
+		return std::chrono::steady_clock::now() < expected_end;
 	}
-	List& choiceList = boost::get<List>(boost::get<Map>(state.getVariables())[choices]);
-	vector<std::string> choiceCheck; //vector to check if the choice valid
-	for(auto choice:choiceList){
-		const std::string choiceName = boost::get<std::string>(boost::get<Map>(choice)["name"]);
-		choiceCheck.push_back(choiceName);
-		server.send({state.getConnectionByName(name), choiceName + "\t"});
-	}	
-	server.send({state.getConnectionByName(name), "\n"});
+};
+
+void InputChoiceRule::run(Server& server, GameState& state){
+	//  Get the player name
+	Getter getter(to, state.getVariables());
+	GetterResult player_result = getter.get();
+	assert(!player_result.needs_to_be_saved);
+	Map& player = boost::get<Map>(player_result.result);
+	const std::string& player_name = boost::get<std::string>(player["name"]);
+	Connection player_connection = state.getConnectionByName(player_name);
+
+	// Write the prompt to buffer
+	std::ostringstream buffer;
+	buffer << prompt.fill_with(state.getVariables()) << std::endl;
+
+	// Get the list of choices (from a <Query, List> variant)
+	ResolveQuery<List> get_list_of_choices(state.getVariables());
+	List& list_of_choices = boost::apply_visitor(get_list_of_choices, choices);
+	if (list_of_choices.size() == 0u) {
+		std::cout << "Input Choice: list of choices must be non-empty" << std::endl;
+		std::terminate();
+	}
+
+	// Write the choices to buffer
+	StringConverter to_string;
+	for(size_t i = 0u; i < list_of_choices.size(); ++i){
+		buffer << '\t' << i + 1 << ". " << boost::apply_visitor(to_string, list_of_choices[i]) << std::endl;
+	}
+	buffer << std::endl;
+	server.send({player_connection, buffer.str()});
 	
-	//read user input
-	bool isReceived = false;
-	bool isValid = false;
-	std::string input = "";
-	while(!isValid){
-		isReceived = false;
-		while(!isReceived){
-			Connection connection = state.getConnectionByName(name);
-			auto received = server.receive(connection);
-			if(received.has_value()){
-				input = std::move(received.value());
-				server.send({connection,input});
-				isReceived = true;
+	// Read user input
+	Timer timer(timeout.value_or(300));	// 5 minutes max
+	size_t player_choice = list_of_choices.size();	// invalid choice
+	while(timer.hasnt_elapsed()) {
+		auto received = server.receive(player_connection);
+		if(received.has_value()) {
+			std::string input = std::move(received.value());
+			try {
+				player_choice = std::stoul(input) - 1u;	// user-visible list starts with one
+			}
+			catch (std::exception& e) {
+				player_choice = list_of_choices.size(); // invalid choice
+			}
+			if (player_choice < list_of_choices.size()) {
+				server.send({player_connection, "You selected: " + input + "\n\n"});
+				break;	// valid choice has been entered
+			}
+			else {
+				server.send({player_connection,"Please enter a valid choice!\n\n"});
 			}
 		}
-		isValid = std::any_of(choiceCheck.begin(), choiceCheck.end(), [&input](auto &item){
-			return (input.compare(item) == 0);
-		});
-
-		if(!isValid){
-			server.send({state.getConnectionByName(name),"Please input correct choice!"});
-		}
 	}
 	
-	Getter getterResult(this->result, state.getVariables());
-	GetterResult resultResult = getterResult.get();
-	std::string& resultString = boost::get<std::string>(resultResult.result);
-	resultString = input;
+	if (player_choice >= list_of_choices.size()) {
+		player_choice = 0u;
+		server.send({player_connection,"Timeout! Choosing the default first element.\n\n"});
+	}
 
-	//for testing
-	// PrintTheThing p2;
-    // boost::apply_visitor(p2, state.getVariables());
+	// Store the result in a variable
+	getter.setQuery(this->result); 
+	GetterResult getter_result = getter.get(true);	// create a variable attribute if it doesn't exist
+	assert(!getter_result.needs_to_be_saved);
+	getter_result.result = list_of_choices.at(player_choice);
+
+	// PrintTheThing p;
+	// boost::apply_visitor(p, state.getVariables());
 }
 
 void InputTextRule::run(Server& server, GameState& state){ //IT'S WORKING
@@ -492,11 +551,11 @@ void InputVoteRule::run(Server& server, GameState& state){
 		server.send({state.getConnectionByName(name), prompt.fill_with(state.getVariables()) });
 	}
 	//defining list or list name
-	if(choices.find(".name")!= string::npos){ //might have a better way to do this, but it works
+	if(choices.find(".name")!= std::string::npos){ //might have a better way to do this, but it works
 		choices.erase(choices.size()-5, 5);
 	}
 	List& choiceList = boost::get<List>(boost::get<Map>(state.getVariables())[choices]);
-	vector<std::string> choiceCheck; //vector to check if the choice valid
+	std::vector<std::string> choiceCheck; //vector to check if the choice valid
 	//construct choice check vector
 	for(auto choice:choiceList){
 		const std::string choiceName = boost::get<std::string>(boost::get<Map>(choice)["name"]);

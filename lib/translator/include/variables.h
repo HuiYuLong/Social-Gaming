@@ -25,6 +25,8 @@ struct Query
 
 bool operator==(const Query& q1, const Query& q2);
 
+std::ostream& operator<<(std::ostream& out, const Query& query);
+
 using Variable = boost::make_recursive_variant<
     bool,   
     int,
@@ -38,6 +40,8 @@ using Variable = boost::make_recursive_variant<
 using List = std::vector<Variable>;
 using Map = std::unordered_map<std::string, Variable>;
 using Pointer = Variable*;
+
+Pointer getReference(Variable& variable);
 
 class QueryTokensIterator
 {
@@ -217,10 +221,11 @@ class Getter
     thread_local static Variable returned;
     Variable& toplevel;
     QueryTokensIterator iterator;
+    bool create_if_not_exists;
 public:
     Getter(const Query& untokenizer_query, Variable& toplevel);
     void setQuery(Query query);
-    GetterResult get();
+    GetterResult get(bool create_if_not_exists = false);
     GetterResult processBoolean(Variable& boolean);
     GetterResult processInteger(Variable& integer);
     GetterResult processString(Variable& string);

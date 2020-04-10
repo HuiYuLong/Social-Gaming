@@ -150,7 +150,7 @@ public:
     {
         Map& toplevelmap = boost::get<Map>(toplevel);
         List& players = boost::get<List>(toplevelmap["players"]);
-        for ([[maybe_unused]] const auto& [name, connection]: name2connection) {
+        for ([[maybe_unused]] const auto& [name, _]: name2connection) {
             players.emplace_back(conf.getPerPlayer());
             Map& playermap = boost::get<Map>(players.back());
             playermap["name"] = name;
@@ -260,8 +260,9 @@ class InputChoiceRule : public Rule{
 private:
     Query to;
     Text prompt;
-    ruleType choices; 
+    boost::variant<List, Query> choices;
     Query result;
+    std::optional<int> timeout;
 public:
     InputChoiceRule(const nlohmann::json& rule);
 
@@ -317,7 +318,7 @@ public:
 
 class ScoresRule: public Rule{
 private:
-    ruleType score;
+    std::string score_attribute;
     bool ascending;
 
 public:
@@ -387,8 +388,8 @@ public:
 
 class DiscardRule : public Rule {
 private:
-    ruleType from;
-    int count;
+    Query from;
+    boost::variant<int, Query> count;
 public:
     DiscardRule(const nlohmann::json& rule);
 

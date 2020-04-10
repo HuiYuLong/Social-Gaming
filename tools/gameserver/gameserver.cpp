@@ -140,7 +140,7 @@ struct GameSession {
     }
     if (players.size() < configuration->getPlayerCountMin()) {
       std::ostringstream ostream;
-      ostream << "This game requires at least " << configuration->getPlayerCountMin() << "people to play, but only "
+      ostream << "This game requires at least " << configuration->getPlayerCountMin() << " people to play, but only "
         << players.size() << " are present in the lobby\n\n";
       return {ostream.str(), false};
     }
@@ -168,7 +168,7 @@ struct GameSession {
           std::cout << "One of the players has disconnected while the game was on" << std::endl;
         }
         catch (std::exception& e) {
-          std::cout << "Warning: a game thread has exited with an exception" << std::endl;
+          std::cout << "Warning: a game thread has exited with an exception " << e.what() << std::endl;
         }
         detached = false;
         std::cout << "Session's " << id << " thread is finished" << std::endl;
