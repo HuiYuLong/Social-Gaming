@@ -395,6 +395,7 @@ void ScoresRule::run(Server& server, GameState& state)
 	for(const auto& [score, name] : score_board) {
 		buffer << name << ": " << score << std::endl;
 	}
+	buffer << std::endl;
 	for(auto item: score_board) {
 		server.send({state.getConnectionByName(item.second), buffer.str() });
 	}

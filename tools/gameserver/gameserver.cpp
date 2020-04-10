@@ -94,22 +94,6 @@ struct GameSession {
     return "Changed the username to " + name + "\n\n";
   }
 
-  std::string
-  register_configuration(const std::string& game_name)
-  {
-    auto game = std::find_if(configurations.begin(), configurations.end(),
-      [&game_name](const Configuration& conf) {
-      return game_name == conf.getName();
-    });
-    if (game != configurations.end()) {
-      configuration = &(*game);
-      return "Successfully changed the game to " + game->getName() + "\n\n";
-    }
-    else {
-      return "Could not find a game with the given name\n\n";
-    }
-  }
-
   // // Removes the username of a given connectionfrom name2connection 
   // bool
   // remove_username(Connection connection)
@@ -127,10 +111,25 @@ struct GameSession {
   // Indicates whether all the necessary fields of the game session are set up properly
   // and the game session is ready to start the game
   std::pair<std::string, bool>
-  validate()
+  validate(const std::string& game_name)
   {
-    if (configuration == nullptr) {
-      return {"Please /select a game from the list\n\n", false};
+    try {
+      // Assume that the user provided the index from the list
+      size_t config_index = std::stoul(game_name) - 1u; // user-visible list starts with one
+      configuration = &configurations.at(config_index);
+    }
+    catch (std::exception& e) {
+      // Otherwise, try to find it by it's name
+      auto game = std::find_if(configurations.begin(), configurations.end(),
+        [&game_name](const Configuration& conf) {
+        return game_name == conf.getName();
+      });
+      if (game != configurations.end()) {
+        configuration = &(*game);
+      }
+      else {
+        return {"Could not find a game with the given name\n\n", false};
+      }
     }
     if (players.size() > configuration->getPlayerCountMax()) {
       std::ostringstream ostream;
@@ -148,9 +147,9 @@ struct GameSession {
   }
 
   std::string
-  start(Server& server)
+  start(Server& server, const std::string& game_name)
   {
-    auto [notice, good_to_go] = validate();
+    auto [notice, good_to_go] = validate(game_name);
     if(good_to_go) {
       Name2Connection name2connection;
       name2connection.reserve(players.size());
@@ -169,6 +168,9 @@ struct GameSession {
         }
         catch (std::exception& e) {
           std::cout << "Warning: a game thread has exited with an exception " << e.what() << std::endl;
+        }
+        for(const auto& [connection, name] : this->players) {
+          server.send({connection, "The game is over!\n\n"});
         }
         detached = false;
         std::cout << "Session's " << id << " thread is finished" << std::endl;
@@ -275,11 +277,10 @@ main(int argc, char* argv[]) {
 
   std::ostringstream ostream;
   ostream << "Welcome to the Social Game Engine!\n\n\
-/username &lt;name&gt; - choose yourself an in-game name\n\
-/select &lt;game&gt; - choose a game to play from the list below\n\
-/start - when you are ready\n\
+/username &lt;name&gt; - to change your name\n\
+/start &lt;game&gt; - to start the game\n\
 /quit - if you need to leave\n\
-/shutdown - close the game\n\n\nAvailable games:\n\n";
+/shutdown - to close the game\n\n\nAvailable games:\n\n";
   for ([[maybe_unused]] const auto& [key, gamespecfile]: serverspec["games"].items())
 	{
 		std::ifstream gamespecstream{std::string(gamespecfile)};
@@ -350,11 +351,8 @@ main(int argc, char* argv[]) {
                 session->players.clear();
                 break;
               }
-              if (message_text.compare(0, 8, "/select ") == 0) {
-                buffer << session->register_configuration(message_text.substr(8));
-              }
-              else if (message_text == "/start") {
-                buffer << session->start(server);
+              if (message_text.compare(0, 7, "/start ") == 0) {
+                buffer << session->start(server, message_text.substr(7));
               }
               else {
                 server.send({connection, "Invalid command\n\n"});
