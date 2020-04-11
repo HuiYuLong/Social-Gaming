@@ -1,0 +1,63 @@
+{
+    "configuration": {
+      "name": "Arguments test",
+      "player count": {"min": 1, "max": 1},
+      "audience": false,
+      "setup": {}
+    },
+  
+    "constants": {
+      "player": {"name": "Game Owner"}
+    },
+  
+    "variables": {
+      "list": [0, "a", "A", {}],
+      "count1": 1
+    },
+  
+    "per-player": {},
+  
+    "per-audience": {},
+  
+    "rules": [
+
+          { "rule": "input-choice",
+            "to": "player",
+            "prompt": "Choose from a list given by varaible name",
+            "choices": "list",
+            "result": "result"
+          },
+          { "rule": "global-message",
+            "value": "Result: {result}"
+          },
+          { "rule": "input-choice",
+            "to": "player",
+            "prompt": "Choose from a list provided in json",
+            "choices": ["Uno", "Dos", 3],
+            "result": "result"
+          },
+          { "rule": "global-message",
+            "value": "Result: {result}"
+          },
+
+
+          { "rule": "global-message",
+            "value": "List before: {list}"
+          },
+        { "rule": "discard",
+            "from": "list",
+            "count": "count1"
+          },
+          { "rule": "discard",
+            "from": "list",
+            "count": 2
+          },
+          { "rule": "global-message",
+            "value": "List after: {list}"
+          }
+          
+          
+          
+          
+    ]
+  }
