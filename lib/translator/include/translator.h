@@ -275,6 +275,7 @@ private:
     Query to; 
     Text prompt;
     Query result; 
+    std::optional<int> timeout;
 public:
     InputTextRule(const nlohmann::json& rule);
 

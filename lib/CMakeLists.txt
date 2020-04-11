@@ -1,6 +1,5 @@
 add_subdirectory(networking)
 add_subdirectory(json)
 add_subdirectory(translator)
-add_subdirectory(authentication)
 add_subdirectory(GameSession)
 add_subdirectory(Gamespec)
