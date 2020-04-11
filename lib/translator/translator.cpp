@@ -201,6 +201,9 @@ InputChoiceRule::InputChoiceRule(const nlohmann::json& rule): to(rule["to"]), pr
 	std::cout << "Input Choice: " << rule["prompt"] << std::endl;
 }
 InputTextRule::InputTextRule(const nlohmann::json& rule): to(rule["to"]), prompt(rule["prompt"]), result(rule["result"]){
+	if (auto timeout_it = rule.find("timeout"); timeout_it != rule.end()) {
+		timeout = *timeout_it;
+	}
 	std::cout << "Input Text: " << rule["prompt"] << std::endl;
 }
 InputVoteRule::InputVoteRule(const nlohmann::json& rule): to(rule["to"]), prompt(rule["prompt"]), choices(rule["choices"]),result(rule["result"]){
@@ -510,29 +513,32 @@ void InputChoiceRule::run(Server& server, GameState& state){
 }
 
 void InputTextRule::run(Server& server, GameState& state){ //IT'S WORKING
+	//  Get the player name
 	Getter getter(to, state.getVariables());
-	GetterResult result = getter.get();
-	Map& p = boost::get<Map>(result.result);
-	const std::string& name = boost::get<std::string>(p["name"]);
-	server.send({state.getConnectionByName(name), prompt.fill_with(state.getVariables()) });
+	GetterResult player_result = getter.get();
+	assert(!player_result.needs_to_be_saved);
+	Map& player = boost::get<Map>(player_result.result);
+	const std::string& player_name = boost::get<std::string>(player["name"]);
+	Connection player_connection = state.getConnectionByName(player_name);
 
-	bool isReceived = false;
-	std::string input = "";
-
-	while(!isReceived){
-		Connection connection = state.getConnectionByName(name);
-		auto received = server.receive(connection);
-		if(received.has_value()){
+	std::string input = " ";
+	// Read user input
+	Timer timer(timeout.value_or(300));	// 5 minutes max
+	while(timer.hasnt_elapsed()) {
+		auto received = server.receive(player_connection);
+		if(received.has_value()) {
 			input = std::move(received.value());
-			server.send({connection,input});
-			isReceived = true;
+				server.send({player_connection, player_name + " sent you a text: " + input + "\n\n"});
+				break;	// valid choice has been entered
 		}
 	}
+	if(input == " ")
+		server.send({player_connection,"Timeout!\n\n"});
 
-	Getter getterResult(this->result, state.getVariables());
-	GetterResult resultResult = getterResult.get();
-	std::string& resultString = boost::get<std::string>(resultResult.result);
-	resultString = input;
+	// Getter getterResult(this->result, state.getVariables());
+	// GetterResult resultResult = getterResult.get();
+	// std::string& resultString = boost::get<std::string>(resultResult.result);
+	// resultString = input;
 
 	//for testing
 	// PrintTheThing p2;
