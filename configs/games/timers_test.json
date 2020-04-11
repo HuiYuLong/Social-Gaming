@@ -56,7 +56,10 @@
                          ]
                       }
                     ]
-                  }
+                  },
+                  { "rule": "global-message",
+                    "value": "You've made a {choice}"
+                }
             ]
             },
   
@@ -86,7 +89,10 @@
                          ]
                       }
                     ]
-                  }
+                  },
+                  { "rule": "global-message",
+                    "value": "You've made a {choice}"
+                }
             ]
             },
 
@@ -111,6 +117,45 @@
                     }
                 ]
                 },
+
+                { "rule": "global-message",
+                    "value": "Long timer inside a short timer"
+                  },
+
+                  { "rule": "timer",
+                    "duration": 10,
+                    "mode": "at most",
+                    "rules": [
+                        { "rule": "timer",
+                            "duration": 60,
+                            "mode": "exact",
+                            "rules": [
+                                { "rule": "input-choice",
+                                    "to": "player",
+                                    "prompt": "Choose wisely!",
+                                    "choices": ["Default choice", "Wise choice"],
+                                    "result": "choice"
+                                },
+                                { "rule": "when",
+                                    "cases": [
+                                      { "condition": "choice == wise_choice",
+                                        "rules": [ 
+                                            { "rule": "add",
+                                                "to": "count",
+                                                "value": 1
+                                            }
+                        
+                                         ]
+                                      }
+                                    ]
+                                  },
+                                  { "rule": "global-message",
+                                    "value": "You've made a {choice}"
+                                }
+                            ]
+                            }
+                    ]
+                    },
 
                 { "rule": "global-message",
                     "value": "Count: {count}"

@@ -115,10 +115,10 @@ RuleList::RuleList(const nlohmann::json& json_rules)
 void RuleList::run(Server& server, GameState& state)
 {
 	for (const auto& ptr : rules) {
-		ptr->run(server, state);
 		if(!state.checkCallbacks()) {
 			return;
 		}
+		ptr->run(server, state);
 	}
 }
 
@@ -221,6 +221,9 @@ void ExactTimer::run(Server& server, GameState& state)
 	subrules.run(server, state);
 	state.deregisterCallback(*this);
 	while (timer->hasnt_expired()) {
+		if(!state.checkCallbacks()) {
+			return;
+		}
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}
 }
@@ -320,6 +323,9 @@ MessageRule::MessageRule(const nlohmann::json& rule): to(rule["to"]), value(rule
 void LoopRule::run(Server& server, GameState& state) {
 
 	while (failCondition.evaluate(state.getVariables())) {
+		if(!state.checkCallbacks()) {
+			return;
+		}
 		subrules.run(server, state);
 	}
 }	
@@ -469,6 +475,9 @@ void ForEachRule::run(Server& server, GameState& state)
 	List& elements = result.needs_to_be_saved ? temp = std::move(boost::get<List>(result.result)), temp : boost::get<List>(result.result);
 	Map& toplevel = boost::get<Map>(state.getVariables());
 	for (Variable& element : elements) {
+		if(!state.checkCallbacks()) {
+			return;
+		}
 		toplevel[element_name] = getReference(element);
 		//PrintTheThing p;
 		//boost::apply_visitor(p, state.getVariables());
@@ -518,6 +527,9 @@ void InputChoiceRule::run(Server& server, GameState& state){
 	Timer timer(timeout.value_or(300));	// 5 minutes max
 	size_t player_choice = list_of_choices.size();	// invalid choice
 	while(timer.hasnt_expired()) {
+		if (!state.checkCallbacks()) {
+			return;
+		}
 		auto received = server.receive(player_connection);
 		if(received.has_value()) {
 			std::string input = std::move(received.value());
@@ -534,9 +546,6 @@ void InputChoiceRule::run(Server& server, GameState& state){
 			else {
 				server.send({player_connection,"Please enter a valid choice!\n\n"});
 			}
-		}
-		if (!state.checkCallbacks()) {
-			return;
 		}
 	}
 	
@@ -566,15 +575,15 @@ void InputTextRule::run(Server& server, GameState& state){ //IT'S WORKING
 	std::string input = "";
 
 	while(!isReceived){
+		if (!state.checkCallbacks()) {
+			return;
+		}
 		Connection connection = state.getConnectionByName(name);
 		auto received = server.receive(connection);
 		if(received.has_value()){
 			input = std::move(received.value());
 			server.send({connection,input});
 			isReceived = true;
-		}
-		if (!state.checkCallbacks()) {
-			return;
 		}
 	}
 
