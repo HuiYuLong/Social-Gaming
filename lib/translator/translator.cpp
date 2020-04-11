@@ -37,8 +37,7 @@ Variable buildVariables(const nlohmann::json& json)
         return list;
     }
     else {
-        std::cout << "Invalid JSON variable type" << std::endl;
-        std::terminate();
+		throw std::runtime_error{"Translator: Invalid JSON variable type"};
     }
 }
 
@@ -341,8 +340,7 @@ void DiscardRule::run(Server& server, GameState& state){
 	ResolveQuery<int> get_count(state.getVariables());
 	int actual_count = boost::apply_visitor(get_count, this->count);
 	if (actual_count < 0 || actual_count > list.size()) {
-		std::cout << "Discard Rule: invalid number of discarded elements" << std::endl;
-		std::terminate();
+		throw std::runtime_error{"Discard Rule: invalid number of discarded elements"};
 	}
 	list.resize(list.size() - actual_count);
 }
@@ -395,6 +393,7 @@ void ScoresRule::run(Server& server, GameState& state)
 	for(const auto& [score, name] : score_board) {
 		buffer << name << ": " << score << std::endl;
 	}
+	buffer << std::endl;
 	for(auto item: score_board) {
 		server.send({state.getConnectionByName(item.second), buffer.str() });
 	}
@@ -459,8 +458,7 @@ void InputChoiceRule::run(Server& server, GameState& state){
 	ResolveQuery<List> get_list_of_choices(state.getVariables());
 	List& list_of_choices = boost::apply_visitor(get_list_of_choices, choices);
 	if (list_of_choices.size() == 0u) {
-		std::cout << "Input Choice: list of choices must be non-empty" << std::endl;
-		std::terminate();
+		throw std::runtime_error{"Input Choice: list of choices must be non-empty"};
 	}
 
 	// Write the choices to buffer

@@ -61,16 +61,11 @@ GetterResult Getter::processInteger(Variable& integer)
         size_t opening_bracket = current_query.rfind('(');
         size_t closing_bracket = current_query.rfind(')');
         std::string_view argument = current_query.substr(opening_bracket + 1, closing_bracket - opening_bracket - 1);
-        // int upfrom;
-        // if(auto [p, ec] = std::from_chars(argument.data(), argument.data()+argument.size(), upfrom); ec != std::errc()) {
-        //     std::cout << "Error in upfrom(int): invalid argument" << std::endl;
-        //     std::terminate();
-        // }
         auto value = boost::convert<int>(argument, boost::cnv::strtol());
         if (!value.has_value())
         {
-            std::cout << "Error in upfrom(int): invalid argument" << std::endl;
-            std::terminate();
+            std::cout << "Error in upfrom(int): invalid argument\n";
+            throw GetterError("Error in upfrom(int): invalid argument\n");
         }
         int upfrom = value.get();
         returned = List(boost::get<int>(integer) - upfrom + 1, 0);
@@ -80,16 +75,14 @@ GetterResult Getter::processInteger(Variable& integer)
     }
     else
     {
-        std::cout << "Unrecognized integer attribute " << current_query << std::endl;
-        std::terminate();
+        throw GetterError("Unrecognized integer attribute\n");
     }
 }
 
 GetterResult Getter::processString(Variable& string)
 {
     if(iterator.hasNext()) {
-        std::cout << "Error: strings have no attributes" << std::endl;
-        std::terminate();
+        throw GetterError("Error: strings have no attributes\n");
     }
     return {string, false};
 }
@@ -135,13 +128,11 @@ GetterResult Getter::processList(Variable& varlist)
         if (current_query.size() < 12u /*smallest possible: collect(x,y)*/
             || current_query[opening_bracket] != '('
             || current_query[closing_bracket] != ')') {
-                std::cout << "Invalid query: collect method call is ill-formed" << std::endl;
-                std::terminate();
+                throw GetterError("Invalid query: collect method call is ill-formed\n");
             }
         size_t argument_separator = current_query.find(',', opening_bracket);
         if(argument_separator == std::string::npos) {
-            std::cout << "Imvalid query: collect method requires two arguments" << std::endl;
-            std::terminate();
+            throw GetterError("Invalid query: collect method requires two arguments\n");
         }
         size_t second_argument_start = argument_separator + 1u;
         while (current_query[second_argument_start] == ' ') { ++second_argument_start; }
@@ -179,8 +170,7 @@ GetterResult Getter::processList(Variable& varlist)
         List elements_list;
         elements_list.reserve(list.size());
         if(!iterator.hasNext()) {
-            std::cout << "Invalid query: \"elements\" must be followed by an attribute name" << std::endl;
-            std::terminate();
+            throw GetterError("Invalid query: \"elements\" must be followed by an attribute name\n");
         }
         const auto attribute = iterator.getNext();
         // Elements must be either maps or pointers to maps
@@ -214,8 +204,7 @@ GetterResult Getter::processList(Variable& varlist)
     }
     else
     {
-        std::cout << "Unrecognized list attribute " << current_query << std::endl;
-        std::terminate();
+        throw GetterError("Invalid query: Unrecognized list attribute\n");
     }
 }
 

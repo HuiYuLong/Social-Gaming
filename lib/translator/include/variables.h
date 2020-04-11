@@ -43,6 +43,11 @@ using Pointer = Variable*;
 
 Pointer getReference(Variable& variable);
 
+struct GetterError : public std::runtime_error
+{
+    GetterError(const char* message): std::runtime_error(message) { }
+};
+
 class QueryTokensIterator
 {
     std::string query_string;
@@ -56,8 +61,7 @@ public:
     std::string_view produceToken(size_t separator_pos)
     {
         if (separator_pos <= last_pos) {
-            std::cout << "Tokenizer error: empty token" << std::endl;
-            std::terminate();
+            throw GetterError{"Tokenizer error: empty token\n"};
         }
         std::string_view token{query_string.data() + last_pos, separator_pos - last_pos};
         last_pos = separator_pos + 1;
@@ -75,8 +79,7 @@ public:
                 do {
                     pos++;
                     if(pos == query_string.size()) {
-                        std::cout << "Tokenizer error: function call doesn't have a closing bracket" << std::endl;
-                        std::terminate();
+                        throw GetterError{"Tokenizer error: function call doesn't have a closing bracket\n"};
                     }
                 } while (query_string[pos] != ')');
                 pos++;
@@ -84,8 +87,7 @@ public:
                     return produceToken(pos);
                 }
                 else {
-                    std::cout << "Tokenizer error: function call not followed by a separator" << std::endl;
-                    std::terminate();
+                    throw GetterError{"Tokenizer error: function call not followed by a separator\n"};
                 }
             }
         }
