@@ -4,7 +4,7 @@
       "player count": {"min": 1, "max": 1},
       "audience": false,
       "setup": {
-        "Rounds": 3
+        "iterations": 100
       }
     },
   
@@ -157,9 +157,33 @@
                     ]
                     },
 
-                { "rule": "global-message",
-                    "value": "Count: {count}"
-                  }
+                    { "rule": "global-message",
+                        "value": "Wise choices count: {count}"
+                    },
+
+                    { "rule": "global-message",
+                        "value": "The loop iterates over 100 elements with an interval of one second under a 10 second timer"
+                    },
+
+                    { "rule": "timer",
+                        "duration": 10,
+                        "mode": "at most",
+                        "rules": [
+                            { "rule": "foreach",
+                                "list": "configuration.iterations.upfrom(0)",
+                                "element": "i",
+                                "rules": [
+                                    { "rule": "global-message",
+                                        "value": "i = {i}"
+                                    },
+                                    {
+                                        "rule": "pause",
+                                        "duration": 1
+                                    }
+                                ]
+                              }
+                        ]
+                    }
   
     ]
   }
