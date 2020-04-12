@@ -150,7 +150,7 @@ public:
 					break;
 				}
 				else if (input == "false") {
-					parameters[*name] = true;
+					parameters[*name] = false;
 					break;
 				}
 				else {
