@@ -76,7 +76,7 @@ TEST(RuleTests, GlobalMessageRuleTest) {
 	name2connection.insert({"player1", player1});
 	name2connection.insert({"player2", player2});
 
-	std::unique_ptr<GameState> game_state = std::make_unique<GameState>(configurations[0], name2connection);
+	std::unique_ptr<GameState> game_state = std::make_unique<GameState>(configurations[0], name2connection, player1);
 
 	configurations[0].launchGame(server, *game_state);
 

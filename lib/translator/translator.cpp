@@ -122,6 +122,178 @@ void RuleList::run(Server& server, GameState& state)
 	}
 }
 
+class ParameterVisitor : public boost::static_visitor<>
+{
+	Map parameters;
+	Server& server;
+	Connection game_owner;
+	const std::string* name;
+public:
+	ParameterVisitor(Server& server, GameState& state, Connection game_owner): server(server), game_owner(game_owner) { }
+
+	Map getParameters() { return std::move(parameters); }
+
+	void setName(const std::string& _name) { name = &_name; }
+
+	bool receiveBoolean(const std::string& prompt)
+	{
+		while (true) {
+			auto received = server.receive(game_owner);
+			if(received.has_value()) {
+				std::string input = std::move(received.value());
+				if(input.size() == 0u) {
+					return false;
+				}
+				server.send({game_owner, input + "\n\n"});
+				if (input == "true") {
+					parameters[*name] = true;
+					break;
+				}
+				else if (input == "false") {
+					parameters[*name] = true;
+					break;
+				}
+				else {
+					server.send({game_owner, "Value must be \"true\" or \"false\"\n\n"});
+					server.send({game_owner, prompt});
+				}
+			}
+		}
+		return true;
+	}
+
+	void operator()(bool boolean)
+	{
+		std::ostringstream buffer;
+		buffer << "bool " << *name << ": " << (boolean ? "true": "false") << " -> ";
+		server.send({game_owner, buffer.str()});
+		if (!receiveBoolean(buffer.str())) {
+			server.send({game_owner, (boolean ? "true\n\n" : "false\n\n")});
+			parameters[*name] = boolean;
+		}
+	}
+
+	bool receiveInteger(const std::string& prompt)
+	{
+		while (true) {
+			auto received = server.receive(game_owner);
+			if(received.has_value()) {
+				std::string input = std::move(received.value());
+				if(input.size() == 0u) {
+					return false;
+				}
+				server.send({game_owner, input + "\n\n"});
+				try {
+					int new_integer = std::stoi(input);
+					parameters[*name] = new_integer;
+					return true;
+				}
+				catch (std::exception& e) {
+					server.send({game_owner, "Value must be of integer type\n\n"});
+					server.send({game_owner, prompt});
+				}
+			}
+		}
+	}   
+
+	void operator()(int integer)
+	{
+		std::ostringstream buffer;
+		buffer << "integer " << *name << ": " << integer << " -> ";
+		server.send({game_owner, buffer.str()});
+		if(!receiveInteger(buffer.str())) {
+			server.send({game_owner, std::to_string(integer) + "\n\n"});
+			parameters[*name] = integer;
+		}
+	}
+
+	bool receiveString(const std::string& prompt)
+	{
+		while (true) {
+			auto received = server.receive(game_owner);
+			if(received.has_value()) {
+				std::string input = std::move(received.value());
+				if(input.size() == 0u) {
+					return false;
+				}
+				server.send({game_owner, input + "\n\n"});
+				parameters[*name] = input;
+				return true;
+			}
+		}
+	}
+
+	void operator()(const std::string& string)
+	{
+		std::ostringstream buffer;
+		buffer << "string " << *name << ": " << string << " -> ";
+		server.send({game_owner, buffer.str()});
+		if(!receiveString(buffer.str())) {
+			server.send({game_owner, string + "\n\n"});
+			parameters[*name] = string;
+		}
+	}
+
+	void operator()(const Map& specification)
+	{
+		std::ostringstream buffer;
+		const std::string& type = boost::get<std::string>(specification.at("kind"));
+		const std::string& prompt = boost::get<std::string>(specification.at("prompt"));
+		buffer << prompt << '\n' << type << ' ' << *name << " -> ";
+		server.send({game_owner, buffer.str()});
+		if (type == "boolean") {
+			while(!receiveBoolean(buffer.str())) { }
+		}
+		else if (type == "integer") {
+			while(!receiveInteger(buffer.str())) { }
+		}
+		else if (type == "string") {
+			while(!receiveString(buffer.str())) { }
+		}
+		else {
+			throw std::runtime_error{"Unsupported setup varaible kind"};
+		}
+	}
+};
+
+SetupRule::SetupRule(const nlohmann::json& setup)
+{
+	for (const auto& [key, value]: setup.items()) {
+		if(value.is_object()) {
+			parameters.emplace_back(key, boost::get<Map>(buildVariables(value)));
+			const auto& parameter = boost::get<Map>(parameters.back().second);
+			assert(parameter.find("kind") != parameter.end());
+			assert(parameter.find("prompt") != parameter.end());
+		}
+		else if (value.is_boolean()) {
+			parameters.emplace_back(key, bool(value));
+		}
+		else if (value.is_number()) {
+			parameters.emplace_back(key, int(value));
+		}
+		else if (value.is_string()) {
+			parameters.emplace_back(key, std::string(value));
+		}
+		else {
+			throw std::runtime_error{"Unrecognized setup parameter"};
+		}
+	}
+}
+
+void SetupRule::run(Server& server, GameState& state)
+{
+	std::this_thread::sleep_for(std::chrono::milliseconds(1100)); // wait for all the server messages to get processed
+	Connection game_owner = state.getGameOwnerConnection();
+	ParameterVisitor visitor(server, state, game_owner);
+	server.send({game_owner, "Set new values for game parameters or enter nothing to skip:\n\n"});
+	for (const auto& [key, value]: parameters) {
+		visitor.setName(key);
+		boost::apply_visitor(visitor, value);
+	}
+	Map& toplevel = boost::get<Map>(state.getVariables());
+	toplevel["configuration"] = visitor.getParameters();
+}
+
 //**** Control Structures ****//
 ForEachRule::ForEachRule(const nlohmann::json& rule): list(rule["list"]), element_name(rule["element"]), subrules(rule["rules"])
 {

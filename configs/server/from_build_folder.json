@@ -7,6 +7,7 @@
         "../configs/games/rounds.json",
         "../configs/games/rock_paper_scissors.json",
         "../configs/games/timers_test.json",
-        "../configs/games/argument_test.json"
+        "../configs/games/argument_test.json",
+        "../configs/games/setup_test.json"
     ]
 }

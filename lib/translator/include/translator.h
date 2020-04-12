@@ -84,6 +84,18 @@ public:
     void run(Server& server, GameState& state);
 };
 
+class SetupRule : public Rule
+{
+    using Parameter = boost::variant<bool, int, std::string, Map>;
+
+    std::vector<std::pair<std::string, Parameter>> parameters;
+
+public:
+    SetupRule(const nlohmann::json& setup);
+
+    void run(Server& server, GameState& state) override;
+};
+
 // Contains the game configuration independent of a particular game instance
 class Configuration {
 public:
@@ -92,15 +104,10 @@ public:
         player_count_min(config["configuration"]["player count"]["min"]),
         player_count_max(config["configuration"]["player count"]["max"]),
         core_variables(Map()),
-        rules(config["rules"])
+        rules(config["rules"]),
+        setup(config["configuration"]["setup"])
     {
-        Map& map = boost::get<Map>(core_variables);
-        // Put "setup" variables into "configuration" submap
-        map["configuration"] = Map();
-        Map& configuration = boost::get<Map>(map["configuration"]);
-        for(const auto&[key, value]: config["configuration"]["setup"].items()) {
-            configuration[key] = buildVariables(value);
-        }
+        Map& map = boost::get<Map>(core_variables);        
         // Put variables into the top-level map
         for(const auto&[key, value]: config["variables"].items()) {
             map[key] = buildVariables(value);
@@ -134,7 +141,7 @@ public:
     const Variable& getVariables() const { return core_variables; } 
     const Variable& getPerPlayer() const { return per_player; }
     const Variable& getPerAudience() const { return per_audience; }
-    void launchGame(Server& server, GameState& state) { rules.run(server, state); }
+    void launchGame(Server& server, GameState& state) { setup.run(server, state); rules.run(server, state); }
     //std::thread launchGameDetached(Server& server) { return rules.spawnDetached(server, *this); }
 
 private:
@@ -145,6 +152,7 @@ private:
     Variable per_player;
     Variable per_audience;
     RuleList rules;
+    SetupRule setup;
 };
 
 class Callback
@@ -156,9 +164,10 @@ public:
 // Each game session's private game state that holds the variable tree and the mapping of in-game names to connections
 class GameState {
 public:
-    GameState(const Configuration& conf, const Name2Connection& name2connection)
+    GameState(const Configuration& conf, const Name2Connection& name2connection, Connection game_owner)
     :   toplevel(conf.getVariables()),      // copy
-        name2connection(name2connection)    // copy
+        name2connection(name2connection),   // copy
+        game_owner(game_owner)
     {
         Map& toplevelmap = boost::get<Map>(toplevel);
         List& players = boost::get<List>(toplevelmap["players"]);
@@ -173,12 +182,14 @@ public:
 
     Variable& getVariables() { return toplevel; }
     Connection getConnectionByName(const std::string& name) { return name2connection.at(name); }
+    Connection getGameOwnerConnection() { return game_owner; }
     void registerCallback(Callback& callback) { callbacks.push_back(&callback); }
     void deregisterCallback(Callback& callback) { callbacks.erase(std::remove(callbacks.begin(), callbacks.end(), &callback), callbacks.end()); }
     bool checkCallbacks() { return std::all_of(callbacks.begin(), callbacks.end(), [this](Callback* callback) { return callback->check(*this); }); }
 private:
     Variable toplevel;
     Name2Connection name2connection;
+    Connection game_owner;
     std::vector<Callback*> callbacks;   // used by timers
 };
 

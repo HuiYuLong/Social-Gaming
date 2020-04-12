@@ -156,7 +156,7 @@ struct GameSession {
       for (const auto& [connection, name] : players) {
         name2connection.emplace(name, connection);
       }
-      game_state = std::make_unique<GameState>(*configuration, std::move(name2connection));
+      game_state = std::make_unique<GameState>(*configuration, std::move(name2connection), game_owner);
       std::thread t([this, &server]() {
         detached = true;
         std::cout << "Session " << id << " is set free" << std::endl;
