@@ -51,6 +51,15 @@ using networking::Server;
 // Converts JSON objects into Variable objects
 Variable buildVariables(const nlohmann::json& json);
 
+class Timer
+{
+	std::chrono::time_point<std::chrono::steady_clock> expected_end;
+public:
+	Timer(int timeout);
+
+	bool hasnt_expired() const;
+};
+
 class GameState;
 
 // The base class for all the rules in the game configuration
@@ -62,19 +71,17 @@ public:
     virtual void run(Server& server, GameState& state) = 0;
 };
 
-using RuleList = std::vector<std::unique_ptr<Rule>>;
+class RuleList
+{
+    std::vector<std::unique_ptr<Rule>> rules;
 
-// A holder for all the rules in some game configuration
-class RuleTree {
-    RuleList rules;
 public:
-    RuleTree(RuleTree&&);
-    RuleTree& operator=(RuleTree&&);
-    RuleTree(const nlohmann::json& gameConfig);
-    RuleList& getRules();
 
-    // Just run the rules (kept for debugging purposes)
-    void launchGame(Server& server, GameState& state);
+    RuleList(RuleList&&) = default;
+
+    RuleList(const nlohmann::json& json_rules);
+
+    void run(Server& server, GameState& state);
 };
 
 // Contains the game configuration independent of a particular game instance
@@ -127,7 +134,7 @@ public:
     const Variable& getVariables() const { return core_variables; } 
     const Variable& getPerPlayer() const { return per_player; }
     const Variable& getPerAudience() const { return per_audience; }
-    void launchGame(Server& server, GameState& state) { rules.launchGame(server, state); }
+    void launchGame(Server& server, GameState& state) { rules.run(server, state); }
     //std::thread launchGameDetached(Server& server) { return rules.spawnDetached(server, *this); }
 
 private:
@@ -137,9 +144,14 @@ private:
     Variable core_variables;
     Variable per_player;
     Variable per_audience;
-    RuleTree rules;
+    RuleList rules;
 };
 
+class Callback
+{
+public:
+    virtual bool check(GameState&) = 0;
+};
 
 // Each game session's private game state that holds the variable tree and the mapping of in-game names to connections
 class GameState {
@@ -161,10 +173,13 @@ public:
 
     Variable& getVariables() { return toplevel; }
     Connection getConnectionByName(const std::string& name) { return name2connection.at(name); }
-    // getIterators() ?
+    void registerCallback(Callback& callback) { callbacks.push_back(&callback); }
+    void deregisterCallback(Callback& callback) { callbacks.erase(std::remove(callbacks.begin(), callbacks.end(), &callback), callbacks.end()); }
+    bool checkCallbacks() { return std::all_of(callbacks.begin(), callbacks.end(), [this](Callback* callback) { return callback->check(*this); }); }
 private:
     Variable toplevel;
     Name2Connection name2connection;
+    std::vector<Callback*> callbacks;   // used by timers
 };
 
 struct Case
@@ -235,11 +250,52 @@ public:
 
 };
 
-class TimerRule : public Rule{
-private:
+class TimerRuleImplementation
+{
+protected:
     int duration;
-    ruleType mode;
     RuleList subrules;
+    std::unique_ptr<Timer> timer;
+public:
+    TimerRuleImplementation(int duration, const nlohmann::json& subrules);
+
+    virtual void run(Server& server, GameState& state) = 0;
+};
+
+class AtMostTimer : public TimerRuleImplementation, public Callback
+{
+public:
+    AtMostTimer(int duration, const nlohmann::json& subrules);
+
+    void run(Server& server, GameState& state) override;
+
+    bool check(GameState&) override;
+};
+
+class ExactTimer : public TimerRuleImplementation, public Callback
+{
+public:
+    ExactTimer(int duration, const nlohmann::json& subrules);
+
+    void run(Server& server, GameState& state) override;
+
+    bool check(GameState&) override;
+};
+
+class TrackTimer : public TimerRuleImplementation, public Callback
+{
+    Query flag;
+public:
+    TrackTimer(int duration, const nlohmann::json& subrules, const std::string& flag);
+
+    void run(Server& server, GameState& state) override;
+
+    bool check(GameState&) override;
+};
+
+class TimerRule : public Rule {
+private:
+    std::unique_ptr<TimerRuleImplementation> impl;
 public:
     TimerRule(const nlohmann::json& rule);
 
@@ -395,16 +451,6 @@ public:
     DiscardRule(const nlohmann::json& rule);
 
     void run(Server& server, GameState& state) override;
-};
-
-class ListAttributesRule : public Rule {
-private:
-    ruleType list;
-public:
-    ListAttributesRule(const nlohmann::json& rule);
-    
-    void run(Server& server, GameState& state) override;
-
 };
 
 class ForEachRule : public Rule {

@@ -62,9 +62,7 @@ GetterResult Getter::processInteger(Variable& integer)
         size_t closing_bracket = current_query.rfind(')');
         std::string_view argument = current_query.substr(opening_bracket + 1, closing_bracket - opening_bracket - 1);
         auto value = boost::convert<int>(argument, boost::cnv::strtol());
-        if (!value.has_value())
-        {
-            std::cout << "Error in upfrom(int): invalid argument\n";
+        if (!value.has_value()) {
             throw GetterError("Error in upfrom(int): invalid argument\n");
         }
         int upfrom = value.get();
