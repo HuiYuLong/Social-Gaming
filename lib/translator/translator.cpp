@@ -579,7 +579,10 @@ void InputTextRule::run(Server& server, GameState& state){ //IT'S WORKING
 	std::string input = " ";
 	// Read user input
 	Timer timer(timeout.value_or(300));	// 5 minutes max
-	while(timer.hasnt_elapsed()) {
+	while(timer.hasnt_expired()) {
+		if (!state.checkCallbacks()) {
+			return;
+		}
 		auto received = server.receive(player_connection);
 		if(received.has_value()) {
 			input = std::move(received.value());
