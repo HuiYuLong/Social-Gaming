@@ -234,6 +234,111 @@ public:
 		}
 	}
 
+	void receiveQuestionAnswer()
+	{
+		List questions;
+		for(size_t current_question = 1u; ; ++current_question) {
+			Map question;
+			server.send({game_owner, "Question " + std::to_string(current_question) + ": "});
+			while (true) {
+				auto received = server.receive(game_owner);
+				if(received.has_value()) {
+					std::string input = std::move(received.value());
+					if(input.size() == 0u) {
+						server.send({game_owner, "...\n\n"});
+						parameters[*name] = std::move(questions);
+						return;
+					}
+					server.send({game_owner, input + "\n"});
+					question["question"] = std::move(input);
+					break;
+				}
+			}
+			server.send({game_owner, "Answer: "});
+			while (true) {
+				auto received = server.receive(game_owner);
+				if(received.has_value()) {
+					std::string input = std::move(received.value());
+					if(input.size() == 0u) {
+						continue;
+					}
+					server.send({game_owner, input + "\n\n"});
+					question["answer"] = std::move(input);
+					break;
+				}
+			}
+			questions.push_back(std::move(question));
+		}
+	}
+
+	void receiveMultipleChoice()
+	{
+		List questions;
+		for(size_t current_question = 1u; ; ++current_question) {
+			Map multiple_choice;
+			server.send({game_owner, "Question " + std::to_string(current_question) + ": "});
+			while (true) {
+				auto received = server.receive(game_owner);
+				if(received.has_value()) {
+					std::string input = std::move(received.value());
+					if(input.size() == 0u) {
+						server.send({game_owner, "...\n\n"});
+						parameters[*name] = std::move(questions);
+						return;
+					}
+					server.send({game_owner, input + "\n"});
+					multiple_choice["question"] = std::move(input);
+					break;
+				}
+			}
+			List choices;
+			bool more_choices = true;
+			for (size_t choice = 1u; more_choices; ++choice) {
+				server.send({game_owner, std::to_string(choice) + ". "});
+				while(true) {
+					auto received = server.receive(game_owner);
+					if(received.has_value()) {
+						std::string input = std::move(received.value());
+						if(input.size() == 0u) {
+							if (choices.size() == 0u) {
+								continue;
+							}
+							else {
+								more_choices = false;
+								break;
+							}
+						}
+						server.send({game_owner, input + "\n"});
+						choices.push_back(std::move(input));
+						break;
+					}
+				}
+			}
+			server.send({game_owner, "\nCorrect choice: "});
+			while (true) {
+				auto received = server.receive(game_owner);
+				if(received.has_value()) {
+					std::string input = std::move(received.value());
+					if(input.size() == 0u) {
+						continue;
+					}
+					server.send({game_owner, input + "\n\n"});
+					try {
+						size_t choice = std::stoul(input) - 1u;
+						Variable& correct_choice = choices.at(choice);
+						multiple_choice["correct_choice"] = correct_choice;
+						break;
+					}
+					catch (std::exception& e) {
+						server.send({game_owner, "Please enter a number from the list of choices\n\nCorrect choice: "});
+					}
+				}
+			}
+			multiple_choice["choices"] = std::move(choices);
+			questions.push_back(std::move(multiple_choice));
+		}
+	}
+
 	void operator()(const Map& specification)
 	{
 		std::ostringstream buffer;
@@ -250,8 +355,16 @@ public:
 		else if (type == "string") {
 			while(!receiveString(buffer.str())) { }
 		}
+		else if (type == "question-answer") {
+			server.send({game_owner, "\n\n"});
+			receiveQuestionAnswer();
+		}
+		else if (type == "multiple-choice") {
+			server.send({game_owner, "\n\n"});
+			receiveMultipleChoice();
+		}
 		else {
-			throw std::runtime_error{"Unsupported setup varaible kind"};
+			throw std::runtime_error{"Unsupported setup variable kind"};
 		}
 	}
 };
@@ -748,7 +861,9 @@ void InputTextRule::run(Server& server, GameState& state){ //IT'S WORKING
 	const std::string& player_name = boost::get<std::string>(player["name"]);
 	Connection player_connection = state.getConnectionByName(player_name);
 
-	std::string input = " ";
+	server.send({player_connection, prompt.fill_with(state.getVariables())});
+
+	std::string input;
 	// Read user input
 	Timer timer(timeout.value_or(300));	// 5 minutes max
 	while(timer.hasnt_expired()) {
@@ -758,22 +873,18 @@ void InputTextRule::run(Server& server, GameState& state){ //IT'S WORKING
 		auto received = server.receive(player_connection);
 		if(received.has_value()) {
 			input = std::move(received.value());
-				server.send({player_connection, player_name + " sent you a text: " + input + "\n\n"});
-				break;	// valid choice has been entered
+			server.send({player_connection, input + "\n\n"});
+			break;	// valid choice has been entered
 		}
 	}
-	if(input == " ")
-		server.send({player_connection,"Timeout!\n\n"});
+	if(input.size() == 0u) {
+		server.send({player_connection, "Timeout!\n\n"});
+	}
 
-	// Getter getterResult(this->result, state.getVariables());
-	// GetterResult resultResult = getterResult.get();
-	// std::string& resultString = boost::get<std::string>(resultResult.result);
-	// resultString = input;
-
-	//for testing
-	// PrintTheThing p2;
-    // boost::apply_visitor(p2, state.getVariables());
-
+	getter.setQuery(this->result); 
+	GetterResult getter_result = getter.get(true);	// create a variable attribute if it doesn't exist
+	assert(!getter_result.needs_to_be_saved);
+	getter_result.result = input;
 }
 
 
