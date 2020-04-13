@@ -1,52 +1,58 @@
 {
     "configuration": {
-      "name": "Parallelfor test",
-      "player count": {"min": 2, "max": 2},
-      "audience": false,
-      "setup": {}
+        "name": "Parallelfor test",
+        "player count": {
+            "min": 2,
+            "max": 2
+        },
+        "audience": false,
+        "setup": {}
     },
-  
+
     "constants": {
-        "weapons": [
-            { "name": "Rock",     "beats": "Scissors"},
-            { "name": "Paper",    "beats": "Rock"},
-            { "name": "Scissors", "beats": "Paper"}
+        "weapons": [{
+                "name": "Rock",
+                "beats": "Scissors"
+            },
+            {
+                "name": "Paper",
+                "beats": "Rock"
+            },
+            {
+                "name": "Scissors",
+                "beats": "Paper"
+            }
         ]
     },
-  
+
     "variables": {},
-  
+
     "per-player": {},
-  
+
     "per-audience": {},
-  
+
     "rules": [
-        { "rule": "parallelfor",
+        {
+            "rule": "parallelfor",
             "list": "players",
             "element": "player",
-            "rules": [
-  
-              { "rule": "input-choice",
+            "rules": [{
+                "rule": "input-choice",
                 "to": "player",
                 "prompt": "{player.name}, choose your weapon!",
                 "choices": "weapons.elements.name",
                 "result": "player.weapon",
                 "timeout": 10
-              }
-  
-            ]
-          },
-
-          { "rule": "parallelfor",
+            }]
+        },
+        {
+            "rule": "parallelfor",
             "list": "players",
             "element": "player",
-            "rules": [
-  
-              { "rule": "global-message",
+            "rules": [{
+                "rule": "global-message",
                 "value": "{player.name}: {player.weapon}"
-              }
-  
-            ]
-          }
+            }]
+        }
     ]
-  }
+}

@@ -31,6 +31,10 @@
                     { "rule": "loop",
                         "until": "flag",
                         "rules": [
+                            {
+                                "rule": "pause",
+                                "duration": 1
+                            },
                             { "rule": "switch",
                             "value": "flag",
                             "cases": [
@@ -48,10 +52,6 @@
                                 }
                             
                             ]
-                            },
-                            {
-                                "rule": "pause",
-                                "duration": 1
                             }
                         ]
                     }

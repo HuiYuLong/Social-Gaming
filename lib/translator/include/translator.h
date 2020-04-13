@@ -203,8 +203,8 @@ public:
     void deregisterCallback(Callback* callback) { callbacks.erase(std::remove(callbacks.begin(), callbacks.end(), callback), callbacks.end()); }
     CallbackResult checkCallbacks(Rule *rule)
     {
-        for (Callback* callback : callbacks) {
-            CallbackResult result = callback->check(*this, rule);
+        for (auto it = callbacks.rbegin(); it != callbacks.rend(); ++it) {
+            CallbackResult result = (*it)->check(*this, rule);
             if (result.should_stop) {
                 return result;
             }

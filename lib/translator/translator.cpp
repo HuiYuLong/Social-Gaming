@@ -137,10 +137,10 @@ void RuleList::run(Server& server, GameState& state)
 
 		// If so, check the callbacks to let the timers stop it, or parallel rules to do something else
 		if(auto [should_stop, will_be_resumed] = state.checkCallbacks(this); should_stop) {
+			++rule_list_state.iterator;
 			if (!will_be_resumed) {
 				state.deleteState(this);
 			}
-			++rule_list_state.iterator;
 			return;
 		}
 	}
@@ -1011,10 +1011,10 @@ void ForEachRule::run(Server& server, GameState& state)
 		//boost::apply_visitor(p, state.getVariables());
 		subrules.run(server, state);
 		if(auto [should_stop, will_be_resumed] = state.checkCallbacks(this); should_stop) {
+			++foreach_state.iterator;
 			if (!will_be_resumed) {
 				state.deleteState(this);
 			}
-			++foreach_state.iterator;
 			return;
 		}
 	}
