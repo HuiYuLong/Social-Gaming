@@ -195,10 +195,23 @@ private:
 
 struct Case
 { 
-    Case(const nlohmann::json& case_);
+    Case(const nlohmann::json& json_case);
+
+    Case(const nlohmann::json& json_case, const Query& value);
 
 	Condition condition;
 	RuleList subrules;
+};
+
+class Cases
+{
+	std::vector<Case> cases;
+public:
+	Cases(const nlohmann::json& json_cases);
+
+    Cases(const nlohmann::json& json_cases, const Query& value);
+
+	void run(Server&, GameState&);
 };
 
 // Builds a string with all {...} variable references replaced by their values
@@ -246,9 +259,6 @@ public:
         return out.str();
     }
 };
-
-using ruleType = std::string;
-
 
 class AddRule : public Rule{
 private:
@@ -353,7 +363,7 @@ class InputVoteRule : public Rule{
 private:
     Query to; 
     Text prompt; 
-    ruleType choices;
+    std::string choices;
     Query result;
 public:
     InputVoteRule(const nlohmann::json& rule);
@@ -412,7 +422,7 @@ public:
   
 class ReverseRule : public Rule{
 private:
-    ruleType list;
+    std::string list;
 public:
     ReverseRule(const nlohmann::json& rule);
     
@@ -422,7 +432,7 @@ public:
 
 class ShuffleRule : public Rule{
 private:
-    ruleType list;
+    std::string list;
 public:
     ShuffleRule(const nlohmann::json& rule);
     
@@ -433,7 +443,7 @@ public:
 // Sorts a list in ascending order
 class SortRule : public Rule {
 private:
-    ruleType list;
+    std::string list;
     // Variable key;
 public:
     SortRule(const nlohmann::json& rule);
@@ -444,8 +454,8 @@ public:
 
 class DealRule : public Rule {
 private:
-    ruleType from;
-    ruleType to;
+    std::string from;
+    std::string to;
     int count;
 public:
     DealRule(const nlohmann::json& rule);
@@ -467,7 +477,7 @@ public:
 class ForEachRule : public Rule {
 private:
     Query list;
-    ruleType element_name;
+    std::string element_name;
     RuleList subrules;
 
 public:
@@ -480,6 +490,7 @@ public:
 
 class LoopRule : public Rule {
 private:
+    bool untilLoop;
     Condition failCondition;
     RuleList subrules;
 public:
@@ -500,8 +511,8 @@ public:
 
 class ParallelForRule : public Rule {
 private:
-    ruleType list;
-    ruleType element;
+    std::string list;
+    std::string element;
     RuleList subrules;
 public:
     ParallelForRule(const nlohmann::json& rule);
@@ -513,9 +524,7 @@ public:
 // Sorts a list in ascending order
 class SwitchRule : public Rule {
 private:
-    ruleType list;
-    ruleType value;
-    std::vector<Case> cases;
+    Cases cases;
 public:
     SwitchRule(const nlohmann::json& rule);
 
@@ -525,7 +534,7 @@ public:
 
 class WhenRule : public Rule {
 private:
-    std::vector<Case> cases;
+    Cases cases;
 public:
     WhenRule(const nlohmann::json& rule);
 

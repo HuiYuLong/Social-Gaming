@@ -134,7 +134,7 @@ struct GameSession {
     if (players.size() > configuration->getPlayerCountMax()) {
       std::ostringstream ostream;
       ostream << "Too many players for this game. You need to evict "
-        << configuration->getPlayerCountMax() - players.size() << " player(s)\n\n";
+        << players.size() - configuration->getPlayerCountMax() << " player(s)\n\n";
       return {ostream.str(), false};
     }
     if (players.size() < configuration->getPlayerCountMin()) {

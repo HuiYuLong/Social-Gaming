@@ -258,6 +258,8 @@ public:
 
     Condition(const nlohmann::json& condition);
 
+    Condition(const Variable&, const Variable&);
+
     // evaluate condition
     bool evaluate(Variable& toplevel);
 };

@@ -76,7 +76,7 @@ std::unordered_map<std::string, std::function<std::unique_ptr<Rule>(const nlohma
         {"loop", [](const nlohmann::json&rule) {return std::make_unique<LoopRule>(rule);}},
         // {"inparallel", [](const nlohmann::json&rule) {return std::make_unique<InParallelRule>(rule);}},
         // {"parallelfor", [](const nlohmann::json&rule) {return std::make_unique<ParallelForRule>(rule);}},
-        //{"switch", [](const nlohmann::json&rule) {return std::make_unique<SwitchRule>(rule);}},
+        {"switch", [](const nlohmann::json&rule) {return std::make_unique<SwitchRule>(rule);}},
         {"when", [](const nlohmann::json& rule) { return std::make_unique<WhenRule>(rule); }},
 
         //List Operations
@@ -396,6 +396,9 @@ SetupRule::SetupRule(const nlohmann::json& setup)
 void SetupRule::run(Server& server, GameState& state)
 {
 	std::this_thread::sleep_for(std::chrono::milliseconds(1100)); // wait for all the server messages to get processed
+	if(parameters.size() == 0u) {
+		return;
+	}
 	Connection game_owner = state.getGameOwnerConnection();
 	ParameterVisitor visitor(server, state, game_owner);
 	server.send({game_owner, "Set new values for game parameters or enter nothing to skip:\n\n"});
@@ -413,23 +416,49 @@ ForEachRule::ForEachRule(const nlohmann::json& rule): list(rule["list"]), elemen
     std::cout << "For each: " << element_name << std::endl;
 }
 
-LoopRule::LoopRule(const nlohmann::json& rule): failCondition(rule["while"]), subrules(rule["rules"]) {
+LoopRule::LoopRule(const nlohmann::json& rule)
+:	untilLoop(rule.find("until") != rule.end()),
+	failCondition(untilLoop ? rule["until"] : rule["while"]),
+	subrules(rule["rules"]) {
 	std::cout << "Loop" << std::endl;
 }
-	
-WhenRule::WhenRule(const nlohmann::json& rule)
-{
-    std::cout << "When" << std::endl;
-	cases.reserve(rule["cases"].size());
-    for(const auto& case_ : rule["cases"].items()) {
-        std::cout << case_.value()["condition"] << std::endl;
-        cases.emplace_back(case_.value());
-    }
+
+Case::Case(const nlohmann::json& json_case): condition(json_case["condition"]), subrules(json_case["rules"]) {
+	std::cout << "Case " << json_case["condition"] << std::endl;
 }
 
-Case::Case(const nlohmann::json& case_): condition(case_["condition"]), subrules(case_["rules"]) {
-	std::cout << "Case " << case_["condition"] << std::endl;
+Case::Case(const nlohmann::json& json_case, const Query& value): condition(buildVariables(json_case["case"]), value), subrules(json_case["rules"])
+{
+	std::cout << "Case " << json_case["case"] << std::endl;
 }
+
+Cases::Cases(const nlohmann::json& json_cases)
+{
+	cases.reserve(json_cases.size());
+	for(const auto& case_ : json_cases.items()) {
+		std::cout << case_.value()["condition"] << std::endl;
+		cases.emplace_back(case_.value());
+	}
+}
+
+Cases::Cases(const nlohmann::json& json_cases, const Query& value)
+{
+	cases.reserve(json_cases.size());
+	for(const auto& case_ : json_cases.items()) {
+		cases.emplace_back(case_.value(), value);
+	}
+}
+	
+WhenRule::WhenRule(const nlohmann::json& rule): cases(rule["cases"])
+{
+    std::cout << "When" << std::endl;
+}
+
+SwitchRule::SwitchRule(const nlohmann::json& rule): cases(rule["cases"], Query(rule["value"]))
+{
+	std::cout << "Switch" << std::endl;
+}
+
 //
 // Todo: ParallelFor
 //
@@ -610,7 +639,7 @@ MessageRule::MessageRule(const nlohmann::json& rule): to(rule["to"]), value(rule
 
 void LoopRule::run(Server& server, GameState& state) {
 
-	while (failCondition.evaluate(state.getVariables())) {
+	while (untilLoop ^ failCondition.evaluate(state.getVariables())) {
 		if(!state.checkCallbacks()) {
 			return;
 		}
@@ -773,7 +802,7 @@ void ForEachRule::run(Server& server, GameState& state)
 	}
 }
 
-void WhenRule::run(Server& server, GameState& state)
+void Cases::run(Server& server, GameState& state)
 {
 	for(Case& current_case : cases) {
 		if (current_case.condition.evaluate(state.getVariables())) {
@@ -781,6 +810,16 @@ void WhenRule::run(Server& server, GameState& state)
 			break;
 		}
 	}
+}
+
+void WhenRule::run(Server& server, GameState& state)
+{
+	cases.run(server, state);
+}
+
+void SwitchRule::run(Server& server, GameState& state)
+{
+	cases.run(server, state);
 }
 
 void InputChoiceRule::run(Server& server, GameState& state){

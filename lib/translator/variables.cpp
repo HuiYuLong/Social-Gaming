@@ -335,5 +335,13 @@ Condition::Condition(const nlohmann::json& condition)
     }
 }
 
+Condition::Condition(const Variable& first, const Variable& second)
+{
+    clause = [first, second](Variable& toplevel) {
+        Equal equal(toplevel);
+        return boost::apply_visitor(equal, first, second);
+    };
+}
+
 // evaluate condition
 bool Condition::evaluate(Variable& toplevel) { return clause(toplevel); }
