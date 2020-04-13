@@ -504,6 +504,8 @@ AddRule::AddRule(const nlohmann::json& rule): to(rule["to"]), value(rule["value"
 // Todo: NumericalAttribues
 //
 
+TimerRuleState::TimerRuleState(int duration): timer(duration) { }
+
 TimerRuleImplementation::TimerRuleImplementation(int duration, const nlohmann::json& json_subrules): duration(duration), subrules(json_subrules)
 {
 	std::cout << "Timer with duration " << duration << std::endl;
@@ -513,15 +515,24 @@ AtMostTimer::AtMostTimer(int duration, const nlohmann::json& json_subrules): Tim
 
 void AtMostTimer::run(Server& server, GameState& state)
 {
-	timer = std::make_unique<Timer>(duration);
+	// Place the timer into this game's state
+	auto& rule_state_ptr = state.getState(this);
+	rule_state_ptr = std::make_unique<TimerRuleState>(duration);
+
+	// Run the rules while checking on the timer
 	state.registerCallback(*this);
 	subrules.run(server, state);
 	state.deregisterCallback(*this);
+
+	// Delete the timer
+	state.deregisterState(this);
 }
 
-bool AtMostTimer::check(GameState&)
+bool AtMostTimer::check(GameState& state)
 {
-	return timer->hasnt_expired();	// returns false when the timer has expired, which will force all subrules to shut down
+	auto& rule_state_ptr = state.getState(this);
+	Timer& timer = static_cast<TimerRuleState*>(rule_state_ptr.get())->timer;
+	return timer.hasnt_expired();	// returns false when the timer has expired, which will force all subrules to shut down
 }
 
 
@@ -529,24 +540,34 @@ ExactTimer::ExactTimer(int duration, const nlohmann::json& json_subrules): Timer
 
 void ExactTimer::run(Server& server, GameState& state)
 {
-	// Just repeats the subrules until the timer expires
-	timer = std::make_unique<Timer>(duration);
+	// Place the timer into this game's state
+	auto& rule_state_ptr = state.getState(this);
+	rule_state_ptr = std::make_unique<TimerRuleState>(duration);
+
+	// Make sure that the rules run at most the given duration
 	state.registerCallback(*this);
 	subrules.run(server, state);
 	state.deregisterCallback(*this);
-	while (timer->hasnt_expired()) {
+
+	// Pad the execution time to the given duration
+	Timer& timer = static_cast<TimerRuleState*>(rule_state_ptr.get())->timer;
+	while (timer.hasnt_expired()) {
 		if(!state.checkCallbacks()) {
 			return;
 		}
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}
+
+	// Delete the timer
+	state.deregisterState(this);
 }
 
-bool ExactTimer::check(GameState&)
+bool ExactTimer::check(GameState& state)
 {
-	return timer->hasnt_expired();	// returns false when the timer has expired, which will force all subrules to shut down
+	auto& rule_state_ptr = state.getState(this);
+	Timer& timer = static_cast<TimerRuleState*>(rule_state_ptr.get())->timer;
+	return timer.hasnt_expired();	// returns false when the timer has expired, which will force all subrules to shut down
 }
-
 
 TrackTimer::TrackTimer(int duration, const nlohmann::json& json_subrules, const std::string& flag): TimerRuleImplementation(duration, json_subrules), flag(flag) { }
 
@@ -559,24 +580,33 @@ void TrackTimer::run(Server& server, GameState& state)
 	result.result = false;
 
 	// Initialize timer
-	timer = std::make_unique<Timer>(duration);
+	auto& rule_state_ptr = state.getState(this);
+	rule_state_ptr = std::make_unique<TimerRuleState>(duration);
 
 	// Run the subrules while checking on the timer
 	state.registerCallback(*this);
 	subrules.run(server, state);
 	state.deregisterCallback(*this);
+
+	// Delete the timer
+	state.deregisterState(this);
 }
 
 bool TrackTimer::check(GameState& state)
 {
-	if (timer && !timer->hasnt_expired()) {
+	auto& rule_state_ptr = state.getState(this);
+	if (!rule_state_ptr) {
+		return true;	// the flag has already been set, move on
+	}
+	Timer& timer = static_cast<TimerRuleState*>(rule_state_ptr.get())->timer;
+	if (!timer.hasnt_expired()) {
 		// Set the flag to true
 		Getter getter(flag, state.getVariables());
 		GetterResult result = getter.get();
 		assert(!result.needs_to_be_saved);
 		result.result = true;
 		// Disable the timer
-		timer.reset(nullptr);
+		rule_state_ptr.reset(nullptr);
 	}
 	return true; // track timer never stops the rules
 }
@@ -998,6 +1028,10 @@ void InputVoteRule::run(Server& server, GameState& state){
 
 			if(!isValid){
 				server.send({state.getConnectionByName(name),"Please input correct choice!\n"});
+			}
+
+			if(!state.checkCallbacks()) {
+				return;
 			}
 		}
 

@@ -161,6 +161,12 @@ public:
     virtual bool check(GameState&) = 0;
 };
 
+class RuleState
+{
+public:
+    virtual ~RuleState() {};
+};
+
 // Each game session's private game state that holds the variable tree and the mapping of in-game names to connections
 class GameState {
 public:
@@ -186,11 +192,14 @@ public:
     void registerCallback(Callback& callback) { callbacks.push_back(&callback); }
     void deregisterCallback(Callback& callback) { callbacks.erase(std::remove(callbacks.begin(), callbacks.end(), &callback), callbacks.end()); }
     bool checkCallbacks() { return std::all_of(callbacks.begin(), callbacks.end(), [this](Callback* callback) { return callback->check(*this); }); }
+    std::unique_ptr<RuleState>& getState(Rule* rule) { return rule_states[reinterpret_cast<uintptr_t>(rule)]; }
+    void deregisterState(Rule* rule) { rule_states.erase(reinterpret_cast<uintptr_t>(rule)); }
 private:
     Variable toplevel;
     Name2Connection name2connection;
     Connection game_owner;
     std::vector<Callback*> callbacks;   // used by timers
+    std::unordered_map<uintptr_t, std::unique_ptr<RuleState>> rule_states;
 };
 
 struct Case
@@ -271,12 +280,19 @@ public:
 
 };
 
-class TimerRuleImplementation
+class TimerRuleState : public RuleState
+{
+public:
+	TimerRuleState(int duration);
+
+	Timer timer;
+};
+
+class TimerRuleImplementation : public Rule
 {
 protected:
     int duration;
     RuleList subrules;
-    std::unique_ptr<Timer> timer;
 public:
     TimerRuleImplementation(int duration, const nlohmann::json& subrules);
 
