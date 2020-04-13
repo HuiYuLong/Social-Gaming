@@ -814,14 +814,29 @@ void ScoresRule::run(Server& server, GameState& state)
 	}
 }
 
+class ForEachState : public RuleState
+{
+public:
+	ForEachState(List& getter_elements, bool needs_to_be_saved)
+	:	elements(needs_to_be_saved ? temp_elements = std::move(getter_elements), temp_elements : getter_elements)
+	{ }
+
+	List temp_elements;
+	List& elements;
+};
+
 void ForEachRule::run(Server& server, GameState& state)
 {
-	Getter getter(list, state.getVariables());
-	GetterResult result = getter.get();
-	List temp;
-	List& elements = result.needs_to_be_saved ? temp = std::move(boost::get<List>(result.result)), temp : boost::get<List>(result.result);
+	auto& rule_state_ptr = state.getState(this);
+	if(!rule_state_ptr) {
+		Getter getter(list, state.getVariables());
+		GetterResult result = getter.get();
+		rule_state_ptr = std::make_unique<ForEachState>(boost::get<List>(result.result), result.needs_to_be_saved);
+	}
+	ForEachState& foreach_state = *static_cast<ForEachState*>(rule_state_ptr.get());
+	
 	Map& toplevel = boost::get<Map>(state.getVariables());
-	for (Variable& element : elements) {
+	for (Variable& element : foreach_state.elements) {
 		if(!state.checkCallbacks()) {
 			return;
 		}
