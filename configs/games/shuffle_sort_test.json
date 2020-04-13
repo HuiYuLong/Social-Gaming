@@ -1,6 +1,6 @@
 {
   "configuration": {
-    "name": "Not So Simple",
+    "name": "Shuffle sort test",
     "player count": {"min": 1, "max": 4},
     "audience": false,
     "setup": {

@@ -2,9 +2,8 @@
     "port": 4000,
     "indexhtml": "../webchat.html",
     "games": [
-        "../configs/games/simple.json",
-        "../configs/games/not_so_simple.json",
-        "../configs/games/rounds.json",
+        "../configs/games/getter_test.json",
+        "../configs/games/shuffle_sort_test.json",
         "../configs/games/rock_paper_scissors.json",
         "../configs/games/timers_test.json",
         "../configs/games/argument_test.json",
