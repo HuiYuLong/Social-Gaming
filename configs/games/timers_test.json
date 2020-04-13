@@ -1,188 +1,197 @@
 {
-    "configuration": {
-      "name": "Timers test",
-      "player count": {"min": 1, "max": 1},
-      "audience": false,
-      "setup": {
-        "iterations": 100
-      }
+  "configuration": {
+    "name": "Timers test",
+    "player count": {
+      "min": 1,
+      "max": 1
     },
-  
-    "constants": {
-      "weapons": [
-        { "name": "Rock",     "beats": "Scissors"},
-        { "name": "Paper",    "beats": "Rock"},
-        { "name": "Scissors", "beats": "Paper"}
+    "audience": false,
+    "setup": {
+      "iterations": 100
+    }
+  },
+
+  "constants": {
+    "weapons": [{
+        "name": "Rock",
+        "beats": "Scissors"
+      },
+      {
+        "name": "Paper",
+        "beats": "Rock"
+      },
+      {
+        "name": "Scissors",
+        "beats": "Paper"
+      }
+    ]
+  },
+
+  "variables": {
+    "wise_choice": "Wise choice",
+    "count": 0
+  },
+
+  "per-player": {
+    "wins": 0
+  },
+
+  "per-audience": {},
+
+  "rules": [{
+      "rule": "global-message",
+      "value": "You have 10 seconds!"
+    },
+    {
+      "rule": "timer",
+      "duration": 10,
+      "mode": "at most",
+      "rules": [{
+          "rule": "input-choice",
+          "to": "players.at(0)",
+          "prompt": "Choose wisely!",
+          "choices": ["Default choice", "Wise choice"],
+          "result": "choice"
+        },
+        {
+          "rule": "when",
+          "cases": [{
+            "condition": "choice == wise_choice",
+            "rules": [{
+                "rule": "add",
+                "to": "count",
+                "value": 1
+              }
+
+            ]
+          }]
+        },
+        {
+          "rule": "global-message",
+          "value": "You've made a {choice}"
+        }
       ]
     },
-  
-    "variables": {
-      "wise_choice": "Wise choice",
-      "count": 0
+    {
+      "rule": "global-message",
+      "value": "The next timer will ensure that the rules have run for at least 10 seconds"
     },
-  
-    "per-player": {
-      "wins": 0
-    },
-  
-    "per-audience": {},
-  
-    "rules": [
+    {
+      "rule": "timer",
+      "duration": 10,
+      "mode": "exact",
+      "rules": [{
+          "rule": "input-choice",
+          "to": "players.at(0)",
+          "prompt": "Choose wisely!",
+          "choices": ["Default choice", "Wise choice"],
+          "result": "choice"
+        },
+        {
+          "rule": "when",
+          "cases": [{
+            "condition": "choice == wise_choice",
+            "rules": [{
+                "rule": "add",
+                "to": "count",
+                "value": 1
+              }
 
-            { "rule": "global-message",
-                "value": "You have 10 seconds!"
-            },
-
-            { "rule": "timer",
-            "duration": 10,
-            "mode": "at most",
-            "rules": [
-                { "rule": "input-choice",
-                    "to": "players.at(0)",
-                    "prompt": "Choose wisely!",
-                    "choices": ["Default choice", "Wise choice"],
-                    "result": "choice"
-                },
-                { "rule": "when",
-                    "cases": [
-                      { "condition": "choice == wise_choice",
-                        "rules": [ 
-                            { "rule": "add",
-                                "to": "count",
-                                "value": 1
-                            }
-        
-                         ]
-                      }
-                    ]
-                  },
-                  { "rule": "global-message",
-                    "value": "You've made a {choice}"
-                }
             ]
-            },
-  
-          { "rule": "global-message",
-            "value": "The next timer will ensure that the rules have run for at least 10 seconds"
+          }]
+        },
+        {
+          "rule": "global-message",
+          "value": "You've made a {choice}"
+        }
+      ]
+    },
+    {
+      "rule": "global-message",
+      "value": "The next timer will set a flag after 5 seconds"
+    },
+    {
+      "rule": "timer",
+      "duration": 5,
+      "mode": "track",
+      "flag": "flag",
+      "rules": [{
+          "rule": "global-message",
+          "value": "Flag before: {flag}"
+        },
+        {
+          "rule": "pause",
+          "duration": 5
+        },
+        {
+          "rule": "global-message",
+          "value": "Flag after: {flag}"
+        }
+      ]
+    },
+    {
+      "rule": "global-message",
+      "value": "Long timer inside a short timer"
+    },
+    {
+      "rule": "timer",
+      "duration": 10,
+      "mode": "at most",
+      "rules": [{
+        "rule": "timer",
+        "duration": 60,
+        "mode": "exact",
+        "rules": [{
+            "rule": "input-choice",
+            "to": "players.at(0)",
+            "prompt": "Choose wisely!",
+            "choices": ["Default choice", "Wise choice"],
+            "result": "choice"
           },
-  
-          { "rule": "timer",
-            "duration": 10,
-            "mode": "exact",
-            "rules": [
-                { "rule": "input-choice",
-                    "to": "players.at(0)",
-                    "prompt": "Choose wisely!",
-                    "choices": ["Default choice", "Wise choice"],
-                    "result": "choice"
-                },
-                { "rule": "when",
-                    "cases": [
-                      { "condition": "choice == wise_choice",
-                        "rules": [ 
-                            { "rule": "add",
-                                "to": "count",
-                                "value": 1
-                            }
-        
-                         ]
-                      }
-                    ]
-                  },
-                  { "rule": "global-message",
-                    "value": "You've made a {choice}"
-                }
-            ]
-            },
-
-            { "rule": "global-message",
-                "value": "The next timer will set a flag after 5 seconds"
-              },
-      
-              { "rule": "timer",
-                "duration": 5,
-                "mode": "track",
-                "flag": "flag",
-                "rules": [
-                    { "rule": "global-message",
-                    "value": "Flag before: {flag}"
-                    },
-                    {
-                    "rule": "pause",
-                    "duration": 5
-                    },
-                    { "rule": "global-message",
-                    "value": "Flag after: {flag}"
-                    }
-                ]
-                },
-
-                { "rule": "global-message",
-                    "value": "Long timer inside a short timer"
-                  },
-
-                  { "rule": "timer",
-                    "duration": 10,
-                    "mode": "at most",
-                    "rules": [
-                        { "rule": "timer",
-                            "duration": 60,
-                            "mode": "exact",
-                            "rules": [
-                                { "rule": "input-choice",
-                                    "to": "players.at(0)",
-                                    "prompt": "Choose wisely!",
-                                    "choices": ["Default choice", "Wise choice"],
-                                    "result": "choice"
-                                },
-                                { "rule": "when",
-                                    "cases": [
-                                      { "condition": "choice == wise_choice",
-                                        "rules": [ 
-                                            { "rule": "add",
-                                                "to": "count",
-                                                "value": 1
-                                            }
-                        
-                                         ]
-                                      }
-                                    ]
-                                  },
-                                  { "rule": "global-message",
-                                    "value": "You've made a {choice}"
-                                }
-                            ]
-                            }
-                    ]
-                    },
-
-                    { "rule": "global-message",
-                        "value": "Wise choices count: {count}"
-                    },
-
-                    { "rule": "global-message",
-                        "value": "The loop iterates over 100 elements with an interval of one second under a 10 second timer"
-                    },
-
-                    { "rule": "timer",
-                        "duration": 10,
-                        "mode": "at most",
-                        "rules": [
-                            { "rule": "foreach",
-                                "list": "configuration.iterations.upfrom(0)",
-                                "element": "i",
-                                "rules": [
-                                    { "rule": "global-message",
-                                        "value": "i = {i}"
-                                    },
-                                    {
-                                        "rule": "pause",
-                                        "duration": 1
-                                    }
-                                ]
-                              }
-                        ]
-                    }
-  
-    ]
-  }
+          {
+            "rule": "when",
+            "cases": [{
+              "condition": "choice == wise_choice",
+              "rules": [{
+                "rule": "add",
+                "to": "count",
+                "value": 1
+              }]
+            }]
+          },
+          {
+            "rule": "global-message",
+            "value": "You've made a {choice}"
+          }
+        ]
+      }]
+    },
+    {
+      "rule": "global-message",
+      "value": "Wise choices count: {count}"
+    },
+    {
+      "rule": "global-message",
+      "value": "The loop iterates over 100 elements with an interval of one second under a 10 second timer"
+    },
+    {
+      "rule": "timer",
+      "duration": 10,
+      "mode": "at most",
+      "rules": [{
+        "rule": "foreach",
+        "list": "configuration.iterations.upfrom(0)",
+        "element": "i",
+        "rules": [{
+            "rule": "global-message",
+            "value": "i = {i}"
+          },
+          {
+            "rule": "pause",
+            "duration": 1
+          }
+        ]
+      }]
+    }
+  ]
+}

@@ -1,7 +1,10 @@
 {
   "configuration": {
     "name": "Shuffle sort test",
-    "player count": {"min": 1, "max": 4},
+    "player count": {
+      "min": 1,
+      "max": 4
+    },
     "audience": false,
     "setup": {
       "Rounds": 5
@@ -9,18 +12,27 @@
   },
 
   "constants": {
-    "weapons": [
-      { "name": "Rock",     "beats": "Scissors"},
-      { "name": "Paper",    "beats": "Rock"},
-      { "name": "Scissors", "beats": "Paper"}
+    "weapons": [{
+        "name": "Rock",
+        "beats": "Scissors"
+      },
+      {
+        "name": "Paper",
+        "beats": "Rock"
+      },
+      {
+        "name": "Scissors",
+        "beats": "Paper"
+      }
     ]
   },
 
   "variables": {
-    "winners": [
-      {"name": "a", "wins" : 0}
-     ],
-    "tempValue" : 1
+    "winners": [{
+      "name": "a",
+      "wins": 0
+    }],
+    "tempValue": 1
 
   },
 
@@ -32,98 +44,111 @@
 
   "rules": [
 
-    { "rule" : "loop",
-      "while" : "tempValue == 1",
-      "rules" : [
-        { "rule" : "add",
-          "to" : "tempValue",
-          "value" : 1
+    {
+      "rule": "loop",
+      "while": "tempValue == 1",
+      "rules": [{
+          "rule": "add",
+          "to": "tempValue",
+          "value": 1
         },
-        { "rule": "global-message",
+        {
+          "rule": "global-message",
           "value": "this is da loop!"
         }
       ]
     },
 
-    { "rule": "foreach",
+    {
+      "rule": "foreach",
       "list": "configuration.Rounds.upfrom(1)",
       "element": "round",
       "rules": [
 
-        { "rule": "global-message",
+        {
+          "rule": "global-message",
           "value": "Weapons: {weapons}"
         },
 
-        { "rule": "shuffle",
+        {
+          "rule": "shuffle",
           "list": "weapons"
         },
 
-        { "rule": "global-message",
+        {
+          "rule": "global-message",
           "value": "Suffled: {weapons}"
         },
 
-        { "rule": "sort",
+        {
+          "rule": "sort",
           "list": "weapons"
         },
 
-        { "rule": "global-message",
+        {
+          "rule": "global-message",
           "value": "Sorted: {weapons}"
         },
 
-        { "rule": "global-message",
+        {
+          "rule": "global-message",
           "value": "Round {round}. Choose your weapon!"
         },
 
-        { "rule": "foreach",
+        {
+          "rule": "foreach",
           "list": "weapons",
           "element": "weapon",
           "rules": [
 
-              { "rule": "global-message",
-                  "value": "\tWeapon: {weapon.name}"
-              },
+            {
+              "rule": "global-message",
+              "value": "\tWeapon: {weapon.name}"
+            },
 
-              { "rule": "when",
-                  "cases": [
-                    { "condition": "winners.size == players.size",
-                      "rules": [
-                        { "rule": "global-message",
-                          "value": "List of winners is the same size as players."
-                        }
-                      ]
+            {
+              "rule": "when",
+              "cases": [{
+                  "condition": "winners.size == players.size",
+                  "rules": [{
+                    "rule": "global-message",
+                    "value": "List of winners is the same size as players."
+                  }]
+                },
+                {
+                  "condition": "winners.size == 0",
+                  "rules": [{
+                    "rule": "global-message",
+                    "value": "List of winners is empty"
+                  }]
+                },
+                {
+                  "condition": true,
+                  "rules": [{
+                      "rule": "global-message",
+                      "value": "Winners: {winners}"
                     },
-                    { "condition": "winners.size == 0",
-                      "rules": [
-                        { "rule": "global-message",
-                          "value": "List of winners is empty"
-                        }
-                      ]
-                    },
-                    { "condition": true,
-                      "rules": [
-                        { "rule": "global-message",
-                          "value": "Winners: {winners}"
-                        },
-                        { "rule": "foreach",
-                          "list": "winners",
-                          "element": "winner",
-                          "rules": [
-                            { "rule": "add",
-                              "to": "winner.wins",
-                              "value": 1
-                            }
-                          ]
-                        }
-                      ]
+                    {
+                      "rule": "foreach",
+                      "list": "winners",
+                      "element": "winner",
+                      "rules": [{
+                        "rule": "add",
+                        "to": "winner.wins",
+                        "value": 1
+                      }]
                     }
                   ]
                 }
+              ]
+            }
 
           ]
         }
       ]
     },
-    { "rule": "scores",
+    {
+      "rule": "scores",
       "score": "wins",
       "ascending": false
     }

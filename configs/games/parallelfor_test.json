@@ -31,8 +31,7 @@
 
     "per-audience": {},
 
-    "rules": [
-        {
+    "rules": [{
             "rule": "parallelfor",
             "list": "players",
             "element": "player",
