@@ -897,7 +897,22 @@ void SwitchRule::run(Server& server, GameState& state)
 	cases.run(server, state);
 }
 
+class InputRulesState : public RuleState
+{
+public:
+	InputRulesState(int duration) : prompt_sent(false), timer(duration) { }
+
+	bool prompt_sent;
+	Timer timer;
+};
+
 void InputChoiceRule::run(Server& server, GameState& state){
+	auto& rule_state_ptr = state.getState(this);
+	if(!rule_state_ptr) {
+		rule_state_ptr = std::make_unique<InputRulesState>(timeout.value_or(300));
+	}
+	InputRulesState& input_rule_state = *static_cast<InputRulesState*>(rule_state_ptr.get());
+
 	//  Get the player name
 	Getter getter(to, state.getVariables());
 	GetterResult player_result = getter.get();
@@ -906,10 +921,6 @@ void InputChoiceRule::run(Server& server, GameState& state){
 	const std::string& player_name = boost::get<std::string>(player["name"]);
 	Connection player_connection = state.getConnectionByName(player_name);
 
-	// Write the prompt to buffer
-	std::ostringstream buffer;
-	buffer << prompt.fill_with(state.getVariables()) << std::endl;
-
 	// Get the list of choices (from a <Query, List> variant)
 	ResolveQuery<List> get_list_of_choices(state.getVariables());
 	List& list_of_choices = boost::apply_visitor(get_list_of_choices, choices);
@@ -917,18 +928,23 @@ void InputChoiceRule::run(Server& server, GameState& state){
 		throw std::runtime_error{"Input Choice: list of choices must be non-empty"};
 	}
 
-	// Write the choices to buffer
-	StringConverter to_string;
-	for(size_t i = 0u; i < list_of_choices.size(); ++i){
-		buffer << '\t' << i + 1 << ". " << boost::apply_visitor(to_string, list_of_choices[i]) << std::endl;
+	if(!input_rule_state.prompt_sent) {
+		// Write the prompt to buffer
+		std::ostringstream buffer;
+		buffer << prompt.fill_with(state.getVariables()) << std::endl;
+
+		// Write the choices to buffer
+		StringConverter to_string;
+		for(size_t i = 0u; i < list_of_choices.size(); ++i){
+			buffer << '\t' << i + 1 << ". " << boost::apply_visitor(to_string, list_of_choices[i]) << std::endl;
+		}
+		buffer << std::endl;
+		server.send({player_connection, buffer.str()});
 	}
-	buffer << std::endl;
-	server.send({player_connection, buffer.str()});
 	
 	// Read user input
-	Timer timer(timeout.value_or(300));	// 5 minutes max
 	size_t player_choice = list_of_choices.size();	// invalid choice
-	while(timer.hasnt_expired()) {
+	while(input_rule_state.timer.hasnt_expired()) {
 		auto received = server.receive(player_connection);
 		if(received.has_value()) {
 			std::string input = std::move(received.value());
@@ -947,9 +963,9 @@ void InputChoiceRule::run(Server& server, GameState& state){
 			}
 		}
 		if(auto [should_stop, will_be_resumed] = state.checkCallbacks(); should_stop) {
-			// if (!will_be_resumed) {
-			// 	state.deregisterState(this);
-			// }
+			if (!will_be_resumed) {
+				state.deregisterState(this);
+			}
 			return;
 		}
 	}
@@ -965,11 +981,18 @@ void InputChoiceRule::run(Server& server, GameState& state){
 	assert(!getter_result.needs_to_be_saved);
 	getter_result.result = list_of_choices.at(player_choice);
 
+	state.deregisterState(this);
 	// PrintTheThing p;
 	// boost::apply_visitor(p, state.getVariables());
 }
 
 void InputTextRule::run(Server& server, GameState& state){ //IT'S WORKING
+	auto& rule_state_ptr = state.getState(this);
+	if(!rule_state_ptr) {
+		rule_state_ptr = std::make_unique<InputRulesState>(timeout.value_or(300));
+	}
+	InputRulesState& input_rule_state = *static_cast<InputRulesState*>(rule_state_ptr.get());
+
 	//  Get the player name
 	Getter getter(to, state.getVariables());
 	GetterResult player_result = getter.get();
@@ -977,13 +1000,14 @@ void InputTextRule::run(Server& server, GameState& state){ //IT'S WORKING
 	Map& player = boost::get<Map>(player_result.result);
 	const std::string& player_name = boost::get<std::string>(player["name"]);
 	Connection player_connection = state.getConnectionByName(player_name);
-
-	server.send({player_connection, prompt.fill_with(state.getVariables())});
+	
+	if(!input_rule_state.prompt_sent) {
+		server.send({player_connection, prompt.fill_with(state.getVariables())});
+	}
 
 	std::string input;
 	// Read user input
-	Timer timer(timeout.value_or(300));	// 5 minutes max
-	while(timer.hasnt_expired()) {
+	while(input_rule_state.timer.hasnt_expired()) {
 		auto received = server.receive(player_connection);
 		if(received.has_value()) {
 			input = std::move(received.value());
@@ -991,6 +1015,9 @@ void InputTextRule::run(Server& server, GameState& state){ //IT'S WORKING
 			break;	// valid choice has been entered
 		}
 		if(auto [should_stop, will_be_resumed] = state.checkCallbacks(); should_stop) {
+			if (!will_be_resumed) {
+				state.deregisterState(this);
+			}
 			return;
 		}
 	}
@@ -1002,14 +1029,19 @@ void InputTextRule::run(Server& server, GameState& state){ //IT'S WORKING
 	GetterResult getter_result = getter.get(true);	// create a variable attribute if it doesn't exist
 	assert(!getter_result.needs_to_be_saved);
 	getter_result.result = input;
+
+	state.deregisterState(this);
 }
 
-
+// This rule needs to be finished
 void InputVoteRule::run(Server& server, GameState& state){
-	// Has to be placed somewhere to allow timers to terminate the rule
-	// if (!state.checkCallbacks()) {
-	// 	return;
+	// Implement the timeout!
+
+	// auto& rule_state_ptr = state.getState(this);
+	// if(!rule_state_ptr) {
+	// 	rule_state_ptr = std::make_unique<InputRulesState>(timeout.value_or(300));
 	// }
+	// InputRulesState& input_rule_state = *static_cast<InputRulesState*>(rule_state_ptr.get());
 
 	//Send message to the player/audience list
 	Getter getter(to, state.getVariables());
@@ -1078,12 +1110,12 @@ void InputVoteRule::run(Server& server, GameState& state){
 				server.send({state.getConnectionByName(name),"Please input correct choice!\n"});
 			}
 
-			if(auto [should_stop, will_be_resumed] = state.checkCallbacks(); should_stop) {
-				// if (!will_be_resumed) {
-				// 	state.deregisterState(this);
-				// }
-				return;
-			}
+			// if(auto [should_stop, will_be_resumed] = state.checkCallbacks(); should_stop) {
+			// 	// if (!will_be_resumed) {
+			// 	// 	state.deregisterState(this);
+			// 	// }
+			// 	return;
+			// }
 		}
 
 		//modify vote count
