@@ -182,7 +182,8 @@ public:
     GameState(const Configuration& conf, const Name2Connection& name2connection, Connection game_owner)
     :   toplevel(conf.getVariables()),      // copy
         name2connection(name2connection),   // copy
-        game_owner(game_owner)
+        game_owner(game_owner),
+        parallel_world_number(reinterpret_cast<uintptr_t>(nullptr))
     {
         Map& toplevelmap = boost::get<Map>(toplevel);
         List& players = boost::get<List>(toplevelmap["players"]);
@@ -210,14 +211,17 @@ public:
         }
         return CallbackResult{false, false};
     }
-    std::unique_ptr<RuleState>& getState(Rule* rule) { return rule_states[rule]; }
-    void deleteState(Rule* rule) { rule_states.erase(rule); }
+    std::unique_ptr<RuleState>& getState(Rule* rule) { return rule_states[reinterpret_cast<uintptr_t>(rule) | parallel_world_number]; }
+    std::unique_ptr<RuleState>& getPureState(Rule* rule) { return rule_states[reinterpret_cast<uintptr_t>(rule)]; }
+    void deleteState(Rule* rule) { rule_states.erase(reinterpret_cast<uintptr_t>(rule) | parallel_world_number); }
+    void setParallelWorldNumber(uint16_t number) { uintptr_t extended = number; parallel_world_number = extended << 48; }
 private:
     Variable toplevel;
     Name2Connection name2connection;
     Connection game_owner;
     std::vector<Callback*> callbacks;   // used by timers
-    std::unordered_map<Rule*, std::unique_ptr<RuleState>> rule_states;
+    std::unordered_map<uintptr_t, std::unique_ptr<RuleState>> rule_states;
+    uintptr_t parallel_world_number;    // almost crazy
 };
 
 struct Case
@@ -544,16 +548,17 @@ public:
     CallbackResult check(GameState&, Rule*) override;
 };
 
-class ParallelForRule : public Rule {
+class ParallelForRule : public Rule, public Callback {
 private:
-    std::string list;
-    std::string element;
+    Query list;
+    std::string element_name;
     RuleList subrules;
 public:
     ParallelForRule(const nlohmann::json& rule);
 
     void run(Server& server, GameState& state) override;    
 
+    CallbackResult check(GameState&, Rule*) override;
 };
 
 // Sorts a list in ascending order

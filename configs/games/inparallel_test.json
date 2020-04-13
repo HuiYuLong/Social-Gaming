@@ -1,6 +1,6 @@
 {
     "configuration": {
-      "name": "Parallel test",
+      "name": "Inparallel test",
       "player count": {"min": 2, "max": 2},
       "audience": false,
       "setup": {}
@@ -10,7 +10,7 @@
         "choices": ["Yes", "No", "A little bit"],
         "plants": [
             { "kind": "Trees",     "list": ["Oak", "Spruce", "Willow"]},
-            { "kind": "Berries",    "list": ["Watermealons"]}
+            { "kind": "Berries",    "list": ["Watermealon"]}
         ],
         "weapons": [
             { "name": "Rock",     "beats": "Scissors"},

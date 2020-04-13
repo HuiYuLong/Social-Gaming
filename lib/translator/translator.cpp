@@ -75,7 +75,7 @@ std::unordered_map<std::string, std::function<std::unique_ptr<Rule>(const nlohma
 		{"foreach", [](const nlohmann::json& rule) { return std::make_unique<ForEachRule>(rule); }},
         {"loop", [](const nlohmann::json&rule) {return std::make_unique<LoopRule>(rule);}},
         {"inparallel", [](const nlohmann::json&rule) {return std::make_unique<InParallelRule>(rule);}},
-        // {"parallelfor", [](const nlohmann::json&rule) {return std::make_unique<ParallelForRule>(rule);}},
+        {"parallelfor", [](const nlohmann::json&rule) {return std::make_unique<ParallelForRule>(rule);}},
         {"switch", [](const nlohmann::json&rule) {return std::make_unique<SwitchRule>(rule);}},
         {"when", [](const nlohmann::json& rule) { return std::make_unique<WhenRule>(rule); }},
 
@@ -453,6 +453,11 @@ InParallelRule::InParallelRule(const nlohmann::json& rule): subrules(rule["rules
 	std::cout << "In parallel" << std::endl;
 }
 
+ParallelForRule::ParallelForRule(const nlohmann::json& rule): subrules(rule["rules"]), list(rule["list"]), element_name(rule["element"])
+{
+	std::cout << "Parallel for" << std::endl;
+}
+
 Case::Case(const nlohmann::json& json_case): condition(json_case["condition"]), subrules(json_case["rules"]) {
 	std::cout << "Case " << json_case["condition"] << std::endl;
 }
@@ -712,19 +717,10 @@ void LoopRule::run(Server& server, GameState& state) {
 	}
 }
 
-class InParallelRuleState : public RuleState
+class ParallelRulesState : public RuleState
 {
 public:
-	InParallelRuleState(const std::vector<std::unique_ptr<Rule>>& rules)
-	{
-		todo.reserve(rules.size());
-		for (const auto& ptr : rules) {
-			std::vector<Rule*> next = {ptr.get()};
-			todo.emplace(ptr.get(), std::move(next));
-		}
-	}
 
-	std::unordered_map<Rule*, std::vector<Rule*>> todo;
 	std::vector<Rule*> last_run;
 };
 
@@ -732,13 +728,22 @@ void InParallelRule::run(Server& server, GameState& state)
 {
 	auto& rule_state_ptr = state.getState(this);
 	if(!rule_state_ptr) {
-		rule_state_ptr = std::make_unique<InParallelRuleState>(subrules.get());
+		rule_state_ptr = std::make_unique<ParallelRulesState>();
 	}
-	InParallelRuleState& rule_state = *static_cast<InParallelRuleState*>(rule_state_ptr.get());
+	ParallelRulesState& rule_state = *static_cast<ParallelRulesState*>(rule_state_ptr.get());
+
+	std::unordered_map<uint16_t, std::vector<Rule*>> todo;
+	auto& rules = subrules.get();
+	todo.reserve(rules.size());
+	uint16_t world_number = 0u;
+	for (const auto& ptr : rules) {
+		std::vector<Rule*> next = {ptr.get()};
+		todo.emplace(world_number++, std::move(next));
+	}
 
 	state.registerCallback(this);
-	while(!rule_state.todo.empty()) {
-		for (auto it = rule_state.todo.begin(); it != rule_state.todo.end();) {
+	while(!todo.empty()) {
+		for (auto it = todo.begin(); it != todo.end();) {
 			auto& unfinished_rules = it->second;
 			Rule* last_unfinished  = unfinished_rules.back();
 			unfinished_rules.pop_back();
@@ -748,7 +753,7 @@ void InParallelRule::run(Server& server, GameState& state)
 			}
 			rule_state.last_run.clear();
 			if (unfinished_rules.size() == 0u) {
-				it = rule_state.todo.erase(it);
+				it = todo.erase(it);
 			}
 			else {
 				++it;
@@ -765,12 +770,78 @@ void InParallelRule::run(Server& server, GameState& state)
 CallbackResult InParallelRule::check(GameState& state, Rule* ptr)
 {
 	auto& rule_state_ptr = state.getState(this);
-	InParallelRuleState& rule_state = *static_cast<InParallelRuleState*>(rule_state_ptr.get());
+	ParallelRulesState& rule_state = *static_cast<ParallelRulesState*>(rule_state_ptr.get());
 	rule_state.last_run.push_back(ptr);
 	return {true, true}; // first true: the rule should stop, second true: the rule will be resumed
 }
 
-//void ParallelForRule::run(Server& server, GameState& state) {} 
+void ParallelForRule::run(Server& server, GameState& state)
+{
+	auto& rule_state_ptr = state.getState(this);
+	if(!rule_state_ptr) {
+		rule_state_ptr = std::make_unique<ParallelRulesState>();
+	}
+	ParallelRulesState& rule_state = *static_cast<ParallelRulesState*>(rule_state_ptr.get());
+
+	Getter getter(list, state.getVariables());
+	GetterResult result = getter.get();
+	List temp_elements;
+	List& getter_elements = boost::get<List>(result.result);
+	List& elements = (result.needs_to_be_saved ? temp_elements = std::move(getter_elements), temp_elements : getter_elements);
+
+	std::unordered_map<uint16_t, std::pair<Variable&, std::vector<Rule*>>> todo;
+	todo.reserve(elements.size());
+	uint16_t world_number = 0u;
+	Rule *first_rule = subrules.get().front().get();
+	std::vector<Rule*> list_with_first_rule = {first_rule};
+	for (Variable& element : elements) {
+		todo.emplace(std::piecewise_construct,
+                    std::forward_as_tuple(world_number++),
+                    std::forward_as_tuple(element, list_with_first_rule));
+	}
+
+	state.registerCallback(this);
+	Map& toplevel = boost::get<Map>(state.getVariables());
+	while(!todo.empty()) {
+		for (auto it = todo.begin(); it != todo.end();) {
+			auto& [element, unfinished_rules] = it->second;
+			// Place the current element into the game's variable tree
+			toplevel[element_name] = getReference(element);
+			// Reflect the changed state using the "parallel world number"
+			// Due to the parallel world number, all subsequent rules, even if the are the same rules inside the configuration
+			// will have a different state
+			state.setParallelWorldNumber(it->first);
+			// Run the unfinished rules
+			Rule* last_unfinished  = unfinished_rules.back();
+			unfinished_rules.pop_back();
+			last_unfinished->run(server, state);
+			for (auto it = rule_state.last_run.rbegin(); it != rule_state.last_run.rend(); ++it) {
+				unfinished_rules.push_back(*it);
+			}
+			rule_state.last_run.clear();
+			if (unfinished_rules.size() == 0u) {
+				it = todo.erase(it);
+			}
+			else {
+				++it;
+			}
+		}
+		// std::remove_if(rule_state.todo.begin(), rule_state.todo.end(), [](const auto& iter) {
+		// 	return iter.second.size() == 0u;	// remove finished rules
+		// });
+	}
+	state.setParallelWorldNumber(0u);
+	state.deregisterCallback(this);
+	state.deleteState(this);
+}
+
+CallbackResult ParallelForRule::check(GameState& state, Rule* ptr)
+{
+	auto& rule_state_ptr = state.getPureState(this);
+	ParallelRulesState& rule_state = *static_cast<ParallelRulesState*>(rule_state_ptr.get());
+	rule_state.last_run.push_back(ptr);
+	return {true, true}; // first true: the rule should stop, second true: the rule will be resumed
+}
 
 void GlobalMessageRule::run(Server& server, GameState& state)
 {
