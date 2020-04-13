@@ -838,6 +838,7 @@ void ForEachRule::run(Server& server, GameState& state)
 	Map& toplevel = boost::get<Map>(state.getVariables());
 	for (Variable& element : foreach_state.elements) {
 		if(!state.checkCallbacks()) {
+			state.deregisterState(this);
 			return;
 		}
 		toplevel[element_name] = getReference(element);
@@ -845,6 +846,7 @@ void ForEachRule::run(Server& server, GameState& state)
 		//boost::apply_visitor(p, state.getVariables());
 		subrules.run(server, state);
 	}
+	state.deregisterState(this);
 }
 
 void Cases::run(Server& server, GameState& state)
