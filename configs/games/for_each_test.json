@@ -1,0 +1,54 @@
+{
+    "configuration": {
+        "name": "For each test",
+        "player count": {
+            "min": 1,
+            "max": 4
+        },
+        "audience": false,
+        "setup": {
+            "Rounds": 3
+        }
+    },
+
+    "constants": {},
+
+    "variables": {
+        "list": ["a", 1],
+        "extension": ["e"]
+    },
+
+    "per-player": {},
+
+    "per-audience": {},
+
+    "rules": [{
+            "rule": "global-message",
+            "value": "For each rule runs over the extending lists"
+        },
+        {
+            "rule": "foreach",
+            "list": "configuration.Rounds.upfrom(1)",
+            "element": "round",
+            "rules": [{
+                    "rule": "foreach",
+                    "list": "list",
+                    "element": "element",
+                    "rules": [{
+                        "rule": "global-message",
+                        "value": "{element}"
+                    }]
+                },
+                {
+                    "rule": "extend",
+                    "target": "list",
+                    "list": "extension"
+                },
+                {
+                    "rule": "global-message",
+                    "value": "~~~"
+                }
+            ]
+        }
+    ]
+}

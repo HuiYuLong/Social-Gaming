@@ -1,7 +1,10 @@
 {
   "configuration": {
     "name": "Rock, Paper, Scissors",
-    "player count": {"min": 2, "max": 4},
+    "player count": {
+      "min": 2,
+      "max": 4
+    },
     "audience": false,
     "setup": {
       "Rounds": 3
@@ -9,10 +12,18 @@
   },
 
   "constants": {
-    "weapons": [
-      { "name": "Rock",     "beats": "Scissors"},
-      { "name": "Paper",    "beats": "Rock"},
-      { "name": "Scissors", "beats": "Paper"}
+    "weapons": [{
+        "name": "Rock",
+        "beats": "Scissors"
+      },
+      {
+        "name": "Paper",
+        "beats": "Rock"
+      },
+      {
+        "name": "Scissors",
+        "beats": "Paper"
+      }
     ]
   },
 
@@ -26,22 +37,22 @@
 
   "per-audience": {},
 
-  "rules": [
-    { "rule": "foreach",
+  "rules": [{
+      "rule": "foreach",
       "list": "configuration.Rounds.upfrom(1)",
       "element": "round",
-      "rules": [
-
-        { "rule": "global-message",
+      "rules": [{
+          "rule": "global-message",
           "value": "Round {round}. Choose your weapon!"
         },
-
-        { "rule": "foreach",
+        {
+          "rule": "parallelfor",
           "list": "players",
           "element": "player",
           "rules": [
 
-            { "rule": "input-choice",
+            {
+              "rule": "input-choice",
               "to": "player",
               "prompt": "{player.name}, choose your weapon!",
               "choices": "weapons.elements.name",
@@ -51,75 +62,69 @@
 
           ]
         },
-
-        { "rule": "discard",
+        {
+          "rule": "discard",
           "from": "winners",
           "count": "winners.size"
         },
-
-        { "rule": "foreach",
+        {
+          "rule": "foreach",
           "list": "weapons",
           "element": "weapon",
-          "rules": [
-
-            { "rule": "when",
-              "cases": [
-                { "condition": "!players.elements.weapon.contains(weapon.name)",
-                  "rules": [
-
-                    { "rule": "extend",
-                      "target": "winners",
-                      "list": "players.collect(player, player.weapon == weapon.beats)"
-                    }
-
-                  ]  
+          "rules": [{
+            "rule": "when",
+            "cases": [{
+              "condition": "!players.elements.weapon.contains(weapon.name)",
+              "rules": [{
+                  "rule": "extend",
+                  "target": "winners",
+                  "list": "players.collect(player, player.weapon == weapon.beats)"
                 }
-              ]
-            }
 
-          ]
+              ]
+            }]
+          }]
         },
-
-        { "rule": "when",
-          "cases": [
-            { "condition": "winners.size == players.size",
-              "rules": [
-                { "rule": "global-message",
-                  "value": "Tie game!"
-                }
-              ]
+        {
+          "rule": "when",
+          "cases": [{
+              "condition": "winners.size == players.size",
+              "rules": [{
+                "rule": "global-message",
+                "value": "Tie game!"
+              }]
             },
-            { "condition": "winners.size == 0",
-              "rules": [
-                { "rule": "global-message",
-                  "value": "Tie game!"
-                }
-              ]
+            {
+              "condition": "winners.size == 0",
+              "rules": [{
+                "rule": "global-message",
+                "value": "Tie game!"
+              }]
             },
-            { "condition": true,
-              "rules": [
-                { "rule": "global-message",
+            {
+              "condition": true,
+              "rules": [{
+                  "rule": "global-message",
                   "value": "Winners: {winners.elements.name}"
                 },
-                { "rule": "foreach",
+                {
+                  "rule": "foreach",
                   "list": "winners",
                   "element": "winner",
-                  "rules": [
-                    { "rule": "add",
-                      "to": "winner.wins",
-                      "value": 1
-                    }
-                  ]
+                  "rules": [{
+                    "rule": "add",
+                    "to": "winner.wins",
+                    "value": 1
+                  }]
                 }
               ]
             }
           ]
         }
-
       ]
     },
-
-    { "rule": "scores",
+    {
+      "rule": "scores",
       "score": "wins",
       "ascending": false
     }

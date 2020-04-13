@@ -74,9 +74,9 @@ std::unordered_map<std::string, std::function<std::unique_ptr<Rule>(const nlohma
         //Control Structures
 		{"foreach", [](const nlohmann::json& rule) { return std::make_unique<ForEachRule>(rule); }},
         {"loop", [](const nlohmann::json&rule) {return std::make_unique<LoopRule>(rule);}},
-        // {"inparallel", [](const nlohmann::json&rule) {return std::make_unique<InParallelRule>(rule);}},
-        // {"parallelfor", [](const nlohmann::json&rule) {return std::make_unique<ParallelForRule>(rule);}},
-        //{"switch", [](const nlohmann::json&rule) {return std::make_unique<SwitchRule>(rule);}},
+        {"inparallel", [](const nlohmann::json&rule) {return std::make_unique<InParallelRule>(rule);}},
+        {"parallelfor", [](const nlohmann::json&rule) {return std::make_unique<ParallelForRule>(rule);}},
+        {"switch", [](const nlohmann::json&rule) {return std::make_unique<SwitchRule>(rule);}},
         {"when", [](const nlohmann::json& rule) { return std::make_unique<WhenRule>(rule); }},
 
         //List Operations
@@ -112,14 +112,327 @@ RuleList::RuleList(const nlohmann::json& json_rules)
 	}
 }
 
+std::vector<std::unique_ptr<Rule>>& RuleList::get() { return rules; }
+
+class RuleListState : public RuleState
+{
+public:
+	RuleListState(std::vector<std::unique_ptr<Rule>>& rules): iterator(rules.begin()) {}
+
+	std::vector<std::unique_ptr<Rule>>::iterator iterator;
+};
+
 void RuleList::run(Server& server, GameState& state)
 {
-	for (const auto& ptr : rules) {
-		if(!state.checkCallbacks()) {
+	auto& rule_state_ptr = state.getState(this);
+	if(!rule_state_ptr) {
+		rule_state_ptr = std::make_unique<RuleListState>(rules);
+	}
+	RuleListState& rule_list_state = *static_cast<RuleListState*>(rule_state_ptr.get());
+
+	for ( ; rule_list_state.iterator != rules.end(); ++rule_list_state.iterator) {
+		// Run one rule
+		const auto& ptr = *rule_list_state.iterator;
+		ptr->run(server, state);
+
+		// If so, check the callbacks to let the timers stop it, or parallel rules to do something else
+		if(auto [should_stop, will_be_resumed] = state.checkCallbacks(this); should_stop) {
+			++rule_list_state.iterator;
+			if (!will_be_resumed) {
+				state.deleteState(this);
+			}
 			return;
 		}
-		ptr->run(server, state);
 	}
+	state.deleteState(this);
+}
+
+class ParameterVisitor : public boost::static_visitor<>
+{
+	Map parameters;
+	Server& server;
+	Connection game_owner;
+	const std::string* name;
+public:
+	ParameterVisitor(Server& server, GameState& state, Connection game_owner): server(server), game_owner(game_owner) { }
+
+	Map getParameters() { return std::move(parameters); }
+
+	void setName(const std::string& _name) { name = &_name; }
+
+	bool receiveBoolean(const std::string& prompt)
+	{
+		while (true) {
+			auto received = server.receive(game_owner);
+			if(received.has_value()) {
+				std::string input = std::move(received.value());
+				if(input.size() == 0u) {
+					return false;
+				}
+				server.send({game_owner, input + "\n\n"});
+				if (input == "true") {
+					parameters[*name] = true;
+					break;
+				}
+				else if (input == "false") {
+					parameters[*name] = false;
+					break;
+				}
+				else {
+					server.send({game_owner, "Value must be \"true\" or \"false\"\n\n"});
+					server.send({game_owner, prompt});
+				}
+			}
+		}
+		return true;
+	}
+
+	void operator()(bool boolean)
+	{
+		std::ostringstream buffer;
+		buffer << "bool " << *name << ": " << (boolean ? "true": "false") << " -> ";
+		server.send({game_owner, buffer.str()});
+		if (!receiveBoolean(buffer.str())) {
+			server.send({game_owner, (boolean ? "true\n\n" : "false\n\n")});
+			parameters[*name] = boolean;
+		}
+	}
+
+	bool receiveInteger(const std::string& prompt)
+	{
+		while (true) {
+			auto received = server.receive(game_owner);
+			if(received.has_value()) {
+				std::string input = std::move(received.value());
+				if(input.size() == 0u) {
+					return false;
+				}
+				server.send({game_owner, input + "\n\n"});
+				try {
+					int new_integer = std::stoi(input);
+					parameters[*name] = new_integer;
+					return true;
+				}
+				catch (std::exception& e) {
+					server.send({game_owner, "Value must be of integer type\n\n"});
+					server.send({game_owner, prompt});
+				}
+			}
+		}
+	}   
+
+	void operator()(int integer)
+	{
+		std::ostringstream buffer;
+		buffer << "integer " << *name << ": " << integer << " -> ";
+		server.send({game_owner, buffer.str()});
+		if(!receiveInteger(buffer.str())) {
+			server.send({game_owner, std::to_string(integer) + "\n\n"});
+			parameters[*name] = integer;
+		}
+	}
+
+	bool receiveString(const std::string& prompt)
+	{
+		while (true) {
+			auto received = server.receive(game_owner);
+			if(received.has_value()) {
+				std::string input = std::move(received.value());
+				if(input.size() == 0u) {
+					return false;
+				}
+				server.send({game_owner, input + "\n\n"});
+				parameters[*name] = input;
+				return true;
+			}
+		}
+	}
+
+	void operator()(const std::string& string)
+	{
+		std::ostringstream buffer;
+		buffer << "string " << *name << ": " << string << " -> ";
+		server.send({game_owner, buffer.str()});
+		if(!receiveString(buffer.str())) {
+			server.send({game_owner, string + "\n\n"});
+			parameters[*name] = string;
+		}
+	}
+
+	void receiveQuestionAnswer()
+	{
+		List questions;
+		for(size_t current_question = 1u; ; ++current_question) {
+			Map question;
+			server.send({game_owner, "Question " + std::to_string(current_question) + ": "});
+			while (true) {
+				auto received = server.receive(game_owner);
+				if(received.has_value()) {
+					std::string input = std::move(received.value());
+					if(input.size() == 0u) {
+						server.send({game_owner, "...\n\n"});
+						parameters[*name] = std::move(questions);
+						return;
+					}
+					server.send({game_owner, input + "\n"});
+					question["question"] = std::move(input);
+					break;
+				}
+			}
+			server.send({game_owner, "Answer: "});
+			while (true) {
+				auto received = server.receive(game_owner);
+				if(received.has_value()) {
+					std::string input = std::move(received.value());
+					if(input.size() == 0u) {
+						continue;
+					}
+					server.send({game_owner, input + "\n\n"});
+					question["answer"] = std::move(input);
+					break;
+				}
+			}
+			questions.push_back(std::move(question));
+		}
+	}
+
+	void receiveMultipleChoice()
+	{
+		List questions;
+		for(size_t current_question = 1u; ; ++current_question) {
+			Map multiple_choice;
+			server.send({game_owner, "Question " + std::to_string(current_question) + ": "});
+			while (true) {
+				auto received = server.receive(game_owner);
+				if(received.has_value()) {
+					std::string input = std::move(received.value());
+					if(input.size() == 0u) {
+						server.send({game_owner, "...\n\n"});
+						parameters[*name] = std::move(questions);
+						return;
+					}
+					server.send({game_owner, input + "\n"});
+					multiple_choice["question"] = std::move(input);
+					break;
+				}
+			}
+			List choices;
+			bool more_choices = true;
+			for (size_t choice = 1u; more_choices; ++choice) {
+				server.send({game_owner, std::to_string(choice) + ". "});
+				while(true) {
+					auto received = server.receive(game_owner);
+					if(received.has_value()) {
+						std::string input = std::move(received.value());
+						if(input.size() == 0u) {
+							if (choices.size() == 0u) {
+								continue;
+							}
+							else {
+								more_choices = false;
+								break;
+							}
+						}
+						server.send({game_owner, input + "\n"});
+						choices.push_back(std::move(input));
+						break;
+					}
+				}
+			}
+			server.send({game_owner, "\nCorrect choice: "});
+			while (true) {
+				auto received = server.receive(game_owner);
+				if(received.has_value()) {
+					std::string input = std::move(received.value());
+					if(input.size() == 0u) {
+						continue;
+					}
+					server.send({game_owner, input + "\n\n"});
+					try {
+						size_t choice = std::stoul(input) - 1u;
+						Variable& correct_choice = choices.at(choice);
+						multiple_choice["correct_choice"] = correct_choice;
+						break;
+					}
+					catch (std::exception& e) {
+						server.send({game_owner, "Please enter a number from the list of choices\n\nCorrect choice: "});
+					}
+				}
+			}
+			multiple_choice["choices"] = std::move(choices);
+			questions.push_back(std::move(multiple_choice));
+		}
+	}
+
+	void operator()(const Map& specification)
+	{
+		std::ostringstream buffer;
+		const std::string& type = boost::get<std::string>(specification.at("kind"));
+		const std::string& prompt = boost::get<std::string>(specification.at("prompt"));
+		buffer << prompt << '\n' << type << ' ' << *name << " -> ";
+		server.send({game_owner, buffer.str()});
+		if (type == "boolean") {
+			while(!receiveBoolean(buffer.str())) { }
+		}
+		else if (type == "integer") {
+			while(!receiveInteger(buffer.str())) { }
+		}
+		else if (type == "string") {
+			while(!receiveString(buffer.str())) { }
+		}
+		else if (type == "question-answer") {
+			server.send({game_owner, "\n\n"});
+			receiveQuestionAnswer();
+		}
+		else if (type == "multiple-choice") {
+			server.send({game_owner, "\n\n"});
+			receiveMultipleChoice();
+		}
+		else {
+			throw std::runtime_error{"Unsupported setup variable kind"};
+		}
+	}
+};
+
+SetupRule::SetupRule(const nlohmann::json& setup)
+{
+	for (const auto& [key, value]: setup.items()) {
+		if(value.is_object()) {
+			parameters.emplace_back(key, boost::get<Map>(buildVariables(value)));
+			const auto& parameter = boost::get<Map>(parameters.back().second);
+			assert(parameter.find("kind") != parameter.end());
+			assert(parameter.find("prompt") != parameter.end());
+		}
+		else if (value.is_boolean()) {
+			parameters.emplace_back(key, bool(value));
+		}
+		else if (value.is_number()) {
+			parameters.emplace_back(key, int(value));
+		}
+		else if (value.is_string()) {
+			parameters.emplace_back(key, std::string(value));
+		}
+		else {
+			throw std::runtime_error{"Unrecognized setup parameter"};
+		}
+	}
+}
+
+void SetupRule::run(Server& server, GameState& state)
+{
+	std::this_thread::sleep_for(std::chrono::milliseconds(1100)); // wait for all the server messages to get processed
+	if(parameters.size() == 0u) {
+		return;
+	}
+	Connection game_owner = state.getGameOwnerConnection();
+	ParameterVisitor visitor(server, state, game_owner);
+	server.send({game_owner, "Set new values for game parameters or enter nothing to skip:\n\n"});
+	for (const auto& [key, value]: parameters) {
+		visitor.setName(key);
+		boost::apply_visitor(visitor, value);
+	}
+	Map& toplevel = boost::get<Map>(state.getVariables());
+	toplevel["configuration"] = visitor.getParameters();
 }
 
 //**** Control Structures ****//
@@ -128,23 +441,59 @@ ForEachRule::ForEachRule(const nlohmann::json& rule): list(rule["list"]), elemen
     std::cout << "For each: " << element_name << std::endl;
 }
 
-LoopRule::LoopRule(const nlohmann::json& rule): failCondition(rule["while"]), subrules(rule["rules"]) {
+LoopRule::LoopRule(const nlohmann::json& rule)
+:	untilLoop(rule.find("until") != rule.end()),
+	failCondition(untilLoop ? rule["until"] : rule["while"]),
+	subrules(rule["rules"]) {
 	std::cout << "Loop" << std::endl;
 }
-	
-WhenRule::WhenRule(const nlohmann::json& rule)
+
+InParallelRule::InParallelRule(const nlohmann::json& rule): subrules(rule["rules"])
 {
-    std::cout << "When" << std::endl;
-	cases.reserve(rule["cases"].size());
-    for(const auto& case_ : rule["cases"].items()) {
-        std::cout << case_.value()["condition"] << std::endl;
-        cases.emplace_back(case_.value());
-    }
+	std::cout << "In parallel" << std::endl;
 }
 
-Case::Case(const nlohmann::json& case_): condition(case_["condition"]), subrules(case_["rules"]) {
-	std::cout << "Case " << case_["condition"] << std::endl;
+ParallelForRule::ParallelForRule(const nlohmann::json& rule): subrules(rule["rules"]), list(rule["list"]), element_name(rule["element"])
+{
+	std::cout << "Parallel for" << std::endl;
 }
+
+Case::Case(const nlohmann::json& json_case): condition(json_case["condition"]), subrules(json_case["rules"]) {
+	std::cout << "Case " << json_case["condition"] << std::endl;
+}
+
+Case::Case(const nlohmann::json& json_case, const Query& value): condition(buildVariables(json_case["case"]), value), subrules(json_case["rules"])
+{
+	std::cout << "Case " << json_case["case"] << std::endl;
+}
+
+Cases::Cases(const nlohmann::json& json_cases)
+{
+	cases.reserve(json_cases.size());
+	for(const auto& case_ : json_cases.items()) {
+		std::cout << case_.value()["condition"] << std::endl;
+		cases.emplace_back(case_.value());
+	}
+}
+
+Cases::Cases(const nlohmann::json& json_cases, const Query& value)
+{
+	cases.reserve(json_cases.size());
+	for(const auto& case_ : json_cases.items()) {
+		cases.emplace_back(case_.value(), value);
+	}
+}
+	
+WhenRule::WhenRule(const nlohmann::json& rule): cases(rule["cases"])
+{
+    std::cout << "When" << std::endl;
+}
+
+SwitchRule::SwitchRule(const nlohmann::json& rule): cases(rule["cases"], Query(rule["value"]))
+{
+	std::cout << "Switch" << std::endl;
+}
+
 //
 // Todo: ParallelFor
 //
@@ -190,6 +539,8 @@ AddRule::AddRule(const nlohmann::json& rule): to(rule["to"]), value(rule["value"
 // Todo: NumericalAttribues
 //
 
+TimerRuleState::TimerRuleState(int duration): timer(duration) { }
+
 TimerRuleImplementation::TimerRuleImplementation(int duration, const nlohmann::json& json_subrules): duration(duration), subrules(json_subrules)
 {
 	std::cout << "Timer with duration " << duration << std::endl;
@@ -199,15 +550,24 @@ AtMostTimer::AtMostTimer(int duration, const nlohmann::json& json_subrules): Tim
 
 void AtMostTimer::run(Server& server, GameState& state)
 {
-	timer = std::make_unique<Timer>(duration);
-	state.registerCallback(*this);
+	// Place the timer into this game's state
+	auto& rule_state_ptr = state.getState(this);
+	rule_state_ptr = std::make_unique<TimerRuleState>(duration);
+
+	// Run the rules while checking on the timer
+	state.registerCallback(this);
 	subrules.run(server, state);
-	state.deregisterCallback(*this);
+	state.deregisterCallback(this);
+
+	// Delete the timer
+	state.deleteState(this);
 }
 
-bool AtMostTimer::check(GameState&)
+CallbackResult AtMostTimer::check(GameState& state, Rule*)
 {
-	return timer->hasnt_expired();	// returns false when the timer has expired, which will force all subrules to shut down
+	auto& rule_state_ptr = state.getState(this);
+	Timer& timer = static_cast<TimerRuleState*>(rule_state_ptr.get())->timer;
+	return {!timer.hasnt_expired(), false};	// returns true when the timer has expired, which will force all subrules to shut down
 }
 
 
@@ -215,24 +575,39 @@ ExactTimer::ExactTimer(int duration, const nlohmann::json& json_subrules): Timer
 
 void ExactTimer::run(Server& server, GameState& state)
 {
-	// Just repeats the subrules until the timer expires
-	timer = std::make_unique<Timer>(duration);
-	state.registerCallback(*this);
+	// Place the timer into this game's state
+	auto& rule_state_ptr = state.getState(this);
+	if(!rule_state_ptr) {
+		rule_state_ptr = std::make_unique<TimerRuleState>(duration);
+	}
+
+	// Make sure that the rules run at most the given duration
+	state.registerCallback(this);
 	subrules.run(server, state);
-	state.deregisterCallback(*this);
-	while (timer->hasnt_expired()) {
-		if(!state.checkCallbacks()) {
+	state.deregisterCallback(this);
+
+	// Pad the execution time to the given duration
+	Timer& timer = static_cast<TimerRuleState*>(rule_state_ptr.get())->timer;
+	while (timer.hasnt_expired()) {
+		if(auto [should_stop, will_be_resumed] = state.checkCallbacks(this); should_stop) {
+			if (!will_be_resumed) {
+				state.deleteState(this);
+			}
 			return;
 		}
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}
+
+	// Delete the timer
+	state.deleteState(this);
 }
 
-bool ExactTimer::check(GameState&)
+CallbackResult ExactTimer::check(GameState& state, Rule*)
 {
-	return timer->hasnt_expired();	// returns false when the timer has expired, which will force all subrules to shut down
+	auto& rule_state_ptr = state.getState(this);
+	Timer& timer = static_cast<TimerRuleState*>(rule_state_ptr.get())->timer;
+	return {!timer.hasnt_expired(), false};	// returns true when the timer has expired, which will force all subrules to shut down
 }
-
 
 TrackTimer::TrackTimer(int duration, const nlohmann::json& json_subrules, const std::string& flag): TimerRuleImplementation(duration, json_subrules), flag(flag) { }
 
@@ -245,26 +620,35 @@ void TrackTimer::run(Server& server, GameState& state)
 	result.result = false;
 
 	// Initialize timer
-	timer = std::make_unique<Timer>(duration);
+	auto& rule_state_ptr = state.getState(this);
+	rule_state_ptr = std::make_unique<TimerRuleState>(duration);
 
 	// Run the subrules while checking on the timer
-	state.registerCallback(*this);
+	state.registerCallback(this);
 	subrules.run(server, state);
-	state.deregisterCallback(*this);
+	state.deregisterCallback(this);
+
+	// Delete the timer
+	state.deleteState(this);
 }
 
-bool TrackTimer::check(GameState& state)
+CallbackResult TrackTimer::check(GameState& state, Rule*)
 {
-	if (timer && !timer->hasnt_expired()) {
+	auto& rule_state_ptr = state.getState(this);
+	if (!rule_state_ptr) {
+		return {false, false};	// the flag has already been set, move on
+	}
+	Timer& timer = static_cast<TimerRuleState*>(rule_state_ptr.get())->timer;
+	if (!timer.hasnt_expired()) {
 		// Set the flag to true
 		Getter getter(flag, state.getVariables());
 		GetterResult result = getter.get();
 		assert(!result.needs_to_be_saved);
 		result.result = true;
 		// Disable the timer
-		timer.reset(nullptr);
+		rule_state_ptr.reset(nullptr);
 	}
-	return true; // track timer never stops the rules
+	return {false, false}; // track timer never stops the rules
 }
 
 
@@ -325,13 +709,139 @@ MessageRule::MessageRule(const nlohmann::json& rule): to(rule["to"]), value(rule
 
 void LoopRule::run(Server& server, GameState& state) {
 
-	while (failCondition.evaluate(state.getVariables())) {
-		if(!state.checkCallbacks()) {
+	while (untilLoop ^ failCondition.evaluate(state.getVariables())) {
+		subrules.run(server, state);
+		if(auto [should_stop, will_be_resumed] = state.checkCallbacks(this); should_stop) {
 			return;
 		}
-		subrules.run(server, state);
 	}
-}	
+}
+
+class ParallelRulesState : public RuleState
+{
+public:
+
+	std::vector<Rule*> last_run;
+};
+
+void InParallelRule::run(Server& server, GameState& state)
+{
+	auto& rule_state_ptr = state.getState(this);
+	if(!rule_state_ptr) {
+		rule_state_ptr = std::make_unique<ParallelRulesState>();
+	}
+	ParallelRulesState& rule_state = *static_cast<ParallelRulesState*>(rule_state_ptr.get());
+
+	std::unordered_map<uint16_t, std::vector<Rule*>> todo;
+	auto& rules = subrules.get();
+	todo.reserve(rules.size());
+	uint16_t world_number = 0u;
+	for (const auto& ptr : rules) {
+		std::vector<Rule*> next = {ptr.get()};
+		todo.emplace(world_number++, std::move(next));
+	}
+
+	state.registerCallback(this);
+	while(!todo.empty()) {
+		for (auto it = todo.begin(); it != todo.end();) {
+			auto& unfinished_rules = it->second;
+			Rule* last_unfinished  = unfinished_rules.back();
+			unfinished_rules.pop_back();
+			last_unfinished->run(server, state);
+			for (auto it = rule_state.last_run.rbegin(); it != rule_state.last_run.rend(); ++it) {
+				unfinished_rules.push_back(*it);
+			}
+			rule_state.last_run.clear();
+			if (unfinished_rules.size() == 0u) {
+				it = todo.erase(it);
+			}
+			else {
+				++it;
+			}
+		}
+		// std::remove_if(rule_state.todo.begin(), rule_state.todo.end(), [](const auto& iter) {
+		// 	return iter.second.size() == 0u;	// remove finished rules
+		// });
+	}
+	state.deregisterCallback(this);
+	state.deleteState(this);
+}
+
+CallbackResult InParallelRule::check(GameState& state, Rule* ptr)
+{
+	auto& rule_state_ptr = state.getState(this);
+	ParallelRulesState& rule_state = *static_cast<ParallelRulesState*>(rule_state_ptr.get());
+	rule_state.last_run.push_back(ptr);
+	return {true, true}; // first true: the rule should stop, second true: the rule will be resumed
+}
+
+void ParallelForRule::run(Server& server, GameState& state)
+{
+	auto& rule_state_ptr = state.getState(this);
+	if(!rule_state_ptr) {
+		rule_state_ptr = std::make_unique<ParallelRulesState>();
+	}
+	ParallelRulesState& rule_state = *static_cast<ParallelRulesState*>(rule_state_ptr.get());
+
+	Getter getter(list, state.getVariables());
+	GetterResult result = getter.get();
+	List temp_elements;
+	List& getter_elements = boost::get<List>(result.result);
+	List& elements = (result.needs_to_be_saved ? temp_elements = std::move(getter_elements), temp_elements : getter_elements);
+
+	std::unordered_map<uint16_t, std::pair<Variable&, std::vector<Rule*>>> todo;
+	todo.reserve(elements.size());
+	uint16_t world_number = 0u;
+	Rule *first_rule = subrules.get().front().get();
+	std::vector<Rule*> list_with_first_rule = {first_rule};
+	for (Variable& element : elements) {
+		todo.emplace(std::piecewise_construct,
+                    std::forward_as_tuple(world_number++),
+                    std::forward_as_tuple(element, list_with_first_rule));
+	}
+
+	state.registerCallback(this);
+	Map& toplevel = boost::get<Map>(state.getVariables());
+	while(!todo.empty()) {
+		for (auto it = todo.begin(); it != todo.end();) {
+			auto& [element, unfinished_rules] = it->second;
+			// Place the current element into the game's variable tree
+			toplevel[element_name] = getReference(element);
+			// Reflect the changed state using the "parallel world number"
+			// Due to the parallel world number, all subsequent rules, even if the are the same rules inside the configuration
+			// will have a different state
+			state.setParallelWorldNumber(it->first);
+			// Run the unfinished rules
+			Rule* last_unfinished  = unfinished_rules.back();
+			unfinished_rules.pop_back();
+			last_unfinished->run(server, state);
+			for (auto it = rule_state.last_run.rbegin(); it != rule_state.last_run.rend(); ++it) {
+				unfinished_rules.push_back(*it);
+			}
+			rule_state.last_run.clear();
+			if (unfinished_rules.size() == 0u) {
+				it = todo.erase(it);
+			}
+			else {
+				++it;
+			}
+		}
+		// std::remove_if(rule_state.todo.begin(), rule_state.todo.end(), [](const auto& iter) {
+		// 	return iter.second.size() == 0u;	// remove finished rules
+		// });
+	}
+	state.setParallelWorldNumber(0u);
+	state.deregisterCallback(this);
+	state.deleteState(this);
+}
+
+CallbackResult ParallelForRule::check(GameState& state, Rule* ptr)
+{
+	auto& rule_state_ptr = state.getPureState(this);
+	ParallelRulesState& rule_state = *static_cast<ParallelRulesState*>(rule_state_ptr.get());
+	rule_state.last_run.push_back(ptr);
+	return {true, true}; // first true: the rule should stop, second true: the rule will be resumed
+}
 
 void GlobalMessageRule::run(Server& server, GameState& state)
 {
@@ -470,25 +980,48 @@ void ScoresRule::run(Server& server, GameState& state)
 	}
 }
 
+class ForEachState : public RuleState
+{
+public:
+	ForEachState(List& getter_elements, bool needs_to_be_saved)
+	:	elements(needs_to_be_saved ? temp_elements = std::move(getter_elements), temp_elements : getter_elements),
+		iterator(elements.begin())
+	{ }
+
+	List temp_elements;
+	List& elements;
+	List::iterator iterator;
+};
+
 void ForEachRule::run(Server& server, GameState& state)
 {
-	Getter getter(list, state.getVariables());
-	GetterResult result = getter.get();
-	List temp;
-	List& elements = result.needs_to_be_saved ? temp = std::move(boost::get<List>(result.result)), temp : boost::get<List>(result.result);
+	auto& rule_state_ptr = state.getState(this);
+	if(!rule_state_ptr) {
+		Getter getter(list, state.getVariables());
+		GetterResult result = getter.get();
+		rule_state_ptr = std::make_unique<ForEachState>(boost::get<List>(result.result), result.needs_to_be_saved);
+	}
+	ForEachState& foreach_state = *static_cast<ForEachState*>(rule_state_ptr.get());
+	
 	Map& toplevel = boost::get<Map>(state.getVariables());
-	for (Variable& element : elements) {
-		if(!state.checkCallbacks()) {
-			return;
-		}
+	for (; foreach_state.iterator != foreach_state.elements.end(); ++foreach_state.iterator) {
+		Variable& element = *foreach_state.iterator;
 		toplevel[element_name] = getReference(element);
 		//PrintTheThing p;
 		//boost::apply_visitor(p, state.getVariables());
 		subrules.run(server, state);
+		if(auto [should_stop, will_be_resumed] = state.checkCallbacks(this); should_stop) {
+			++foreach_state.iterator;
+			if (!will_be_resumed) {
+				state.deleteState(this);
+			}
+			return;
+		}
 	}
+	state.deleteState(this);
 }
 
-void WhenRule::run(Server& server, GameState& state)
+void Cases::run(Server& server, GameState& state)
 {
 	for(Case& current_case : cases) {
 		if (current_case.condition.evaluate(state.getVariables())) {
@@ -498,7 +1031,32 @@ void WhenRule::run(Server& server, GameState& state)
 	}
 }
 
+void WhenRule::run(Server& server, GameState& state)
+{
+	cases.run(server, state);
+}
+
+void SwitchRule::run(Server& server, GameState& state)
+{
+	cases.run(server, state);
+}
+
+class InputRulesState : public RuleState
+{
+public:
+	InputRulesState(int duration) : prompt_sent(false), timer(duration) { }
+
+	bool prompt_sent;
+	Timer timer;
+};
+
 void InputChoiceRule::run(Server& server, GameState& state){
+	auto& rule_state_ptr = state.getState(this);
+	if(!rule_state_ptr) {
+		rule_state_ptr = std::make_unique<InputRulesState>(timeout.value_or(300));
+	}
+	InputRulesState& input_rule_state = *static_cast<InputRulesState*>(rule_state_ptr.get());
+
 	//  Get the player name
 	Getter getter(to, state.getVariables());
 	GetterResult player_result = getter.get();
@@ -507,10 +1065,6 @@ void InputChoiceRule::run(Server& server, GameState& state){
 	const std::string& player_name = boost::get<std::string>(player["name"]);
 	Connection player_connection = state.getConnectionByName(player_name);
 
-	// Write the prompt to buffer
-	std::ostringstream buffer;
-	buffer << prompt.fill_with(state.getVariables()) << std::endl;
-
 	// Get the list of choices (from a <Query, List> variant)
 	ResolveQuery<List> get_list_of_choices(state.getVariables());
 	List& list_of_choices = boost::apply_visitor(get_list_of_choices, choices);
@@ -518,21 +1072,24 @@ void InputChoiceRule::run(Server& server, GameState& state){
 		throw std::runtime_error{"Input Choice: list of choices must be non-empty"};
 	}
 
-	// Write the choices to buffer
-	StringConverter to_string;
-	for(size_t i = 0u; i < list_of_choices.size(); ++i){
-		buffer << '\t' << i + 1 << ". " << boost::apply_visitor(to_string, list_of_choices[i]) << std::endl;
+	if(!input_rule_state.prompt_sent) {
+		// Write the prompt to buffer
+		std::ostringstream buffer;
+		buffer << prompt.fill_with(state.getVariables()) << std::endl;
+
+		// Write the choices to buffer
+		StringConverter to_string;
+		for(size_t i = 0u; i < list_of_choices.size(); ++i){
+			buffer << '\t' << i + 1 << ". " << boost::apply_visitor(to_string, list_of_choices[i]) << std::endl;
+		}
+		buffer << std::endl;
+		server.send({player_connection, buffer.str()});
+		input_rule_state.prompt_sent = true;
 	}
-	buffer << std::endl;
-	server.send({player_connection, buffer.str()});
 	
 	// Read user input
-	Timer timer(timeout.value_or(300));	// 5 minutes max
 	size_t player_choice = list_of_choices.size();	// invalid choice
-	while(timer.hasnt_expired()) {
-		if (!state.checkCallbacks()) {
-			return;
-		}
+	while(input_rule_state.timer.hasnt_expired()) {
 		auto received = server.receive(player_connection);
 		if(received.has_value()) {
 			std::string input = std::move(received.value());
@@ -550,6 +1107,12 @@ void InputChoiceRule::run(Server& server, GameState& state){
 				server.send({player_connection,"Please enter a valid choice!\n\n"});
 			}
 		}
+		if(auto [should_stop, will_be_resumed] = state.checkCallbacks(this); should_stop) {
+			if (!will_be_resumed) {
+				state.deleteState(this);
+			}
+			return;
+		}
 	}
 	
 	if (player_choice >= list_of_choices.size()) {
@@ -563,11 +1126,18 @@ void InputChoiceRule::run(Server& server, GameState& state){
 	assert(!getter_result.needs_to_be_saved);
 	getter_result.result = list_of_choices.at(player_choice);
 
+	state.deleteState(this);
 	// PrintTheThing p;
 	// boost::apply_visitor(p, state.getVariables());
 }
 
 void InputTextRule::run(Server& server, GameState& state){ //IT'S WORKING
+	auto& rule_state_ptr = state.getState(this);
+	if(!rule_state_ptr) {
+		rule_state_ptr = std::make_unique<InputRulesState>(timeout.value_or(300));
+	}
+	InputRulesState& input_rule_state = *static_cast<InputRulesState*>(rule_state_ptr.get());
+
 	//  Get the player name
 	Getter getter(to, state.getVariables());
 	GetterResult player_result = getter.get();
@@ -575,41 +1145,50 @@ void InputTextRule::run(Server& server, GameState& state){ //IT'S WORKING
 	Map& player = boost::get<Map>(player_result.result);
 	const std::string& player_name = boost::get<std::string>(player["name"]);
 	Connection player_connection = state.getConnectionByName(player_name);
+	
+	if(!input_rule_state.prompt_sent) {
+		server.send({player_connection, prompt.fill_with(state.getVariables())});
+		input_rule_state.prompt_sent = true;
+	}
 
-	std::string input = " ";
+	std::string input;
 	// Read user input
-	Timer timer(timeout.value_or(300));	// 5 minutes max
-	while(timer.hasnt_expired()) {
-		if (!state.checkCallbacks()) {
-			return;
-		}
+	while(input_rule_state.timer.hasnt_expired()) {
 		auto received = server.receive(player_connection);
 		if(received.has_value()) {
 			input = std::move(received.value());
-				server.send({player_connection, player_name + " sent you a text: " + input + "\n\n"});
-				break;	// valid choice has been entered
+			server.send({player_connection, input + "\n\n"});
+			break;	// valid choice has been entered
+		}
+		if(auto [should_stop, will_be_resumed] = state.checkCallbacks(this); should_stop) {
+			if (!will_be_resumed) {
+				state.deleteState(this);
+			}
+			return;
 		}
 	}
-	if(input == " ")
-		server.send({player_connection,"Timeout!\n\n"});
+	if(input.size() == 0u) {
+		server.send({player_connection, "Timeout!\n\n"});
+	}
 
-	// Getter getterResult(this->result, state.getVariables());
-	// GetterResult resultResult = getterResult.get();
-	// std::string& resultString = boost::get<std::string>(resultResult.result);
-	// resultString = input;
+	getter.setQuery(this->result); 
+	GetterResult getter_result = getter.get(true);	// create a variable attribute if it doesn't exist
+	assert(!getter_result.needs_to_be_saved);
+	getter_result.result = input;
 
-	//for testing
-	// PrintTheThing p2;
-    // boost::apply_visitor(p2, state.getVariables());
-
+	state.deleteState(this);
 }
 
 
+// This rule needs to be finished
 void InputVoteRule::run(Server& server, GameState& state){
-	// Has to be placed somewhere to allow timers to terminate the rule
-	// if (!state.checkCallbacks()) {
-	// 	return;
+	// Implement the timeout!
+
+	// auto& rule_state_ptr = state.getState(this);
+	// if(!rule_state_ptr) {
+	// 	rule_state_ptr = std::make_unique<InputRulesState>(timeout.value_or(300));
 	// }
+	// InputRulesState& input_rule_state = *static_cast<InputRulesState*>(rule_state_ptr.get());
 
 	//Send message to the player/audience list
 	Getter getter(to, state.getVariables());
@@ -677,6 +1256,13 @@ void InputVoteRule::run(Server& server, GameState& state){
 			if(!isValid){
 				server.send({state.getConnectionByName(name),"Please input correct choice!\n"});
 			}
+
+			// if(auto [should_stop, will_be_resumed] = state.checkCallbacks(); should_stop) {
+			// 	// if (!will_be_resumed) {
+			// 	// 	state.deleteState(this);
+			// 	// }
+			// 	return;
+			// }
 		}
 
 		//modify vote count

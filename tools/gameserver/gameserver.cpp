@@ -134,7 +134,7 @@ struct GameSession {
     if (players.size() > configuration->getPlayerCountMax()) {
       std::ostringstream ostream;
       ostream << "Too many players for this game. You need to evict "
-        << configuration->getPlayerCountMax() - players.size() << " player(s)\n\n";
+        << players.size() - configuration->getPlayerCountMax() << " player(s)\n\n";
       return {ostream.str(), false};
     }
     if (players.size() < configuration->getPlayerCountMin()) {
@@ -156,7 +156,7 @@ struct GameSession {
       for (const auto& [connection, name] : players) {
         name2connection.emplace(name, connection);
       }
-      game_state = std::make_unique<GameState>(*configuration, std::move(name2connection));
+      game_state = std::make_unique<GameState>(*configuration, std::move(name2connection), game_owner);
       std::thread t([this, &server]() {
         detached = true;
         std::cout << "Session " << id << " is set free" << std::endl;
@@ -229,12 +229,13 @@ onDisconnect(Connection c, Server& server) {
   sessionMap.erase(c);
   std::cout << "Session " << session->id << " has lost connection with " << session->players.at(c) << std::endl;
   for(const auto& [connection, name] : session->players) {
-    server.send({connection, name + " has left\n\n"});
+    server.send({connection, session->players.at(c) + " has left\n\n"});
   }
   session->players.erase(c);
   if(session->players.empty())
   {
     std::cout << "No players left. Shutting down session " << session->id << std::endl;
+    while (session->detached) { std::this_thread::sleep_for(std::chrono::milliseconds(100)); }
     gameSessions.erase(std::remove_if(std::begin(gameSessions), std::end(gameSessions), [](std::unique_ptr<GameSession>& session) { return session->players.empty(); }), std::end(gameSessions));
   }
 }
@@ -371,6 +372,7 @@ main(int argc, char* argv[]) {
       if(session->players.empty())
       {
         std::cout << "No players left. Shutting down session " << session->id << std::endl;
+        while (session->detached) { std::this_thread::sleep_for(std::chrono::milliseconds(100)); }
         gameSessions.erase(std::remove_if(std::begin(gameSessions), std::end(gameSessions), [](const std::unique_ptr<GameSession>& session) { return session->players.empty(); }), std::end(gameSessions));
         continue;
       }

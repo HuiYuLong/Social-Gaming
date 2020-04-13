@@ -1,0 +1,111 @@
+{
+    "configuration": {
+        "name": "Setup Test",
+        "player count": {
+            "min": 1,
+            "max": 1
+        },
+        "audience": false,
+        "setup": {
+            "Rounds": 3,
+            "Message": "this is a string",
+            "Condition": true,
+            "UnknownRounds": {
+                "kind": "integer",
+                "prompt": "This prompts you to enter an integer"
+            },
+            "UnknownMessage": {
+                "kind": "string",
+                "prompt": "This prompts you to enter a string"
+            },
+            "UnknownCondition": {
+                "kind": "boolean",
+                "prompt": "This prompts you to enter a boolean"
+            },
+            "Questions": {
+                "kind": "question-answer",
+                "prompt": "This prompts you to enter some questions"
+            },
+            "MultipleChoice": {
+                "kind": "multiple-choice",
+                "prompt": "This prompts you to enter a multiple choice test"
+            }
+        }
+    },
+
+    "constants": {},
+
+    "variables": {},
+
+    "per-player": {},
+
+    "per-audience": {},
+
+    "rules": [{
+            "rule": "global-message",
+            "value": "{configuration.Rounds}\n{configuration.Message}\n{configuration.Condition}\n{configuration.UnknownRounds}\n{configuration.UnknownMessage}\n{configuration.UnknownCondition}\n"
+        },
+        {
+            "rule": "foreach",
+            "list": "configuration.Questions",
+            "element": "question",
+            "rules": [{
+                    "rule": "input-text",
+                    "to": "players.at(0)",
+                    "prompt": "{question.question}",
+                    "result": "answer",
+                    "timeout": 15
+                },
+                {
+                    "rule": "when",
+                    "cases": [{
+                            "condition": "answer == question.answer",
+                            "rules": [{
+                                "rule": "global-message",
+                                "value": "Correct!"
+                            }]
+                        },
+                        {
+                            "condition": true,
+                            "rules": [{
+                                "rule": "global-message",
+                                "value": "Wrong!"
+                            }]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "rule": "foreach",
+            "list": "configuration.MultipleChoice",
+            "element": "question",
+            "rules": [{
+                    "rule": "input-choice",
+                    "to": "players.at(0)",
+                    "prompt": "{question.question}",
+                    "choices": "question.choices",
+                    "result": "choice"
+                },
+                {
+                    "rule": "when",
+                    "cases": [{
+                            "condition": "choice == question.correct_choice",
+                            "rules": [{
+                                "rule": "global-message",
+                                "value": "Correct!"
+                            }]
+                        },
+                        {
+                            "condition": true,
+                            "rules": [{
+                                "rule": "global-message",
+                                "value": "Wrong!"
+                            }]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

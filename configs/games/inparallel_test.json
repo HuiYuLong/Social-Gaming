@@ -1,0 +1,236 @@
+{
+    "configuration": {
+        "name": "Inparallel test",
+        "player count": {
+            "min": 2,
+            "max": 2
+        },
+        "audience": false,
+        "setup": {}
+    },
+
+    "constants": {
+        "choices": ["Yes", "No", "A little bit"],
+        "plants": [{
+                "kind": "Trees",
+                "list": ["Oak", "Spruce", "Willow"]
+            },
+            {
+                "kind": "Berries",
+                "list": ["Watermealon"]
+            }
+        ],
+        "weapons": [{
+                "name": "Rock",
+                "beats": "Scissors"
+            },
+            {
+                "name": "Paper",
+                "beats": "Rock"
+            },
+            {
+                "name": "Scissors",
+                "beats": "Paper"
+            }
+        ]
+    },
+
+    "variables": {
+        "count": 0,
+        "iterations": 10
+    },
+
+    "per-player": {},
+
+    "per-audience": {},
+
+    "rules": [{
+            "rule": "inparallel",
+            "rules": [{
+                    "rule": "global-message",
+                    "value": "Simultaneously adding 2 and subtracting 1 from 0"
+                },
+                {
+                    "rule": "add",
+                    "to": "count",
+                    "value": 2
+                },
+                {
+                    "rule": "add",
+                    "to": "count",
+                    "value": -1
+                }
+            ]
+        },
+        {
+            "rule": "global-message",
+            "value": "Result: {count}"
+        },
+        {
+            "rule": "pause",
+            "duration": 3
+        },
+
+        {
+            "rule": "inparallel",
+            "rules": [{
+                    "rule": "foreach",
+                    "list": "plants",
+                    "element": "plant_kind",
+                    "rules": [{
+                            "rule": "foreach",
+                            "list": "plant_kind.list",
+                            "element": "plant",
+                            "rules": [{
+                                    "rule": "global-message",
+                                    "value": "{plant_kind.kind}: {plant}"
+                                },
+                                {
+                                    "rule": "add",
+                                    "to": "count",
+                                    "value": 1
+                                }
+                            ]
+                        }
+
+                    ]
+                },
+                {
+                    "rule": "loop",
+                    "until": "count == 4",
+                    "rules": [{
+                        "rule": "when",
+                        "cases": [{
+                                "condition": "count == 5",
+                                "rules": [{
+                                    "rule": "global-message",
+                                    "value": "Error in the loop"
+                                }]
+                            },
+                            {
+                                "condition": true,
+                                "rules": [{
+                                    "rule": "global-message",
+                                    "value": "~~~"
+                                }]
+                            }
+                        ]
+                    }]
+                },
+                {
+                    "rule": "foreach",
+                    "list": "iterations.upfrom(0)",
+                    "element": "i",
+                    "rules": [{
+                        "rule": "global-message",
+                        "value": "{i}"
+                    }]
+                }
+            ]
+        },
+        {
+            "rule": "when",
+            "cases": [{
+                    "condition": "count == 5",
+                    "rules": [{
+                        "rule": "global-message",
+                        "value": "Final count is correct"
+                    }]
+                },
+                {
+                    "condition": true,
+                    "rules": [{
+                        "rule": "global-message",
+                        "value": "There was an error"
+                    }]
+                }
+            ]
+        },
+        {
+            "rule": "pause",
+            "duration": 5
+        },
+        {
+            "rule": "inparallel",
+            "rules": [{
+                    "rule": "input-choice",
+                    "to": "players.at(0)",
+                    "prompt": "Does this solution use threads?",
+                    "choices": "choices",
+                    "result": "result_0",
+                    "timeout": 15
+                },
+                {
+                    "rule": "input-choice",
+                    "to": "players.at(1)",
+                    "prompt": "Does this solution use threads?",
+                    "choices": "choices",
+                    "result": "result_1",
+                    "timeout": 15
+                }
+            ]
+        },
+        {
+            "rule": "inparallel",
+            "rules": [{
+                    "rule": "switch",
+                    "value": "result_0",
+                    "cases": [{
+                            "case": "Yes",
+                            "rules": [{
+                                "rule": "message",
+                                "to": "players.at(0)",
+                                "value": "A little bit"
+                            }]
+                        },
+                        {
+                            "case": "No",
+                            "rules": [{
+                                "rule": "message",
+                                "to": "players.at(0)",
+                                "value": "A little bit"
+                            }]
+                        },
+                        {
+                            "case": "A little bit",
+                            "rules": [{
+                                "rule": "message",
+                                "to": "players.at(0)",
+                                "value": "The server uses threads to run different games, but the parallel rules inside those games are interleaved to simulate parallelism without the use of threads"
+                            }]
+                        }
+                    ]
+                },
+                {
+                    "rule": "switch",
+                    "value": "result_1",
+                    "cases": [{
+                            "case": "Yes",
+                            "rules": [{
+                                "rule": "message",
+                                "to": "players.at(1)",
+                                "value": "A little bit"
+                            }]
+                        },
+                        {
+                            "case": "No",
+                            "rules": [{
+                                "rule": "message",
+                                "to": "players.at(1)",
+                                "value": "A little bit"
+                            }]
+                        },
+                        {
+                            "case": "A little bit",
+                            "rules": [{
+                                "rule": "message",
+                                "to": "players.at(1)",
+                                "value": "The server uses threads to run different games, but the parallel rules inside those games are interleaved to simulate parallelism without the use of threads"
+                            }]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

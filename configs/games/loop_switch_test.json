@@ -1,0 +1,66 @@
+{
+    "configuration": {
+        "name": "Loop switch test",
+        "player count": {
+            "min": 1,
+            "max": 1
+        },
+        "audience": false,
+        "setup": {}
+    },
+
+    "constants": {},
+
+    "variables": {},
+
+    "per-player": {},
+
+    "per-audience": {},
+
+    "rules": [
+        {
+            "rule": "global-message",
+            "value": "The loop will iterate until a 10 second track timer sets a flag"
+        },
+        {
+            "rule": "timer",
+            "duration": 10,
+            "mode": "track",
+            "flag": "flag",
+            "rules": [{
+                "rule": "loop",
+                "while": "!flag",
+                "rules": [{
+                    "rule": "loop",
+                    "until": "flag",
+                    "rules": [
+                        {
+                            "rule": "pause",
+                            "duration": 1
+                        },
+                        {
+                            "rule": "switch",
+                            "value": "flag",
+                            "cases": [{
+                                    "case": true,
+                                    "rules": [{
+                                        "rule": "global-message",
+                                        "value": "Flag is set"
+                                    }]
+                                },
+                                {
+                                    "case": false,
+                                    "rules": [{
+                                        "rule": "global-message",
+                                        "value": "Flag is not set"
+                                    }]
+                                }
+
+                            ]
+                        }
+                    ]
+                }]
+            }]
+        }
+    ]
+}

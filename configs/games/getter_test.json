@@ -1,0 +1,65 @@
+{
+  "configuration": {
+    "name": "Getter test",
+    "player count": {
+      "min": 1,
+      "max": 4
+    },
+    "audience": false,
+    "setup": {
+      "Rounds": 10
+    }
+  },
+
+  "constants": {
+    "weapons": [{
+        "name": "Rock",
+        "beats": "Scissors"
+      },
+      {
+        "name": "Paper",
+        "beats": "Rock"
+      },
+      {
+        "name": "Scissors",
+        "beats": "Paper"
+      }
+    ]
+  },
+
+  "variables": {
+    "weapon": {
+      "name": "Low Orbit Ion Cannon",
+      "beats": "Rock"
+    },
+    "winners": ["Apparently variable lists can contain different types", "Like this string and the following player maps"]
+  },
+
+  "per-player": {
+    "wins": 0,
+    "weapon": "Rock"
+  },
+
+  "per-audience": {},
+
+  "rules": [{
+      "rule": "global-message",
+      "value": "Winners size before: {winners.size}"
+    },
+    {
+      "rule": "when",
+      "cases": [{
+        "condition": "!players.elements.weapon.contains(weapon.name)",
+        "rules": [{
+          "rule": "extend",
+          "target": "winners",
+          "list": "players.collect(player, player.weapon == weapon.beats)"
+        }]
+      }]
+    },
+    {
+      "rule": "global-message",
+      "value": "Winners now: {winners}"
+    }
+  ]
+}

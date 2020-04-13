@@ -71,7 +71,7 @@ public:
     virtual void run(Server& server, GameState& state) = 0;
 };
 
-class RuleList
+class RuleList : public Rule
 {
     std::vector<std::unique_ptr<Rule>> rules;
 
@@ -81,7 +81,21 @@ public:
 
     RuleList(const nlohmann::json& json_rules);
 
-    void run(Server& server, GameState& state);
+    std::vector<std::unique_ptr<Rule>>& get();
+
+    void run(Server& server, GameState& state) override;
+};
+
+class SetupRule : public Rule
+{
+    using Parameter = boost::variant<bool, int, std::string, Map>;
+
+    std::vector<std::pair<std::string, Parameter>> parameters;
+
+public:
+    SetupRule(const nlohmann::json& setup);
+
+    void run(Server& server, GameState& state) override;
 };
 
 // Contains the game configuration independent of a particular game instance
@@ -92,15 +106,10 @@ public:
         player_count_min(config["configuration"]["player count"]["min"]),
         player_count_max(config["configuration"]["player count"]["max"]),
         core_variables(Map()),
-        rules(config["rules"])
+        rules(config["rules"]),
+        setup(config["configuration"]["setup"])
     {
-        Map& map = boost::get<Map>(core_variables);
-        // Put "setup" variables into "configuration" submap
-        map["configuration"] = Map();
-        Map& configuration = boost::get<Map>(map["configuration"]);
-        for(const auto&[key, value]: config["configuration"]["setup"].items()) {
-            configuration[key] = buildVariables(value);
-        }
+        Map& map = boost::get<Map>(core_variables);        
         // Put variables into the top-level map
         for(const auto&[key, value]: config["variables"].items()) {
             map[key] = buildVariables(value);
@@ -134,7 +143,7 @@ public:
     const Variable& getVariables() const { return core_variables; } 
     const Variable& getPerPlayer() const { return per_player; }
     const Variable& getPerAudience() const { return per_audience; }
-    void launchGame(Server& server, GameState& state) { rules.run(server, state); }
+    void launchGame(Server& server, GameState& state) { setup.run(server, state); rules.run(server, state); }
     //std::thread launchGameDetached(Server& server) { return rules.spawnDetached(server, *this); }
 
 private:
@@ -145,20 +154,36 @@ private:
     Variable per_player;
     Variable per_audience;
     RuleList rules;
+    SetupRule setup;
+};
+
+struct CallbackResult
+{
+    bool should_stop;
+    bool will_be_resumed;
 };
 
 class Callback
 {
 public:
-    virtual bool check(GameState&) = 0;
+    // a pair indicating whether the rule should stop and whether it is going to be continued
+    virtual CallbackResult check(GameState&, Rule*) = 0;
+};
+
+class RuleState
+{
+public:
+    virtual ~RuleState() {};
 };
 
 // Each game session's private game state that holds the variable tree and the mapping of in-game names to connections
 class GameState {
 public:
-    GameState(const Configuration& conf, const Name2Connection& name2connection)
+    GameState(const Configuration& conf, const Name2Connection& name2connection, Connection game_owner)
     :   toplevel(conf.getVariables()),      // copy
-        name2connection(name2connection)    // copy
+        name2connection(name2connection),   // copy
+        game_owner(game_owner),
+        parallel_world_number(reinterpret_cast<uintptr_t>(nullptr))
     {
         Map& toplevelmap = boost::get<Map>(toplevel);
         List& players = boost::get<List>(toplevelmap["players"]);
@@ -173,21 +198,51 @@ public:
 
     Variable& getVariables() { return toplevel; }
     Connection getConnectionByName(const std::string& name) { return name2connection.at(name); }
-    void registerCallback(Callback& callback) { callbacks.push_back(&callback); }
-    void deregisterCallback(Callback& callback) { callbacks.erase(std::remove(callbacks.begin(), callbacks.end(), &callback), callbacks.end()); }
-    bool checkCallbacks() { return std::all_of(callbacks.begin(), callbacks.end(), [this](Callback* callback) { return callback->check(*this); }); }
+    Connection getGameOwnerConnection() { return game_owner; }
+    void registerCallback(Callback* callback) { callbacks.push_back(callback); }
+    void deregisterCallback(Callback* callback) { callbacks.erase(std::remove(callbacks.begin(), callbacks.end(), callback), callbacks.end()); }
+    CallbackResult checkCallbacks(Rule *rule)
+    {
+        for (auto it = callbacks.rbegin(); it != callbacks.rend(); ++it) {
+            CallbackResult result = (*it)->check(*this, rule);
+            if (result.should_stop) {
+                return result;
+            }
+        }
+        return CallbackResult{false, false};
+    }
+    std::unique_ptr<RuleState>& getState(Rule* rule) { return rule_states[reinterpret_cast<uintptr_t>(rule) | parallel_world_number]; }
+    std::unique_ptr<RuleState>& getPureState(Rule* rule) { return rule_states[reinterpret_cast<uintptr_t>(rule)]; }
+    void deleteState(Rule* rule) { rule_states.erase(reinterpret_cast<uintptr_t>(rule) | parallel_world_number); }
+    void setParallelWorldNumber(uint16_t number) { uintptr_t extended = number; parallel_world_number = extended << 48; }
 private:
     Variable toplevel;
     Name2Connection name2connection;
+    Connection game_owner;
     std::vector<Callback*> callbacks;   // used by timers
+    std::unordered_map<uintptr_t, std::unique_ptr<RuleState>> rule_states;
+    uintptr_t parallel_world_number;    // almost crazy
 };
 
 struct Case
 { 
-    Case(const nlohmann::json& case_);
+    Case(const nlohmann::json& json_case);
+
+    Case(const nlohmann::json& json_case, const Query& value);
 
 	Condition condition;
 	RuleList subrules;
+};
+
+class Cases
+{
+	std::vector<Case> cases;
+public:
+	Cases(const nlohmann::json& json_cases);
+
+    Cases(const nlohmann::json& json_cases, const Query& value);
+
+	void run(Server&, GameState&);
 };
 
 // Builds a string with all {...} variable references replaced by their values
@@ -236,9 +291,6 @@ public:
     }
 };
 
-using ruleType = std::string;
-
-
 class AddRule : public Rule{
 private:
     Query to;
@@ -250,12 +302,19 @@ public:
 
 };
 
-class TimerRuleImplementation
+class TimerRuleState : public RuleState
+{
+public:
+	TimerRuleState(int duration);
+
+	Timer timer;
+};
+
+class TimerRuleImplementation : public Rule
 {
 protected:
     int duration;
     RuleList subrules;
-    std::unique_ptr<Timer> timer;
 public:
     TimerRuleImplementation(int duration, const nlohmann::json& subrules);
 
@@ -269,7 +328,7 @@ public:
 
     void run(Server& server, GameState& state) override;
 
-    bool check(GameState&) override;
+    CallbackResult check(GameState&, Rule*) override;
 };
 
 class ExactTimer : public TimerRuleImplementation, public Callback
@@ -279,7 +338,7 @@ public:
 
     void run(Server& server, GameState& state) override;
 
-    bool check(GameState&) override;
+    CallbackResult check(GameState&, Rule*) override;
 };
 
 class TrackTimer : public TimerRuleImplementation, public Callback
@@ -290,7 +349,7 @@ public:
 
     void run(Server& server, GameState& state) override;
 
-    bool check(GameState&) override;
+    CallbackResult check(GameState&, Rule*) override;
 };
 
 class TimerRule : public Rule {
@@ -342,7 +401,7 @@ class InputVoteRule : public Rule{
 private:
     Query to; 
     Text prompt; 
-    ruleType choices;
+    std::string choices;
     Query result;
 public:
     InputVoteRule(const nlohmann::json& rule);
@@ -401,7 +460,7 @@ public:
   
 class ReverseRule : public Rule{
 private:
-    ruleType list;
+    std::string list;
 public:
     ReverseRule(const nlohmann::json& rule);
     
@@ -411,7 +470,7 @@ public:
 
 class ShuffleRule : public Rule{
 private:
-    ruleType list;
+    std::string list;
 public:
     ShuffleRule(const nlohmann::json& rule);
     
@@ -422,7 +481,7 @@ public:
 // Sorts a list in ascending order
 class SortRule : public Rule {
 private:
-    ruleType list;
+    std::string list;
     // Variable key;
 public:
     SortRule(const nlohmann::json& rule);
@@ -433,8 +492,8 @@ public:
 
 class DealRule : public Rule {
 private:
-    ruleType from;
-    ruleType to;
+    std::string from;
+    std::string to;
     int count;
 public:
     DealRule(const nlohmann::json& rule);
@@ -456,7 +515,7 @@ public:
 class ForEachRule : public Rule {
 private:
     Query list;
-    ruleType element_name;
+    std::string element_name;
     RuleList subrules;
 
 public:
@@ -469,6 +528,7 @@ public:
 
 class LoopRule : public Rule {
 private:
+    bool untilLoop;
     Condition failCondition;
     RuleList subrules;
 public:
@@ -477,34 +537,34 @@ public:
 
 };
   
-class InParallelRule : public Rule {
+class InParallelRule : public Rule, public Callback {
 private:
-    RuleList subrules;
+    RuleList  subrules;
 public:
     InParallelRule(const nlohmann::json& rule);
 
     void run(Server& server, GameState& state) override;
 
+    CallbackResult check(GameState&, Rule*) override;
 };
 
-class ParallelForRule : public Rule {
+class ParallelForRule : public Rule, public Callback {
 private:
-    ruleType list;
-    ruleType element;
+    Query list;
+    std::string element_name;
     RuleList subrules;
 public:
     ParallelForRule(const nlohmann::json& rule);
 
     void run(Server& server, GameState& state) override;    
 
+    CallbackResult check(GameState&, Rule*) override;
 };
 
 // Sorts a list in ascending order
 class SwitchRule : public Rule {
 private:
-    ruleType list;
-    ruleType value;
-    std::vector<Case> cases;
+    Cases cases;
 public:
     SwitchRule(const nlohmann::json& rule);
 
@@ -514,7 +574,7 @@ public:
 
 class WhenRule : public Rule {
 private:
-    std::vector<Case> cases;
+    Cases cases;
 public:
     WhenRule(const nlohmann::json& rule);
 
