@@ -21,7 +21,7 @@
 
           { "rule": "input-choice",
             "to": "players.at(0)",
-            "prompt": "Choose from a list given by varaible name",
+            "prompt": "Choose from a list given by variable name",
             "choices": "list",
             "result": "result"
           },

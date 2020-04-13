@@ -81,6 +81,8 @@ public:
 
     RuleList(const nlohmann::json& json_rules);
 
+    std::vector<std::unique_ptr<Rule>>& get();
+
     void run(Server& server, GameState& state) override;
 };
 
@@ -165,7 +167,7 @@ class Callback
 {
 public:
     // a pair indicating whether the rule should stop and whether it is going to be continued
-    virtual CallbackResult check(GameState&) = 0;
+    virtual CallbackResult check(GameState&, Rule*) = 0;
 };
 
 class RuleState
@@ -196,26 +198,26 @@ public:
     Variable& getVariables() { return toplevel; }
     Connection getConnectionByName(const std::string& name) { return name2connection.at(name); }
     Connection getGameOwnerConnection() { return game_owner; }
-    void registerCallback(Callback& callback) { callbacks.push_back(&callback); }
-    void deregisterCallback(Callback& callback) { callbacks.erase(std::remove(callbacks.begin(), callbacks.end(), &callback), callbacks.end()); }
-    CallbackResult checkCallbacks()
+    void registerCallback(Callback* callback) { callbacks.push_back(callback); }
+    void deregisterCallback(Callback* callback) { callbacks.erase(std::remove(callbacks.begin(), callbacks.end(), callback), callbacks.end()); }
+    CallbackResult checkCallbacks(Rule *rule)
     {
         for (Callback* callback : callbacks) {
-            CallbackResult result = callback->check(*this);
+            CallbackResult result = callback->check(*this, rule);
             if (result.should_stop) {
                 return result;
             }
         }
         return CallbackResult{false, false};
     }
-    std::unique_ptr<RuleState>& getState(Rule* rule) { return rule_states[reinterpret_cast<uintptr_t>(rule)]; }
-    void deregisterState(Rule* rule) { rule_states.erase(reinterpret_cast<uintptr_t>(rule)); }
+    std::unique_ptr<RuleState>& getState(Rule* rule) { return rule_states[rule]; }
+    void deleteState(Rule* rule) { rule_states.erase(rule); }
 private:
     Variable toplevel;
     Name2Connection name2connection;
     Connection game_owner;
     std::vector<Callback*> callbacks;   // used by timers
-    std::unordered_map<uintptr_t, std::unique_ptr<RuleState>> rule_states;
+    std::unordered_map<Rule*, std::unique_ptr<RuleState>> rule_states;
 };
 
 struct Case
@@ -322,7 +324,7 @@ public:
 
     void run(Server& server, GameState& state) override;
 
-    CallbackResult check(GameState&) override;
+    CallbackResult check(GameState&, Rule*) override;
 };
 
 class ExactTimer : public TimerRuleImplementation, public Callback
@@ -332,7 +334,7 @@ public:
 
     void run(Server& server, GameState& state) override;
 
-    CallbackResult check(GameState&) override;
+    CallbackResult check(GameState&, Rule*) override;
 };
 
 class TrackTimer : public TimerRuleImplementation, public Callback
@@ -343,7 +345,7 @@ public:
 
     void run(Server& server, GameState& state) override;
 
-    CallbackResult check(GameState&) override;
+    CallbackResult check(GameState&, Rule*) override;
 };
 
 class TimerRule : public Rule {
@@ -531,14 +533,15 @@ public:
 
 };
   
-class InParallelRule : public Rule {
+class InParallelRule : public Rule, public Callback {
 private:
-    RuleList subrules;
+    RuleList  subrules;
 public:
     InParallelRule(const nlohmann::json& rule);
 
     void run(Server& server, GameState& state) override;
 
+    CallbackResult check(GameState&, Rule*) override;
 };
 
 class ParallelForRule : public Rule {
