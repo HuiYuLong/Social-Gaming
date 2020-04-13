@@ -71,7 +71,7 @@ public:
     virtual void run(Server& server, GameState& state) = 0;
 };
 
-class RuleList
+class RuleList : public Rule
 {
     std::vector<std::unique_ptr<Rule>> rules;
 
@@ -81,7 +81,7 @@ public:
 
     RuleList(const nlohmann::json& json_rules);
 
-    void run(Server& server, GameState& state);
+    void run(Server& server, GameState& state) override;
 };
 
 class SetupRule : public Rule
@@ -155,10 +155,17 @@ private:
     SetupRule setup;
 };
 
+struct CallbackResult
+{
+    bool should_stop;
+    bool will_be_resumed;
+};
+
 class Callback
 {
 public:
-    virtual bool check(GameState&) = 0;
+    // a pair indicating whether the rule should stop and whether it is going to be continued
+    virtual CallbackResult check(GameState&) = 0;
 };
 
 class RuleState
@@ -191,7 +198,16 @@ public:
     Connection getGameOwnerConnection() { return game_owner; }
     void registerCallback(Callback& callback) { callbacks.push_back(&callback); }
     void deregisterCallback(Callback& callback) { callbacks.erase(std::remove(callbacks.begin(), callbacks.end(), &callback), callbacks.end()); }
-    bool checkCallbacks() { return std::all_of(callbacks.begin(), callbacks.end(), [this](Callback* callback) { return callback->check(*this); }); }
+    CallbackResult checkCallbacks()
+    {
+        for (Callback* callback : callbacks) {
+            CallbackResult result = callback->check(*this);
+            if (result.should_stop) {
+                return result;
+            }
+        }
+        return CallbackResult{false, false};
+    }
     std::unique_ptr<RuleState>& getState(Rule* rule) { return rule_states[reinterpret_cast<uintptr_t>(rule)]; }
     void deregisterState(Rule* rule) { rule_states.erase(reinterpret_cast<uintptr_t>(rule)); }
 private:
@@ -306,7 +322,7 @@ public:
 
     void run(Server& server, GameState& state) override;
 
-    bool check(GameState&) override;
+    CallbackResult check(GameState&) override;
 };
 
 class ExactTimer : public TimerRuleImplementation, public Callback
@@ -316,7 +332,7 @@ public:
 
     void run(Server& server, GameState& state) override;
 
-    bool check(GameState&) override;
+    CallbackResult check(GameState&) override;
 };
 
 class TrackTimer : public TimerRuleImplementation, public Callback
@@ -327,7 +343,7 @@ public:
 
     void run(Server& server, GameState& state) override;
 
-    bool check(GameState&) override;
+    CallbackResult check(GameState&) override;
 };
 
 class TimerRule : public Rule {

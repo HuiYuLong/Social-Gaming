@@ -8,6 +8,7 @@
         "configs/games/timers_test.json",
         "configs/games/argument_test.json",
         "configs/games/setup_test.json",
-        "configs/games/loop_switch_test.json"
+        "configs/games/loop_switch_test.json",
+        "configs/games/for_each_test.json"
     ]
 }
