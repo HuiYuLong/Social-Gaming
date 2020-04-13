@@ -17,9 +17,7 @@
   
     "constants": {},
   
-    "variables": {
-        "player": {"name": "Game Owner"}
-    },
+    "variables": {},
   
     "per-player": {},
   
@@ -36,7 +34,7 @@
         "element": "question",
         "rules": [
             { "rule": "input-text",
-            "to": "player",
+            "to": "players.at(0)",
             "prompt": "{question.question}",
             "result": "answer",
             "timeout": 15
@@ -66,7 +64,7 @@
             "element": "question",
             "rules": [
                 { "rule": "input-choice",
-                "to": "player",
+                "to": "players.at(0)",
                 "prompt": "{question.question}",
                 "choices": "question.choices",
                 "result": "choice"

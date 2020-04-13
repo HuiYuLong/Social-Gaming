@@ -6,9 +6,7 @@
       "setup": {}
     },
   
-    "constants": {
-      "player": {"name": "Game Owner"}
-    },
+    "constants": {},
   
     "variables": {},
   

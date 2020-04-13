@@ -18,8 +18,7 @@
   
     "variables": {
       "wise_choice": "Wise choice",
-      "count": 0,
-      "player": {"name": "Game Owner"}
+      "count": 0
     },
   
     "per-player": {
@@ -39,7 +38,7 @@
             "mode": "at most",
             "rules": [
                 { "rule": "input-choice",
-                    "to": "player",
+                    "to": "players.at(0)",
                     "prompt": "Choose wisely!",
                     "choices": ["Default choice", "Wise choice"],
                     "result": "choice"
@@ -72,7 +71,7 @@
             "mode": "exact",
             "rules": [
                 { "rule": "input-choice",
-                    "to": "player",
+                    "to": "players.at(0)",
                     "prompt": "Choose wisely!",
                     "choices": ["Default choice", "Wise choice"],
                     "result": "choice"
@@ -131,7 +130,7 @@
                             "mode": "exact",
                             "rules": [
                                 { "rule": "input-choice",
-                                    "to": "player",
+                                    "to": "players.at(0)",
                                     "prompt": "Choose wisely!",
                                     "choices": ["Default choice", "Wise choice"],
                                     "result": "choice"

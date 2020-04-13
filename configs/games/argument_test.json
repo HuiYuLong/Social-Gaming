@@ -6,9 +6,7 @@
       "setup": {}
     },
   
-    "constants": {
-      "player": {"name": "Game Owner"}
-    },
+    "constants": {},
   
     "variables": {
       "list": [0, "a", "A", {}],
@@ -22,7 +20,7 @@
     "rules": [
 
           { "rule": "input-choice",
-            "to": "player",
+            "to": "players.at(0)",
             "prompt": "Choose from a list given by varaible name",
             "choices": "list",
             "result": "result"
@@ -31,7 +29,7 @@
             "value": "Result: {result}"
           },
           { "rule": "input-choice",
-            "to": "player",
+            "to": "players.at(0)",
             "prompt": "Choose from a list provided in json",
             "choices": ["Uno", "Dos", 3],
             "result": "result"

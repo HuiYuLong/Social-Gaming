@@ -98,6 +98,18 @@ GetterResult Getter::processList(Variable& varlist)
         returned = (int) list.size();
         return {returned, true};
     }
+    else if(current_query.compare(0, 2, "at") == 0) {
+        size_t opening_bracket = 2u;
+        size_t closing_bracket = current_query.size() - 1u;
+        if (current_query.size() < 5u /*smallest possible: at(0)*/
+            || current_query[opening_bracket] != '('
+            || current_query[closing_bracket] != ')') {
+                throw GetterError("Invalid query: at() method call is ill-formed\n");
+        }
+        std::string unnecessary_argument_copy{current_query.substr(opening_bracket + 1, closing_bracket - opening_bracket - 1)};
+        size_t index = std::stoul(unnecessary_argument_copy);
+        return {list.at(index), false};
+    }
     else if(current_query.compare(0, 8, "contains") == 0)
     {
         // TODO
