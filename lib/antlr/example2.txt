@@ -1,1 +1,0 @@
-players.elements.collect(player, player.weapon == weapon.beats)
